@@ -101,3 +101,4 @@ exports.updateProductDetails = asyncHandler(async (req, res) => {
   await productModel.updateDetails(id, { name, price });
   res.redirect("/admin?success=Product%20updated");
 });
+// COntroller
