@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include("../partials/head") %>
+  </head>
+  <body>
+    <%- include("../partials/navbar") %>
+
+    <div class="hero">
+      <div class="hero-content">
+        <img id="img-hero" src="/img/cans.png" alt="cans" />
+
+        <section class="hero-title">
+          <p>Explore Asian Flavor</p>
+          <p id="bottom-text">Traditional Asian Flavor. Moder taste</p>
+          <button class="hero-button">
+            <a href="/products">Shop now</a>
+          </button>
+        </section>
+      </div>
+    </div>
+    <div class="product-info">
+      <div class="product-benefits">
+        <img src="/img/ARTIFICIAL-FLAVORS.svg" alt="ARTIFICIAL-FLAVORS" />
+        <img src="/img/MADE.svg" alt="Made with real fruit" />
+        <img src="/img/Calories.svg" alt="25 Calories or less" />
+        <img src="/img/SWEETENERS.svg" alt="100% Natural Sweetners" />
+        <img src="/img/ofsugarorless.svg" alt="5g of suger or less" />
+      </div>
+      <section class="product-descriptions" id="product-mission">
+        <div class="mission-intro">
+          <p>
+            Founded with a mission of bridging cultures by highlighting unique
+            Asian flavors, Sanzo offers a refreshing experience that honors the
+            authenticity of these bold, beloved flavors.
+          </p>
+        </div>
+        <div class="description-row">
+          <img src="/img/images.jpg" alt="fruit can" />
+          <section class="description" id="description-1">
+            <h2 class="big-text">BOLD,AUTHENTIC ATIAN FLAVORS</h2>
+            <p>
+              Whether these flavors are a taste of home or a source of
+              discovery, each sip invites you to celebrate culture, connection,
+              and the joy of real ingrediants
+            </p>
+          </section>
+        </div>
+        <div class="description-row">
+          <section class="description" id="description-2">
+            <h2 class="big-text">Made With Real Fruit</h2>
+            <p>
+              We believe real flavor comes from real fruit. So we use juice from
+              iconic Asian fruits, harvested with care.
+            </p>
+          </section>
+          <img src="/img/can with mango.jpg" alt="mango fruit can" />
+        </div>
+      </section>
+    </div>
+    <%- include("../partials/footer") %>
+
+    <script src="/js/main.js"></script>
+  </body>
+</html>

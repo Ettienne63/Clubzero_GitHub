@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include("../partials/head") %>
+  </head>
+  <body>
+    <%- include("../partials/navbar") %>
+
+    <div class="auth-container">
+      <h2>Login</h2>
+      <p class="auth-error" aria-live="polite">
+        <%= typeof error !== "undefined" ? error : "" %>
+      </p>
+
+      <form action="/auth/login" method="POST">
+        <input
+          type="email"
+          name="email"
+          placeholder="Email"
+          maxlength="254"
+          required
+        />
+        <input
+          type="password"
+          name="password"
+          placeholder="Password"
+          minlength="6"
+          maxlength="128"
+          required
+        />
+        <button type="submit">Login</button>
+      </form>
+      <p>Don't have an account? <a href="/signup">Sign Up</a></p>
+    </div>
+
+    <%- include("../partials/footer") %>
+    <script src="/js/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include("../partials/head") %>
+  </head>
+  <body>
+    <%- include("../partials/navbar") %>
+
+    <main class="cart-page">
+      <header class="cart-header">
+        <h2>Your Cart</h2>
+      </header>
+
+      <% if (!items || items.length === 0) { %>
+        <p class="cart-empty">Your cart is empty.</p>
+      <% } else { %>
+        <div class="cart-list">
+          <% items.forEach(item => { %>
+            <div class="cart-item">
+              <img src="<%= item.image %>" alt="<%= item.name %>">
+              <div class="cart-details">
+                <div class="cart-title"><%= item.name %></div>
+                <div class="cart-price">R <%= item.price %></div>
+                <form class="cart-qty-form" action="/cart/update/<%= item.productId %>" method="POST">
+                  <label>
+                    Qty
+                    <input type="number" name="quantity" min="1" value="<%= item.quantity %>">
+                  </label>
+                  <button type="submit">Update</button>
+                </form>
+                <form action="/cart/remove/<%= item.productId %>" method="POST">
+                  <button type="submit" class="cart-remove">Remove</button>
+                </form>
+              </div>
+              <div class="cart-total">R <%= item.total.toFixed(2) %></div>
+            </div>
+          <% }) %>
+        </div>
+
+        <div class="cart-summary">
+          <div>Subtotal: <strong>R <%= subtotal.toFixed(2) %></strong></div>
+          <form action="/cart/clear" method="POST">
+            <button type="submit" class="cart-clear">Clear Cart</button>
+          </form>
+        </div>
+      <% } %>
+    </main>
+
+    <%- include("../partials/footer") %>
+    <script src="/js/main.js"></script>
+  </body>
+</html>

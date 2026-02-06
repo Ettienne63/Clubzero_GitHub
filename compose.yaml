@@ -1,0 +1,25 @@
+services:
+  backend:
+    build: .
+    ports:
+      - "9000:9000"
+    environment:
+      - PORT=9000
+    env_file:
+      - .env
+    depends_on:
+      - db
+
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_PID=Express
+      - SA_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    ports:
+      - "14330:1433"
+
+volumes:
+  sqlserver_data:

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include("../partials/head") %>
+  </head>
+  <body>
+    <%- include("../partials/navbar") %>
+
+    <main class="admin-page">
+      <header class="admin-header">
+        <h2>Admin Panel</h2>
+        <p>Manage products and update images.</p>
+      </header>
+    <% if (error) { %>
+      <div class="admin-message admin-error"><%= error %></div>
+    <% } %>
+    <% if (success) { %>
+      <div class="admin-message admin-success"><%= success %></div>
+    <% } %>
+      <section class="admin-section">
+        <h3>Add Product</h3>
+        <form class="admin-form" action="/admin/add-product" method="POST" enctype="multipart/form-data">
+          <label>
+            <span>Product name</span>
+            <input type="text" name="name" placeholder="Product name" required />
+          </label>
+          <label>
+            <span>Price</span>
+            <input type="number" name="price" placeholder="Price" step="0.01" min="0" required />
+          </label>
+          <label>
+            <span>Image</span>
+            <input type="file" name="image" accept="image/*" />
+          </label>
+          <button type="submit">Add Product</button>
+        </form>
+      </section>
+
+      <section class="admin-section">
+        <h3>Update Product Image</h3>
+        <div class="admin-products">
+          <% (products || []).forEach(product => { %>
+            <div class="admin-product">
+              <img src="<%= product.image %>" alt="<%= product.name %>">
+              <div class="admin-product-body">
+                <form class="admin-inline-form admin-edit-form" action="/admin/update-product/<%= product.id %>" method="POST">
+                  <label>
+                    Name
+                    <input type="text" name="name" value="<%= product.name %>" required>
+                  </label>
+                  <label>
+                    Price
+                    <input type="number" name="price" step="0.01" min="0.01" value="<%= product.price %>" required>
+                  </label>
+                  <button type="submit">Update Details</button>
+                </form>
+                <form class="admin-inline-form" action="/admin/update-product-image/<%= product.id %>" method="POST" enctype="multipart/form-data">
+                  <input type="file" name="image" accept="image/*" required />
+                  <button type="submit">Update Image</button>
+                </form>
+                <form class="admin-inline-form" action="/admin/delete-product/<%= product.id %>" method="POST" onsubmit="return confirm('Remove this product?');">
+                  <button type="submit" class="admin-danger">Remove Product</button>
+                </form>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      </section>
+    </main>
+
+    <%- include("../partials/footer") %>
+    <script src="/js/main.js"></script>
+  </body>
+</html>

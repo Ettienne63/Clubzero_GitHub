@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include("../partials/head") %>
+  </head>
+  <body>
+    <%- include("../partials/navbar") %>
+
+    <main class="products-page">
+      <header class="products-header">
+        <h2>Products</h2>
+        <% if (search) { %>
+          <p>Results for "<%= search %>"</p>
+        <% } else { %>
+          <p>Fresh picks, curated for you.</p>
+        <% } %>
+      </header>
+      <div class="products-grid">
+      <% products.forEach(product => { %>
+        <div class="product-card">
+          <div class="product-image">
+            <img src="<%= product.image %>" alt="<%= product.name %>">
+          </div>
+          <div class="product-body">
+            <h3><%= product.name %></h3>
+            <p class="product-price">R <%= product.price %></p>
+            <form action="/cart/add/<%= product.id %>" method="POST">
+              <button class="product-btn" type="submit">Add to Cart</button>
+            </form>
+          </div>
+        </div>
+      <% }) %>
+      </div>
+    </main>
+
+    <%- include("../partials/footer") %>
+    <script src="/js/main.js"></script>
+  </body>
+</html>

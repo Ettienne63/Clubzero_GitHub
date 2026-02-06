@@ -1,0 +1,74 @@
+<nav id="main-navbar">
+  <ul class="nav-left">
+    <li><a href="/">Home</a></li>
+    <li><a href="/about">About</a></li>
+    <li><a href="/products">Products</a></li>
+  </ul>
+
+  <div class="logo">Sanzo</div>
+
+  <ul class="nav-right">
+    <li>
+      <form class="nav-search" action="/products" method="GET">
+        <input type="text" name="q" placeholder="Search products..." />
+        <button type="submit">Search</button>
+      </form>
+    </li>
+    <li><a href="/cart">Cart</a></li>
+    <% if (isAdmin) { %>
+      <li><a href="/admin">Admin</a></li>
+    <% } %>
+    <% if (user) { %>
+      <li>
+        <form action="/auth/logout" method="POST" class="nav-logout-form">
+          <button type="submit" class="nav-logout-btn">Logout</button>
+        </form>
+      </li>
+    <% } else { %>
+      <li><a href="/login">Login</a></li>
+    <% } %>
+  </ul>
+
+  <div class="hamburger" id="hamburger">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</nav>
+<nav id="scroll-navbar">
+  <ul class="nav-left">
+    <li><a href="/">Home</a></li>
+    <li><a href="/about">About</a></li>
+    <li><a href="/products">Products</a></li>
+  </ul>
+
+  <div class="logo">Sanzo</div>
+
+  <ul class="nav-right">
+    <li>
+      <form class="nav-search" action="/products" method="GET">
+        <input type="text" name="q" placeholder="Search products..." />
+        <button type="submit">Search</button>
+      </form>
+    </li>
+    <li><a href="/cart">Cart</a></li>
+    <% if (isAdmin) { %>
+      <li><a href="/admin">Admin</a></li>
+    <% } %>
+    <% if (user) { %>
+      <li>
+        <form action="/auth/logout" method="POST" class="nav-logout-form">
+          <button type="submit" class="nav-logout-btn">Logout</button>
+        </form>
+      </li>
+    <% } else { %>
+      <li><a href="/login">Login</a></li>
+    <% } %>
+  </ul>
+
+  <div class="hamburger" id="scroll-hamburger">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</nav>
