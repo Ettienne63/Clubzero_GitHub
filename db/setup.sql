@@ -44,3 +44,38 @@ BEGIN
   );
 END
 GO
+
+IF OBJECT_ID(N'dbo.Orders', N'U') IS NULL
+BEGIN
+  CREATE TABLE dbo.Orders (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    UserEmail NVARCHAR(255) NOT NULL,
+    FirstName NVARCHAR(255) NOT NULL,
+    LastName NVARCHAR(255) NOT NULL,
+    Email NVARCHAR(255) NOT NULL,
+    Phone NVARCHAR(50) NULL,
+    Address NVARCHAR(500) NOT NULL,
+    City NVARCHAR(255) NOT NULL,
+    PostalCode NVARCHAR(50) NOT NULL,
+    Subtotal DECIMAL(10,2) NOT NULL,
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE()
+  );
+END
+GO
+
+IF OBJECT_ID(N'dbo.OrderItems', N'U') IS NULL
+BEGIN
+  CREATE TABLE dbo.OrderItems (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    OrderId INT NOT NULL,
+    ProductId INT NOT NULL,
+    ProductName NVARCHAR(255) NOT NULL,
+    UnitPrice DECIMAL(10,2) NOT NULL,
+    Quantity INT NOT NULL,
+    LineTotal DECIMAL(10,2) NOT NULL,
+    CONSTRAINT FK_OrderItems_Order
+      FOREIGN KEY (OrderId) REFERENCES dbo.Orders(Id)
+      ON DELETE CASCADE
+  );
+END
+GO

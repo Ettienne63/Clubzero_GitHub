@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include("../partials/head") %>
+  </head>
+  <body>
+    <%- include("../partials/navbar") %>
+
+    <main class="checkout-page">
+      <header class="checkout-header">
+        <h2>Checkout</h2>
+        <p>Please complete your details to place the order.</p>
+      </header>
+
+      <section class="checkout-card">
+        <% if (typeof error !== "undefined" && error) { %>
+          <p class="checkout-error" aria-live="polite"><%= error %></p>
+        <% } %>
+        <form action="/checkout" method="post" class="checkout-form">
+          <div class="checkout-grid">
+            <label>
+              First name
+              <input
+                type="text"
+                name="firstName"
+                placeholder="First name"
+                required
+              />
+            </label>
+            <label>
+              Last name
+              <input
+                type="text"
+                name="lastName"
+                placeholder="Last name"
+                required
+              />
+            </label>
+            <label class="checkout-full">
+              Email
+              <input type="email" name="email" placeholder="Email" required />
+            </label>
+            <label class="checkout-full">
+              Phone
+              <input type="tel" name="phone" placeholder="Phone number" />
+            </label>
+            <label class="checkout-full">
+              Address
+              <input
+                type="text"
+                name="address"
+                placeholder="Street address"
+                required
+              />
+            </label>
+            <label>
+              City
+              <input type="text" name="city" placeholder="City" required />
+            </label>
+            <label>
+              Postal code
+              <input
+                type="text"
+                name="postalCode"
+                placeholder="Postal code"
+                required
+              />
+            </label>
+          </div>
+
+          <div class="checkout-actions">
+            <a href="/thankyou-payment">
+              <button type="submit" class="checkout-submit">Place order</button>
+            </a>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <%- include("../partials/footer") %>
+  </body>
+</html>

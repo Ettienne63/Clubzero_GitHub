@@ -6,16 +6,21 @@ let poolPromise;
 
 function getPool() {
   if (!poolPromise) {
-    const server = process.env.DB_SERVER || ".";
+    const rawServer = process.env.DB_SERVER || ".";
+    const [server, portFromEnv] = String(rawServer).split(",");
     const database = process.env.DB_NAME || "SanzoDB";
 
     const config = {
-      server,
+      server: server || ".",
       database,
       options: {
         trustServerCertificate: true,
       },
     };
+    const parsedPort = Number(portFromEnv);
+    if (Number.isInteger(parsedPort) && parsedPort > 0) {
+      config.options.port = parsedPort;
+    }
 
     if (useTrusted) {
       const odbcDriver =

@@ -13,6 +13,10 @@ router.get("/about", (req, res) => {
 
 router.get("/products", productController.getProducts);
 
+router.get("/checkout", (req, res) => {
+  res.render("pages/checkout");
+});
+
 // Cart route handled in routes/cartRoutes.js
 
 router.get("/login", (req, res) => {
