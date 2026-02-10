@@ -865,9 +865,101 @@ nav ul li a:hover {
     justify-content: center;
   }
 }
-footer {
-  background-color: #333;
+
+.thankyou-container {
+  background-color: #8e134f;
+  flex: 1;
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #8e134f;
+  opacity: 0.8;
+  background:
+    radial-gradient(
+      circle,
+      transparent 20%,
+      #8e134f 20%,
+      #8e134f 80%,
+      transparent 80%,
+      transparent
+    ),
+    radial-gradient(
+        circle,
+        transparent 20%,
+        #8e134f 20%,
+        #8e134f 80%,
+        transparent 80%,
+        transparent
+      )
+      25px 25px,
+    linear-gradient(white 2px, transparent 2px) 0 -1px,
+    linear-gradient(90deg, white 2px, #8e134f 2px) -1px 0;
+  background-size:
+    50px 50px,
+    50px 50px,
+    25px 25px,
+    25px 25px;
+}
+.thankyou-content {
+  color: #fff;
+  font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+  text-align: center;
+  padding: 20px 28px;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 14px;
+  background: #8e134f;
+}
+
+.progress-container {
+  width: 600px;
+  margin: 50px auto;
+  font-family: Arial, sans-serif;
+}
+
+.progress-bar {
+  position: relative;
+  height: 10px;
+  background: #ddd;
+  border-radius: 5px;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: #4caf50;
+  transition: width 0.5s ease;
+}
+
+.checkpoint-marker {
+  position: absolute;
+  top: -15px;
+  width: 35px;
+  height: 35px;
+  background: #ccc;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   color: white;
+  font-size: 12px;
+  transform: translateX(-50%);
+  transition: background 0.3s;
+}
+
+.checkpoint-marker.active {
+  background: #4caf50;
+}
+
+#totalSales {
+  padding-top: 20px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 18px;
+}
+footer {
+  background-color: cornsilk;
+  color: black;
   text-align: center;
   padding: 15px;
   margin-top: auto;

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include("../partials/head") %>
+  </head>
+  <body>
+    <%- include("../partials/navbar") %>
+    <div class="thankyou-container">
+      <div class="thankyou-content">
+        <p>Thank you for the support</p>
+
+        <div class="progress-container">
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+            <div class="checkpoint-marker" style="left: 0%">1</div>
+            <div class="checkpoint-marker" style="left: 10%">1k</div>
+            <div class="checkpoint-marker" style="left: 50%">5k</div>
+            <div class="checkpoint-marker" style="left: 100%">10k</div>
+          </div>
+          <div id="totalSales">Total Sales: 0</div>
+        </div>
+
+        <button onclick="updateSales(5200)">5200 Sales</button>
+      </div>
+    </div>
+    <%- include("../partials/footer") %>
+    <script src="/js/main.js"></script>
+  </body>
+</html>
