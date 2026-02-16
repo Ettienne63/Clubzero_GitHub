@@ -1,94 +1,106 @@
-const { getPool, sql } = require("../db/sqlServer");
+const { prisma } = require("../lib/prisma");
 
-async function getItems(userEmail) {
-  const pool = await getPool();
-  const result = await pool
-    .request()
-    .input("email", sql.NVarChar(255), userEmail)
-    .query(
-      `
-      SELECT c.ProductId, c.Quantity, p.Name, p.Price, p.Image
-      FROM CartItems c
-      INNER JOIN Products p ON p.Id = c.ProductId
-      WHERE c.UserEmail = @email
-      ORDER BY c.Id DESC
-      `,
-    );
-  return result.recordset;
+async function getItems(userId) {
+  const items = await prisma.cartItem.findMany({
+    where: {
+      userId: Number(userId),
+    },
+    include: {
+      product: true,
+    },
+    orderBy: {
+      id: "desc",
+    },
+  });
+
+  return items.map((item) => ({
+    productId: item.productId,
+    name: item.product.name,
+    price: Number(item.product.price),
+    image: item.product.image,
+    quantity: item.quantity,
+    total: Number(item.product.price) * item.quantity,
+  }));
 }
 
-async function addItem(userEmail, productId) {
-  const pool = await getPool();
-  const existing = await pool
-    .request()
-    .input("email", sql.NVarChar(255), userEmail)
-    .input("productId", sql.Int, Number(productId))
-    .query(
-      "SELECT Id, Quantity FROM CartItems WHERE UserEmail = @email AND ProductId = @productId",
-    );
+async function addItem(userId, productId) {
+  const parsedUserId = Number(userId);
+  const parsedProductId = Number(productId);
+  const existing = await prisma.cartItem.findUnique({
+    where: {
+      userId_productId: {
+        userId: parsedUserId,
+        productId: parsedProductId,
+      },
+    },
+    select: {
+      id: true,
+      quantity: true,
+    },
+  });
 
-  if (existing.recordset.length) {
-    const row = existing.recordset[0];
-    await pool
-      .request()
-      .input("id", sql.Int, row.Id)
-      .input("quantity", sql.Int, row.Quantity + 1)
-      .query("UPDATE CartItems SET Quantity = @quantity WHERE Id = @id");
+  if (existing) {
+    await prisma.cartItem.update({
+      where: {
+        id: existing.id,
+      },
+      data: {
+        quantity: existing.quantity + 1,
+      },
+    });
     return;
   }
 
-  await pool
-    .request()
-    .input("email", sql.NVarChar(255), userEmail)
-    .input("productId", sql.Int, Number(productId))
-    .input("quantity", sql.Int, 1)
-    .query(
-      "INSERT INTO CartItems (UserEmail, ProductId, Quantity) VALUES (@email, @productId, @quantity)",
-    );
+  await prisma.cartItem.create({
+    data: {
+      userId: parsedUserId,
+      productId: parsedProductId,
+      quantity: 1,
+    },
+  });
 }
 
-async function updateQuantity(userEmail, productId, quantity) {
+async function updateQuantity(userId, productId, quantity) {
   const qty = Number(quantity);
-  const pool = await getPool();
+  const parsedUserId = Number(userId);
+  const parsedProductId = Number(productId);
 
   if (!qty || qty <= 0) {
-    await pool
-      .request()
-      .input("email", sql.NVarChar(255), userEmail)
-      .input("productId", sql.Int, Number(productId))
-      .query(
-        "DELETE FROM CartItems WHERE UserEmail = @email AND ProductId = @productId",
-      );
+    await prisma.cartItem.deleteMany({
+      where: {
+        userId: parsedUserId,
+        productId: parsedProductId,
+      },
+    });
     return;
   }
 
-  await pool
-    .request()
-    .input("email", sql.NVarChar(255), userEmail)
-    .input("productId", sql.Int, Number(productId))
-    .input("quantity", sql.Int, qty)
-    .query(
-      "UPDATE CartItems SET Quantity = @quantity WHERE UserEmail = @email AND ProductId = @productId",
-    );
+  await prisma.cartItem.updateMany({
+    where: {
+      userId: parsedUserId,
+      productId: parsedProductId,
+    },
+    data: {
+      quantity: qty,
+    },
+  });
 }
 
-async function removeItem(userEmail, productId) {
-  const pool = await getPool();
-  await pool
-    .request()
-    .input("email", sql.NVarChar(255), userEmail)
-    .input("productId", sql.Int, Number(productId))
-    .query(
-      "DELETE FROM CartItems WHERE UserEmail = @email AND ProductId = @productId",
-    );
+async function removeItem(userId, productId) {
+  await prisma.cartItem.deleteMany({
+    where: {
+      userId: Number(userId),
+      productId: Number(productId),
+    },
+  });
 }
 
-async function clearCart(userEmail) {
-  const pool = await getPool();
-  await pool
-    .request()
-    .input("email", sql.NVarChar(255), userEmail)
-    .query("DELETE FROM CartItems WHERE UserEmail = @email");
+async function clearCart(userId) {
+  await prisma.cartItem.deleteMany({
+    where: {
+      userId: Number(userId),
+    },
+  });
 }
 
 module.exports = {

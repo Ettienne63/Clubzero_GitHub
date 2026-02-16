@@ -56,10 +56,10 @@ exports.login = asyncHandler(async (req, res) => {
   }
 
   const isBcryptHash =
-    typeof user.PasswordHash === "string" && user.PasswordHash.startsWith("$2");
+    typeof user.passwordHash === "string" && user.passwordHash.startsWith("$2");
   const isValid = isBcryptHash
-    ? await bcrypt.compare(password, user.PasswordHash)
-    : password === user.PasswordHash;
+    ? await bcrypt.compare(password, user.passwordHash)
+    : password === user.passwordHash;
   if (!isValid) {
     return res.redirect(
       "/login?error=" + encodeURIComponent("Invalid credentials"),
@@ -71,7 +71,7 @@ exports.login = asyncHandler(async (req, res) => {
     await userModel.updatePasswordByEmail(email, newHash);
   }
 
-  req.session.user = { email: user.Email, name: user.Name };
+  req.session.user = { id: user.id, email: user.email, name: user.name };
   res.redirect("/");
 });
 

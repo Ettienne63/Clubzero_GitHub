@@ -1,0 +1,80 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           Int        @id @default(autoincrement())
+  name         String
+  email        String     @unique
+  passwordHash String
+  createdAt    DateTime   @default(now())
+
+  cartItems    CartItem[]
+  orders       Order[]
+}
+
+model Product {
+  id         Int         @id @default(autoincrement())
+  name       String
+  price      Decimal     @db.Decimal(10, 2)
+  image      String?
+
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+}
+
+model CartItem {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  productId Int
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId]) // prevents duplicate cart rows
+  @@index([userId])
+}
+
+model Order {
+  id         Int        @id @default(autoincrement())
+  userId     Int
+  firstName  String
+  lastName   String
+  email      String
+  phone      String?
+  address    String
+  city       String
+  postalCode String
+  subtotal   Decimal    @db.Decimal(10, 2)
+  createdAt  DateTime   @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+
+  @@index([userId])
+}
+
+model OrderItem {
+  id          Int     @id @default(autoincrement())
+  orderId     Int
+  productId   Int
+  productName String
+  unitPrice   Decimal @db.Decimal(10, 2)
+  quantity    Int
+  lineTotal   Decimal @db.Decimal(10, 2)
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+}

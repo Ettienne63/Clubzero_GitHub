@@ -7,25 +7,26 @@
    `Copy-Item .env.example .env`
 3. Edit `.env` and set real secrets:
    - `SESSION_SECRET` should be unique per developer.
-   - `DB_PASSWORD` should be unique`.
+   - `POSTGRES_PASSWORD` should be unique.
 4. Start everything:
    `docker compose up -d --build`
-5. Open the app:
+5. Run Prisma migration:
+   `npx prisma migrate dev`
+6. Open the app:
    `http://localhost:9000`
 
 **Notes**
 
 - `.env.example` is a template. The app reads only `.env`.
-- The backend connects to SQL Server at host `db` on port `1433`.
-- If the database does not exist yet, create it by running `db/setup.sql` against the `db` service.
+- The backend connects to PostgreSQL at host `db` on port `5432` using `DATABASE_URL`.
+- Database schema is managed by Prisma migrations in `prisma/migrations`.
 - You do not need to rebuild for README changes. Rebuild only when code, dependencies, or the Dockerfile changes.
 
-**Connect With SSMS / Azure Data Studio**
+**Connect With psql / DB GUI**
 Use these values when connecting:
 
-- Server name: `localhost,14330`
-- Authentication: `SQL Server Authentication`
-- Username/Login: `sa`
-- Password: your `DB_PASSWORD` from `.env`
-- Database name: leave blank (or `SanzoDB` after it exists)
-- Encryption: set to Optional/Off and enable “Trust server certificate”
+- Host: `localhost`
+- Port: `5432`
+- Username: `POSTGRES_USER` from `.env`
+- Password: `POSTGRES_PASSWORD` from `.env`
+- Database: `POSTGRES_DB` from `.env`

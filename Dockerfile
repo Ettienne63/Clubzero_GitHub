@@ -2,19 +2,13 @@ FROM node:22
 
 WORKDIR /app
 
-# Add build tools + ODBC headers/libs for msnodesqlv8
-RUN apt-get update \
- && apt-get install -y --no-install-recommends \
-    build-essential \
-    unixodbc \
-    unixodbc-dev \
- && rm -rf /var/lib/apt/lists/*
-
 COPY package*.json ./
 
 RUN npm install
 
 COPY . .
+
+RUN npx prisma generate
 
 ENV PORT=9000
 

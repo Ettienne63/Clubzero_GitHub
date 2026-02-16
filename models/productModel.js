@@ -1,72 +1,79 @@
-const { getPool, sql } = require("../db/sqlServer");
-
-const mapProducts = (rows) =>
-  rows.map((row) => ({
-    id: row.Id,
-    name: row.Name,
-    price: Number(row.Price),
-    image: row.Image,
-  }));
+const { prisma } = require("../lib/prisma");
 
 async function getAll(searchTerm = "") {
-  const pool = await getPool();
-  const request = pool.request();
-  let query = "SELECT Id, Name, Price, Image FROM Products ORDER BY Id DESC";
+  const products = await prisma.product.findMany({
+    where: searchTerm
+      ? {
+          name: {
+            contains: searchTerm,
+            mode: "insensitive",
+          },
+        }
+      : undefined,
+    orderBy: {
+      id: "desc",
+    },
+  });
 
-  if (searchTerm) {
-    request.input("search", sql.NVarChar(255), `%${searchTerm}%`);
-    query =
-      "SELECT Id, Name, Price, Image FROM Products WHERE Name LIKE @search ORDER BY Id DESC";
-  }
-
-  const result = await request.query(query);
-  return mapProducts(result.recordset);
+  return products.map((product) => ({
+    id: product.id,
+    name: product.name,
+    price: Number(product.price),
+    image: product.image,
+  }));
 }
 
 async function getImageById(id) {
-  const pool = await getPool();
-  const result = await pool
-    .request()
-    .input("id", sql.Int, Number(id))
-    .query("SELECT Image FROM Products WHERE Id = @id");
-  return result.recordset[0]?.Image || null;
+  const product = await prisma.product.findUnique({
+    where: {
+      id: Number(id),
+    },
+    select: {
+      image: true,
+    },
+  });
+  return product?.image || null;
 }
 
 async function insert({ name, price, image }) {
-  const pool = await getPool();
-  await pool
-    .request()
-    .input("name", sql.NVarChar(255), name)
-    .input("price", sql.Decimal(10, 2), Number(price))
-    .input("image", sql.NVarChar(1000), image)
-    .query("INSERT INTO Products (Name, Price, Image) VALUES (@name, @price, @image)");
+  await prisma.product.create({
+    data: {
+      name,
+      price: Number(price),
+      image,
+    },
+  });
 }
 
 async function updateImage(id, image) {
-  const pool = await getPool();
-  await pool
-    .request()
-    .input("id", sql.Int, Number(id))
-    .input("image", sql.NVarChar(1000), image)
-    .query("UPDATE Products SET Image = @image WHERE Id = @id");
+  await prisma.product.update({
+    where: {
+      id: Number(id),
+    },
+    data: {
+      image,
+    },
+  });
 }
 
 async function updateDetails(id, { name, price }) {
-  const pool = await getPool();
-  await pool
-    .request()
-    .input("id", sql.Int, Number(id))
-    .input("name", sql.NVarChar(255), name)
-    .input("price", sql.Decimal(10, 2), Number(price))
-    .query("UPDATE Products SET Name = @name, Price = @price WHERE Id = @id");
+  await prisma.product.update({
+    where: {
+      id: Number(id),
+    },
+    data: {
+      name,
+      price: Number(price),
+    },
+  });
 }
 
 async function deleteById(id) {
-  const pool = await getPool();
-  await pool
-    .request()
-    .input("id", sql.Int, Number(id))
-    .query("DELETE FROM Products WHERE Id = @id");
+  await prisma.product.delete({
+    where: {
+      id: Number(id),
+    },
+  });
 }
 
 module.exports = {

@@ -1,4 +1,4 @@
-const { getPool, sql } = require("../db/sqlServer");
+const { prisma } = require("../lib/prisma");
 
 const normalizeEmail = (email) =>
   String(email || "")
@@ -7,33 +7,34 @@ const normalizeEmail = (email) =>
 
 async function getByEmail(email) {
   const normalized = normalizeEmail(email);
-  const pool = await getPool();
-  const result = await pool
-    .request()
-    .input("email", sql.NVarChar(255), normalized)
-    .query("SELECT Id, Name, Email, PasswordHash FROM Users WHERE Email = @email");
-  return result.recordset[0] || null;
+  return prisma.user.findUnique({
+    where: {
+      email: normalized,
+    },
+  });
 }
 
 async function create({ name, email, passwordHash }) {
   const normalized = normalizeEmail(email);
-  const pool = await getPool();
-  await pool
-    .request()
-    .input("name", sql.NVarChar(255), name)
-    .input("email", sql.NVarChar(255), normalized)
-    .input("password", sql.NVarChar(255), passwordHash)
-    .query("INSERT INTO Users (Name, Email, PasswordHash) VALUES (@name, @email, @password)");
+  return prisma.user.create({
+    data: {
+      name,
+      email: normalized,
+      passwordHash,
+    },
+  });
 }
 
 async function updatePasswordByEmail(email, passwordHash) {
   const normalized = normalizeEmail(email);
-  const pool = await getPool();
-  await pool
-    .request()
-    .input("email", sql.NVarChar(255), normalized)
-    .input("password", sql.NVarChar(255), passwordHash)
-    .query("UPDATE Users SET PasswordHash = @password WHERE Email = @email");
+  await prisma.user.update({
+    where: {
+      email: normalized,
+    },
+    data: {
+      passwordHash,
+    },
+  });
 }
 
 module.exports = {
