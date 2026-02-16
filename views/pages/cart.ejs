@@ -9,6 +9,7 @@
     <main class="cart-page">
       <header class="cart-header">
         <h2>Your Cart</h2>
+       
       </header>
 
       <% if (!items || items.length === 0) { %>
@@ -22,7 +23,7 @@
                 <div class="cart-title"><%= item.name %></div>
                 <div class="cart-price">R <%= item.price %></div>
                 <form class="cart-qty-form" action="/cart/update/<%= item.productId %>" method="POST">
-                  <label>
+                  <label class="cart-qty-label">
                     Qty
                     <input type="number" name="quantity" min="1" value="<%= item.quantity %>">
                   </label>
@@ -45,14 +46,9 @@
         </div>
         
         <div class="cart-checkout-wrap">
-          <a href="/checkout">
-            <button class="cart-clear" id="cart-checkout">Checkout</button>
-          </a>
+          <a href="/checkout" class="cart-checkout-btn">Checkout</a>
         </div>
       <% } %>
-      
-      
-     
     </main>
  
     <%- include("../partials/footer") %>

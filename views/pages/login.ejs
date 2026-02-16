@@ -6,11 +6,12 @@
   <body>
     <%- include("../partials/navbar") %>
 
-    <div class="auth-container">
+    <main class="auth-container">
       <h2>Login</h2>
-      <p class="auth-error" aria-live="polite">
-        <%= typeof error !== "undefined" ? error : "" %>
-      </p>
+      <p class="auth-subtitle">Welcome back. Sign in to continue.</p>
+      <% if (typeof error !== "undefined" && error) { %>
+        <p class="auth-error" aria-live="polite"><%= error %></p>
+      <% } %>
 
       <form action="/auth/login" method="POST">
         <input
@@ -31,7 +32,7 @@
         <button type="submit">Login</button>
       </form>
       <p>Don't have an account? <a href="/signup">Sign Up</a></p>
-    </div>
+    </main>
 
     <%- include("../partials/footer") %>
     <script src="/js/main.js"></script>

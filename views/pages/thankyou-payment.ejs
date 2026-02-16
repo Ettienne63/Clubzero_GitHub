@@ -5,9 +5,10 @@
   </head>
   <body>
     <%- include("../partials/navbar") %>
-    <div class="thankyou-container">
-      <div class="thankyou-content">
-        <p>Thank you for the support</p>
+    <main class="thankyou-container">
+      <section class="thankyou-content">
+        <h1>Thanks for your order</h1>
+        <p class="thankyou-subtext">We appreciate your support and can't wait for you to enjoy Sanzo.</p>
 
         <div class="progress-container">
           <div class="progress-bar">
@@ -20,9 +21,10 @@
           <div id="totalSales">Total Sales: 0</div>
         </div>
 
-        <button onclick="updateSales(5200)">5200 Sales</button>
-      </div>
-    </div>
+        <button class="thankyou-btn" onclick="updateSales(5200)">Show Community Progress</button>
+        <a class="thankyou-link" href="/products">Keep Shopping</a>
+      </section>
+    </main>
     <%- include("../partials/footer") %>
     <script src="/js/main.js"></script>
   </body>
