@@ -3,6 +3,10 @@ const asyncHandler = require("../utils/asyncHandler");
 const userModel = require("../models/userModel");
 
 const MIN_PASSWORD_LEN = 6;
+const ADMIN_EMAILS = String(process.env.ADMIN_EMAILS || "")
+  .split(",")
+  .map((email) => email.trim().toLowerCase())
+  .filter(Boolean);
 
 exports.signup = asyncHandler(async (req, res) => {
   const name = String(req.body.name || "").trim();
@@ -72,7 +76,10 @@ exports.login = asyncHandler(async (req, res) => {
   }
 
   req.session.user = { id: user.id, email: user.email, name: user.name };
-  res.redirect("/");
+  const isAdmin = ADMIN_EMAILS.includes(
+    String(user.email || "").trim().toLowerCase(),
+  );
+  res.redirect(isAdmin ? "/admin" : "/");
 });
 
 exports.logout = (req, res) => {
