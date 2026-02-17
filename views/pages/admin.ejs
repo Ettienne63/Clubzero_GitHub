@@ -29,6 +29,10 @@
             <input type="number" name="price" placeholder="Price" step="0.01" min="0" required />
           </label>
           <label>
+            <span>Description</span>
+            <textarea name="description" placeholder="Product description" rows="4" required></textarea>
+          </label>
+          <label>
             <span>Image</span>
             <input type="file" name="image" accept="image/*" />
           </label>
@@ -51,6 +55,10 @@
                   <label>
                     Price
                     <input type="number" name="price" step="0.01" min="0.01" value="<%= product.price %>" required>
+                  </label>
+                  <label>
+                    Description
+                    <textarea name="description" rows="4" required><%= product.description %></textarea>
                   </label>
                   <button type="submit">Update Details</button>
                 </form>

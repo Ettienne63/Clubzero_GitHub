@@ -1,5 +1,6 @@
 const fs = require("fs").promises;
 const path = require("path");
+const { Prisma } = require("@prisma/client");
 const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
 const productModel = require("../models/productModel");
@@ -46,12 +47,20 @@ exports.renderAdminWithMessage = async (req, res, next, errorMessage) => {
 };
 
 exports.addProduct = asyncHandler(async (req, res) => {
-  const { name, price } = req.body;
+  const name = String(req.body.name || "").trim();
+  const description = String(req.body.description || "").trim();
+  const price = Number(req.body.price);
   const imagePath = req.file ? `/uploads/${req.file.filename}` : null;
+
+  if (!name || !description || !Number.isFinite(price) || price <= 0) {
+    return res.redirect("/admin?error=Invalid%20product%20details");
+  }
+
   await productModel.insert({
     name,
     price,
     image: imagePath || DEFAULT_IMAGE,
+    description,
   });
   res.redirect("/admin?success=Product%20added");
 });
@@ -80,7 +89,34 @@ exports.updateProductImage = asyncHandler(async (req, res) => {
 exports.deleteProduct = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const previousImage = await productModel.getImageById(id);
-  await productModel.deleteById(id);
+  try {
+    await productModel.deleteById(id);
+  } catch (error) {
+    const message = String(error && error.message ? error.message : "").toLowerCase();
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2003"
+    ) {
+      return res.redirect(
+        "/admin?error=Cannot%20remove%20a%20product%20that%20already%20exists%20in%20an%20order",
+      );
+    }
+    if (
+      message.includes("foreign key constraint") ||
+      message.includes("violates restrict setting")
+    ) {
+      return res.redirect(
+        "/admin?error=Cannot%20remove%20a%20product%20that%20already%20exists%20in%20an%20order",
+      );
+    }
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2025"
+    ) {
+      return res.redirect("/admin?error=Product%20not%20found");
+    }
+    throw error;
+  }
 
   if (previousImage) {
     await deleteLocalImage(previousImage);
@@ -92,12 +128,13 @@ exports.deleteProduct = asyncHandler(async (req, res) => {
 exports.updateProductDetails = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const name = String(req.body.name || "").trim();
+  const description = String(req.body.description || "").trim();
   const price = Number(req.body.price);
 
-  if (!name || !Number.isFinite(price) || price <= 0) {
+  if (!name || !description || !Number.isFinite(price) || price <= 0) {
     return res.redirect("/admin?error=Invalid%20product%20details");
   }
 
-  await productModel.updateDetails(id, { name, price });
+  await productModel.updateDetails(id, { name, price, description });
   res.redirect("/admin?success=Product%20updated");
 });

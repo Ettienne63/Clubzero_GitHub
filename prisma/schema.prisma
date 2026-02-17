@@ -28,6 +28,7 @@ model Product {
   name       String
   price      Decimal     @db.Decimal(10, 2)
   image      String?
+  description String?
 
   cartItems  CartItem[]
   orderItems OrderItem[]

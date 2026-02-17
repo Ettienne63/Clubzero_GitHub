@@ -1,5 +1,15 @@
 const { prisma } = require("../lib/prisma");
 
+function mapProduct(product) {
+  return {
+    id: product.id,
+    name: product.name,
+    price: Number(product.price),
+    image: product.image,
+    description: product.description || "",
+  };
+}
+
 async function getAll(searchTerm = "") {
   const products = await prisma.product.findMany({
     where: searchTerm
@@ -15,12 +25,21 @@ async function getAll(searchTerm = "") {
     },
   });
 
-  return products.map((product) => ({
-    id: product.id,
-    name: product.name,
-    price: Number(product.price),
-    image: product.image,
-  }));
+  return products.map(mapProduct);
+}
+
+async function getById(id) {
+  const product = await prisma.product.findUnique({
+    where: {
+      id: Number(id),
+    },
+  });
+
+  if (!product) {
+    return null;
+  }
+
+  return mapProduct(product);
 }
 
 async function getImageById(id) {
@@ -35,12 +54,13 @@ async function getImageById(id) {
   return product?.image || null;
 }
 
-async function insert({ name, price, image }) {
+async function insert({ name, price, image, description }) {
   await prisma.product.create({
     data: {
       name,
       price: Number(price),
       image,
+      description,
     },
   });
 }
@@ -56,7 +76,7 @@ async function updateImage(id, image) {
   });
 }
 
-async function updateDetails(id, { name, price }) {
+async function updateDetails(id, { name, price, description }) {
   await prisma.product.update({
     where: {
       id: Number(id),
@@ -64,6 +84,7 @@ async function updateDetails(id, { name, price }) {
     data: {
       name,
       price: Number(price),
+      description,
     },
   });
 }
@@ -78,6 +99,7 @@ async function deleteById(id) {
 
 module.exports = {
   getAll,
+  getById,
   getImageById,
   insert,
   updateImage,

@@ -3,15 +3,14 @@ const router = express.Router();
 
 const productController = require("../controllers/productController");
 
-router.get("/", (req, res) => {
-  res.render("pages/home");
-});
+router.get("/", productController.getHomePage);
 
 router.get("/about", (req, res) => {
   res.render("pages/about");
 });
 
 router.get("/products", productController.getProducts);
+router.get("/products/:id", productController.getProductDetails);
 
 router.get("/checkout", (req, res) => {
   res.render("pages/checkout");

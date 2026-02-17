@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include("../partials/head") %>
+  </head>
+  <body>
+    <%- include("../partials/navbar") %>
+
+    <main class="product-details-page">
+      <article class="product-details-card">
+        <div class="product-details-image">
+          <img src="<%= product.image %>" alt="<%= product.name %>">
+        </div>
+        <div class="product-details-content">
+          <p class="product-details-label">Product Details</p>
+          <h1><%= product.name %></h1>
+          <p class="product-details-price">R <%= Number(product.price).toFixed(2) %></p>
+          <p class="product-details-description"><%= product.description || "No description added yet for this product." %></p>
+          <div class="product-details-actions">
+            <form action="/cart/add/<%= product.id %>" method="POST">
+              <button class="product-btn" type="submit">Add to Cart</button>
+            </form>
+            <a class="product-details-back" href="/products">Back to Products</a>
+          </div>
+        </div>
+      </article>
+    </main>
+
+    <%- include("../partials/footer") %>
+    <script src="/js/main.js"></script>
+  </body>
+</html>
