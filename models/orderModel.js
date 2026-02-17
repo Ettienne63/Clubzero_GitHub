@@ -30,6 +30,38 @@ async function createOrder(userId, orderData, items) {
   return order.id;
 }
 
+async function getOrdersByUser(userId) {
+  const orders = await prisma.order.findMany({
+    where: {
+      userId: Number(userId),
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    include: {
+      orderItems: {
+        orderBy: {
+          id: "asc",
+        },
+      },
+    },
+  });
+
+  return orders.map((order) => ({
+    id: order.id,
+    createdAt: order.createdAt,
+    subtotal: Number(order.subtotal),
+    items: order.orderItems.map((item) => ({
+      id: item.id,
+      productName: item.productName,
+      unitPrice: Number(item.unitPrice),
+      quantity: Number(item.quantity),
+      lineTotal: Number(item.lineTotal),
+    })),
+  }));
+}
+
 module.exports = {
   createOrder,
+  getOrdersByUser,
 };

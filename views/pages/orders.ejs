@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include("../partials/head") %>
+  </head>
+  <body>
+    <%- include("../partials/navbar") %>
+
+    <main class="orders-page">
+      <header class="orders-header">
+        <h2>Your Orders</h2>
+        <p>Track all of your completed checkouts.</p>
+      </header>
+
+      <% if (!orders || orders.length === 0) { %>
+        <p class="orders-empty">You have not placed any orders yet.</p>
+      <% } else { %>
+        <section class="orders-list">
+          <% orders.forEach((order) => { %>
+            <article class="order-card">
+              <header class="order-top">
+                <div>
+                  <h3>Order #<%= order.id %></h3>
+                  <p><%= new Date(order.createdAt).toLocaleString() %></p>
+                </div>
+                <strong>R <%= order.subtotal.toFixed(2) %></strong>
+              </header>
+
+              <ul class="order-items">
+                <% order.items.forEach((item) => { %>
+                  <li class="order-item">
+                    <span><%= item.productName %> x <%= item.quantity %></span>
+                    <span>R <%= item.lineTotal.toFixed(2) %></span>
+                  </li>
+                <% }) %>
+              </ul>
+            </article>
+          <% }) %>
+        </section>
+      <% } %>
+    </main>
+
+    <%- include("../partials/footer") %>
+    <script src="/js/main.js"></script>
+  </body>
+</html>

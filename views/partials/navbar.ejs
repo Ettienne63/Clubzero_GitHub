@@ -15,6 +15,9 @@
       </form>
     </li>
     <li><a href="/cart">Cart</a></li>
+    <% if (user) { %>
+      <li><a href="/account/orders">Orders</a></li>
+    <% } %>
     <% if (isAdmin) { %>
       <li><a href="/admin">Admin</a></li>
     <% } %>
@@ -52,6 +55,9 @@
       </form>
     </li>
     <li><a href="/cart">Cart</a></li>
+    <% if (user) { %>
+      <li><a href="/account/orders">Orders</a></li>
+    <% } %>
     <% if (isAdmin) { %>
       <li><a href="/admin">Admin</a></li>
     <% } %>

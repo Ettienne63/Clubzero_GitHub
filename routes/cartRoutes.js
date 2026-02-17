@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const cartController = require("../controllers/cartController");
 const checkoutController = require("../controllers/checkoutController");
+const orderController = require("../controllers/orderController");
 const { requireAuth } = require("../middelware/requireAuth");
 const { body, param, validationResult } = require("express-validator");
 
@@ -15,6 +16,7 @@ const validateAndRedirect = (redirectPath) => (req, res, next) => {
 };
 
 router.get("/cart", requireAuth, cartController.getCart);
+router.get("/account/orders", requireAuth, orderController.getOrderHistory);
 
 router.get("/checkout", requireAuth, (req, res) => {
   const error = req.query.error || "";
