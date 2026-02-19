@@ -1,7 +1,9 @@
 const express = require("express");
 const path = require("path");
+const fs = require("fs");
 const session = require("express-session");
 require("dotenv").config();
+const { getUploadDir } = require("./utils/uploadPath");
 
 const pageRoutes = require("./routes/pageRoutes");
 const authRoutes = require("./routes/authRoutes");
@@ -38,6 +40,9 @@ app.use((req, res, next) => {
   next();
 });
 
+const uploadDir = getUploadDir();
+fs.mkdirSync(uploadDir, { recursive: true });
+app.use("/uploads", express.static(uploadDir));
 app.use(express.static(path.join(__dirname, "public")));
 
 app.set("view engine", "ejs");

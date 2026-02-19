@@ -8,6 +8,9 @@ primary_region = 'iad'
 
 [build]
 
+[env]
+  UPLOAD_DIR = '/data/uploads'
+
 [http_service]
   internal_port = 8080
   force_https = true
@@ -24,3 +27,7 @@ primary_region = 'iad'
 
 [deploy]
   release_command = "npx prisma migrate deploy"
+
+[[mounts]]
+  source = 'uploads_data'
+  destination = '/data'

@@ -4,6 +4,7 @@ const { Prisma } = require("@prisma/client");
 const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
 const productModel = require("../models/productModel");
+const { getUploadDir } = require("../utils/uploadPath");
 
 const DEFAULT_IMAGE = "https://via.placeholder.com/150";
 
@@ -12,7 +13,7 @@ const deleteLocalImage = async (imagePath) => {
     return;
   }
   const filename = path.basename(imagePath);
-  const fullPath = path.join(__dirname, "..", "public", "uploads", filename);
+  const fullPath = path.join(getUploadDir(), filename);
   try {
     await fs.unlink(fullPath);
   } catch (error) {

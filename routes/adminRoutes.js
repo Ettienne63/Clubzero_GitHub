@@ -6,8 +6,9 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const { body, param, validationResult } = require("express-validator");
+const { getUploadDir } = require("../utils/uploadPath");
 
-const uploadDir = path.join(__dirname, "../public/uploads");
+const uploadDir = getUploadDir();
 fs.mkdirSync(uploadDir, { recursive: true });
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
