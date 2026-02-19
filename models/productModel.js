@@ -1,12 +1,35 @@
 const { prisma } = require("../lib/prisma");
 
+function buildRatingSummary(reviews = []) {
+  const ratingCount = reviews.length;
+  if (!ratingCount) {
+    return { ratingAverage: 0, ratingCount: 0 };
+  }
+  const total = reviews.reduce((sum, item) => sum + Number(item.rating || 0), 0);
+  return {
+    ratingAverage: Number((total / ratingCount).toFixed(1)),
+    ratingCount,
+  };
+}
+
 function mapProduct(product) {
+  const ratings = buildRatingSummary(product.reviews || []);
   return {
     id: product.id,
     name: product.name,
     price: Number(product.price),
     image: product.image,
     description: product.description || "",
+    ratingAverage: ratings.ratingAverage,
+    ratingCount: ratings.ratingCount,
+    reviews: (product.reviews || []).map((review) => ({
+      id: review.id,
+      userId: review.userId,
+      rating: Number(review.rating),
+      comment: review.comment || "",
+      createdAt: review.createdAt,
+      userName: review.user ? review.user.name : "",
+    })),
   };
 }
 
@@ -23,6 +46,13 @@ async function getAll(searchTerm = "") {
     orderBy: {
       id: "desc",
     },
+    include: {
+      reviews: {
+        select: {
+          rating: true,
+        },
+      },
+    },
   });
 
   return products.map(mapProduct);
@@ -32,6 +62,21 @@ async function getById(id) {
   const product = await prisma.product.findUnique({
     where: {
       id: Number(id),
+    },
+    include: {
+      reviews: {
+        orderBy: {
+          createdAt: "desc",
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
     },
   });
 

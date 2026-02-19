@@ -42,6 +42,13 @@
                   <h3>
                     <a class="product-link" href="/products/<%= product.id %>"><%= product.name %></a>
                   </h3>
+                  <p class="product-rating">
+                    <% if (product.ratingCount > 0) { %>
+                      ★ <%= Number(product.ratingAverage).toFixed(1) %> (<%= product.ratingCount %>)
+                    <% } else { %>
+                      No reviews yet
+                    <% } %>
+                  </p>
                 </div>
               </article>
             <% }) %>

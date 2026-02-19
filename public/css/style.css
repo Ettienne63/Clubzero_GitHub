@@ -684,6 +684,10 @@ nav ul li a:hover {
   color: #8e134f;
   font-weight: 700;
 }
+.product-rating {
+  color: #5b2a40;
+  font-size: 0.95rem;
+}
 .product-btn {
   width: fit-content;
   padding: 10px 16px;
@@ -810,6 +814,10 @@ nav ul li a:hover {
   line-height: 1.65;
   max-width: 58ch;
 }
+.product-rating-details {
+  font-size: 1rem;
+  color: #5b2a40;
+}
 .product-details-actions {
   margin-top: 10px;
   display: flex;
@@ -824,6 +832,74 @@ nav ul li a:hover {
 }
 .product-details-back:hover {
   text-decoration: underline;
+}
+.product-reviews {
+  margin-top: 18px;
+  background: #fff7f1;
+  border: 1px solid #f0d7cf;
+  border-radius: 16px;
+  padding: clamp(18px, 4vw, 26px);
+}
+.product-reviews h2 {
+  color: #8e134f;
+  margin-bottom: 10px;
+}
+.review-list {
+  display: grid;
+  gap: 10px;
+}
+.review-item {
+  border: 1px solid #f0d7cf;
+  border-radius: 10px;
+  padding: 12px;
+  background: #fff;
+}
+.review-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #3a1c2a;
+  margin-bottom: 6px;
+}
+.review-item p {
+  color: #5b2a40;
+}
+.review-form {
+  margin-top: 14px;
+  display: grid;
+  gap: 10px;
+}
+.review-form label {
+  display: grid;
+  gap: 6px;
+  color: #5b2a40;
+}
+.review-form select,
+.review-form textarea {
+  width: 100%;
+  border: 1px solid #e0c0b7;
+  border-radius: 8px;
+  padding: 10px;
+  font: inherit;
+  background: #fff;
+}
+.review-message {
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.review-error {
+  background: #ffe7e7;
+  border: 1px solid #f5b5b5;
+  color: #8a1f1f;
+}
+.review-success {
+  background: #e9f9ef;
+  border: 1px solid #bfe8cc;
+  color: #1f6d3a;
+}
+.review-hint {
+  margin-top: 12px;
+  color: #5b2a40;
 }
 @media (max-width: 860px) {
   .product-details-card {

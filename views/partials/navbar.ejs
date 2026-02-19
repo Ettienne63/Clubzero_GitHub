@@ -1,3 +1,4 @@
+<% const showAdmin = typeof isAdmin !== "undefined" && Boolean(isAdmin); %>
 <nav id="main-navbar">
   <ul class="nav-left">
     <li><a href="/">Home</a></li>
@@ -21,7 +22,7 @@
     <% if (user) { %>
       <li><a href="/account/orders">Orders</a></li>
     <% } %>
-    <% if (isAdmin) { %>
+    <% if (showAdmin) { %>
       <li><a href="/admin">Admin</a></li>
     <% } %>
     <% if (user) { %>
@@ -64,7 +65,7 @@
     <% if (user) { %>
       <li><a href="/account/orders">Orders</a></li>
     <% } %>
-    <% if (isAdmin) { %>
+    <% if (showAdmin) { %>
       <li><a href="/admin">Admin</a></li>
     <% } %>
     <% if (user) { %>

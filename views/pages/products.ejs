@@ -30,6 +30,13 @@
               <h3>
                 <a class="product-link" href="/products/<%= product.id %>"><%= product.name %></a>
               </h3>
+              <p class="product-rating">
+                <% if (product.ratingCount > 0) { %>
+                  ★ <%= Number(product.ratingAverage).toFixed(1) %> (<%= product.ratingCount %>)
+                <% } else { %>
+                  No reviews yet
+                <% } %>
+              </p>
               <p class="product-price">R <%= Number(product.price).toFixed(2) %></p>
               <form action="/cart/add/<%= product.id %>" method="POST">
                 <button class="product-btn" type="submit">Add to Cart</button>

@@ -14,8 +14,21 @@
         <div class="product-details-content">
           <p class="product-details-label">Product Details</p>
           <h1><%= product.name %></h1>
+          <p class="product-rating product-rating-details">
+            <% if (product.ratingCount > 0) { %>
+              ★ <%= Number(product.ratingAverage).toFixed(1) %> from <%= product.ratingCount %> review<%= product.ratingCount === 1 ? "" : "s" %>
+            <% } else { %>
+              No reviews yet
+            <% } %>
+          </p>
           <p class="product-details-price">R <%= Number(product.price).toFixed(2) %></p>
           <p class="product-details-description"><%= product.description || "No description added yet for this product." %></p>
+          <% if (error) { %>
+            <p class="review-message review-error"><%= error %></p>
+          <% } %>
+          <% if (success) { %>
+            <p class="review-message review-success"><%= success %></p>
+          <% } %>
           <div class="product-details-actions">
             <form action="/cart/add/<%= product.id %>" method="POST">
               <button class="product-btn" type="submit">Add to Cart</button>
@@ -24,6 +37,51 @@
           </div>
         </div>
       </article>
+      <section class="product-reviews">
+        <h2>Customer Reviews</h2>
+        <% if (product.reviews && product.reviews.length > 0) { %>
+          <div class="review-list">
+            <% product.reviews.forEach(review => { %>
+              <article class="review-item">
+                <div class="review-top">
+                  <strong><%= review.userName || "Verified buyer" %></strong>
+                  <span>★ <%= review.rating %>/5</span>
+                </div>
+                <% if (review.comment) { %>
+                  <p><%= review.comment %></p>
+                <% } %>
+              </article>
+            <% }) %>
+          </div>
+        <% } else { %>
+          <p class="products-empty">No reviews yet for this product.</p>
+        <% } %>
+
+        <% if (!user) { %>
+          <p class="review-hint">Please <a href="/login">log in</a> to leave a review after purchasing.</p>
+        <% } else if (!canReview) { %>
+          <p class="review-hint">Only verified purchasers can leave a review for this product.</p>
+        <% } else { %>
+          <form class="review-form" action="/products/<%= product.id %>/reviews" method="POST">
+            <label>
+              Rating
+              <select name="rating" required>
+                <option value="">Choose rating</option>
+                <% for (let i = 5; i >= 1; i--) { %>
+                  <option value="<%= i %>" <%= existingReview && Number(existingReview.rating) === i ? "selected" : "" %>>
+                    <%= i %> star<%= i === 1 ? "" : "s" %>
+                  </option>
+                <% } %>
+              </select>
+            </label>
+            <label>
+              Comment (optional)
+              <textarea name="comment" rows="4" maxlength="1000" placeholder="Share your thoughts..."><%= existingReview ? existingReview.comment || "" : "" %></textarea>
+            </label>
+            <button class="product-btn" type="submit"><%= existingReview ? "Update Review" : "Submit Review" %></button>
+          </form>
+        <% } %>
+      </section>
     </main>
 
     <%- include("../partials/footer") %>
