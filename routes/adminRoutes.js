@@ -4,9 +4,11 @@ const adminController = require("../controllers/adminController");
 const { requireAdmin } = require("../middelware/requireAuth");
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs");
 const { body, param, validationResult } = require("express-validator");
 
 const uploadDir = path.join(__dirname, "../public/uploads");
+fs.mkdirSync(uploadDir, { recursive: true });
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
     cb(null, uploadDir);
