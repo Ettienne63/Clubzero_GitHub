@@ -58,7 +58,7 @@ nav ul li a:hover {
   padding: 6px 10px;
   border-radius: 6px;
   border: 1px solid #e0c0b7;
-  min-width: 200px;
+  min-width: 100px;
 }
 .nav-search button {
   padding: 6px 10px;
@@ -122,6 +122,85 @@ nav ul li a:hover {
   background-color: #8e134f;
   border-radius: 2px;
   display: block;
+}
+
+@media (max-width: 1200px) {
+  .hamburger {
+    display: flex;
+  }
+
+  #main-navbar {
+    position: relative;
+    z-index: 1000;
+  }
+
+  .logo {
+    position: static;
+    left: auto;
+    transform: none;
+    font-size: clamp(1.8rem, 6vw, 2.3rem);
+  }
+
+  .nav-left {
+    display: none;
+  }
+
+  .mobile-only {
+    display: list-item;
+  }
+
+  #main-navbar .nav-right,
+  #scroll-navbar .nav-right {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 8px;
+    width: min(92vw, 340px);
+    max-height: 72vh;
+    overflow-y: auto;
+    align-items: stretch;
+    gap: 10px;
+    padding: 14px;
+    background-color: rgba(246, 186, 206, 0.95);
+    flex-direction: column;
+    opacity: 0;
+    pointer-events: none;
+    border-radius: 5px;
+    transition: opacity 0.3s ease;
+  }
+
+  #main-navbar .nav-right.show,
+  #scroll-navbar .nav-right.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  #main-navbar .nav-right li,
+  #scroll-navbar .nav-right li {
+    width: 100%;
+  }
+
+  #main-navbar .nav-right a,
+  #scroll-navbar .nav-right a,
+  #main-navbar .nav-logout-btn,
+  #scroll-navbar .nav-logout-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 8px 0;
+  }
+
+  .nav-right .nav-search {
+    display: grid;
+    gap: 8px;
+    width: 100%;
+    margin: 0;
+  }
+
+  .nav-right .nav-search input,
+  .nav-right .nav-search button {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 @media (max-width: 1024px) {
