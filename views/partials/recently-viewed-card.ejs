@@ -1,0 +1,27 @@
+<div class="col-6 col-md-4 col-lg-3">
+  <article class="card shadow-sm h-100 recently-viewed-card">
+    <a href="/auth/products/<%= product.id %>">
+      <img
+        src="<%= product.imageUrl %>"
+        class="card-img-top recently-viewed-image"
+        alt="<%= product.name %>"
+      />
+    </a>
+    <div class="card-body">
+      <h3 class="h6 mb-1 recently-viewed-title">
+        <a
+          href="/auth/products/<%= product.id %>"
+          class="text-decoration-none product-title-link"
+        >
+          <%= product.name %>
+        </a>
+      </h3>
+      <p class="small text-muted mb-2 recently-viewed-description">
+        <%= product.description || "No description" %>
+      </p>
+      <p class="fw-semibold mb-0 recently-viewed-price">
+        R<%= Number(product.price).toFixed(2) %>
+      </p>
+    </div>
+  </article>
+</div>

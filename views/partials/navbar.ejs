@@ -1,0 +1,78 @@
+<nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top shadow-sm">
+  <div class="container">
+    <a class="navbar-brand" href="/">Club Zero</a>
+    <button
+      class="navbar-toggler d-lg-none"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#collapsibleNavId"
+      aria-controls="collapsibleNavId"
+      aria-expanded="false"
+      aria-label="Toggle navigation"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="collapsibleNavId">
+      <ul class="navbar-nav me-auto mt-2 mt-lg-0">
+        <li class="nav-item">
+          <a class="nav-link active" href="/about">About</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link active" href="/auth/products" aria-current="page">
+            Products <span class="visually-hidden">(current)</span>
+          </a>
+        </li>
+      </ul>
+      <form class="d-flex my-2 my-lg-0" action="/auth/products" method="GET">
+        <input
+          class="form-control me-sm-2"
+          type="text"
+          name="search"
+          placeholder="Search products"
+          value="<%= typeof searchQuery !== 'undefined' ? searchQuery : '' %>"
+        />
+        <button class="btn btn-outline-success my-2 my-sm-0" type="submit">
+          Search
+        </button>
+      </form>
+      <ul class="navbar-nav ms-3">
+        <% const isLoggedIn = typeof user !== "undefined" && Boolean(user); %>
+        <% const showAdmin = isLoggedIn && Boolean(user.isAdmin); %>
+        <% const showGoalTracker = isLoggedIn && String(user.email || "").toLowerCase().trim().endsWith(".clubzero@gmail.co.za"); %>
+        <% if (isLoggedIn) { %> <% if (showAdmin) { %>
+        <li class="nav-item">
+          <a class="nav-link" href="/admin">Admin</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/admin/affiliate">Affiliate Admin</a>
+        </li>
+        <% } %>
+        <% if (showGoalTracker) { %>
+        <li class="nav-item">
+          <a class="nav-link" href="/auth/goals">Goal Tracker</a>
+        </li>
+        <% } %>
+        <li class="nav-item">
+          <a class="nav-link" href="/auth/cart">Cart</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/auth/profile">Profile</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/auth/orders">Orders</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/auth/affiliate">Affiliate</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/auth/logout">Logout</a>
+        </li>
+        <% } else { %>
+        <li class="nav-item">
+          <a class="nav-link" href="/auth/login">Login</a>
+        </li>
+        <% } %>
+      </ul>
+    </div>
+  </div>
+</nav>

@@ -1,0 +1,186 @@
+const { body, param, validationResult } = require("express-validator");
+
+const getFirstValidationMessage = (req) => {
+  const errors = validationResult(req);
+  if (errors.isEmpty()) {
+    return null;
+  }
+
+  return errors.array({ onlyFirstError: true })[0].msg;
+};
+
+const handleValidationError = (onError) => (req, res, next) => {
+  const message = getFirstValidationMessage(req);
+  if (!message) {
+    return next();
+  }
+
+  return onError(req, res, message);
+};
+
+const validateBadRequest = handleValidationError((_req, res, message) =>
+  res.status(400).send(message),
+);
+
+const validateRedirectToLogin = handleValidationError((_req, res, message) =>
+  res.redirect(`/auth/login?error=${encodeURIComponent(message)}`),
+);
+
+const validateRedirectToSignup = handleValidationError((_req, res, message) =>
+  res.redirect(`/auth/signup?error=${encodeURIComponent(message)}`),
+);
+
+const validateRedirectToProducts = handleValidationError((_req, res, message) =>
+  res.redirect(`/auth/products?error=${encodeURIComponent(message)}`),
+);
+
+const validateRedirectToAdmin = handleValidationError((_req, res, message) =>
+  res.redirect(`/admin?error=${encodeURIComponent(message)}`),
+);
+
+const validateRedirectToAdminAffiliate = handleValidationError(
+  (_req, res, message) =>
+    res.redirect(`/admin/affiliate?error=${encodeURIComponent(message)}`),
+);
+
+const validateRedirectToProfile = handleValidationError((_req, res, message) =>
+  res.redirect(`/auth/profile?error=${encodeURIComponent(message)}`),
+);
+
+const validateRedirectToGoals = handleValidationError((_req, res, message) =>
+  res.redirect(`/auth/goals?error=${encodeURIComponent(message)}`),
+);
+
+const signupValidationRules = [
+  body("name").trim().notEmpty().withMessage("Name is required."),
+  body("email").trim().isEmail().withMessage("Valid email is required."),
+  body("password")
+    .isLength({ min: 6 })
+    .withMessage("Password must be at least 6 characters."),
+];
+
+const loginValidationRules = [
+  body("email").trim().isEmail().withMessage("Valid email is required."),
+  body("password").notEmpty().withMessage("Password is required."),
+];
+
+const reviewValidationRules = [
+  param("id").isInt({ min: 1 }).withMessage("Invalid product id."),
+  body("rating")
+    .isInt({ min: 1, max: 5 })
+    .withMessage("Rating must be between 1 and 5."),
+  body("comment")
+    .optional({ values: "falsy" })
+    .isLength({ max: 300 })
+    .withMessage("Comment must be 300 characters or fewer.")
+    .trim(),
+];
+
+const cartAddValidationRules = [
+  body("productId").isInt({ min: 1 }).withMessage("Invalid product id."),
+  body("quantity")
+    .optional({ values: "falsy" })
+    .isInt({ min: 1 })
+    .withMessage("Quantity must be at least 1."),
+];
+
+const cartUpdateValidationRules = [
+  param("id").isInt({ min: 1 }).withMessage("Invalid cart item id."),
+  body("quantity").isInt({ min: 0 }).withMessage("Quantity must be 0 or more."),
+];
+
+const cartDeleteValidationRules = [
+  param("id").isInt({ min: 1 }).withMessage("Invalid cart item id."),
+];
+
+const productValidationRules = [
+  body("name").trim().notEmpty().withMessage("Name is required."),
+  body("description").trim().notEmpty().withMessage("Description is required."),
+  body("price")
+    .isFloat({ min: 0 })
+    .withMessage("Price must be a valid non-negative number."),
+  body("imageUrl").optional({ values: "falsy" }).trim(),
+  body("nutritionInfo").optional({ values: "falsy" }).trim(),
+  body("ingredients").optional({ values: "falsy" }).trim(),
+  body("bestFor").optional({ values: "falsy" }).trim(),
+  body("storageInfo").optional({ values: "falsy" }).trim(),
+];
+
+const productIdParamValidationRules = [
+  param("id").isInt({ min: 1 }).withMessage("Invalid product id."),
+];
+
+const idParamValidationRules = [
+  param("id").isInt({ min: 1 }).withMessage("Invalid id."),
+];
+
+const profileValidationRules = [
+  body("name").trim().notEmpty().withMessage("Name is required."),
+  body("phone")
+    .optional({ values: "falsy" })
+    .trim()
+    .isLength({ max: 30 })
+    .withMessage("Phone number must be 30 characters or fewer."),
+];
+
+const addressValidationRules = [
+  body("label")
+    .optional({ values: "falsy" })
+    .trim()
+    .isLength({ max: 50 })
+    .withMessage("Label must be 50 characters or fewer."),
+  body("recipientName")
+    .trim()
+    .notEmpty()
+    .withMessage("Recipient name is required."),
+  body("phone").trim().notEmpty().withMessage("Phone is required."),
+  body("addressLine1")
+    .trim()
+    .notEmpty()
+    .withMessage("Address line 1 is required."),
+  body("addressLine2").optional({ values: "falsy" }).trim(),
+  body("city").trim().notEmpty().withMessage("City is required."),
+  body("state").trim().notEmpty().withMessage("State or province is required."),
+  body("postalCode").trim().notEmpty().withMessage("Postal code is required."),
+  body("country").trim().notEmpty().withMessage("Country is required."),
+];
+
+const addressIdParamValidationRules = [
+  param("id").isInt({ min: 1 }).withMessage("Invalid address id."),
+];
+
+const goalCreateValidationRules = [
+  body("title")
+    .trim()
+    .notEmpty()
+    .withMessage("Goal title is required.")
+    .isLength({ max: 120 })
+    .withMessage("Goal title must be 120 characters or fewer."),
+  body("targetBottles")
+    .isInt({ min: 1 })
+    .withMessage("Target bottles must be at least 1."),
+];
+
+module.exports = {
+  signupValidationRules,
+  loginValidationRules,
+  reviewValidationRules,
+  cartAddValidationRules,
+  cartUpdateValidationRules,
+  cartDeleteValidationRules,
+  productValidationRules,
+  productIdParamValidationRules,
+  idParamValidationRules,
+  profileValidationRules,
+  addressValidationRules,
+  addressIdParamValidationRules,
+  goalCreateValidationRules,
+  validateBadRequest,
+  validateRedirectToSignup,
+  validateRedirectToLogin,
+  validateRedirectToProducts,
+  validateRedirectToAdmin,
+  validateRedirectToAdminAffiliate,
+  validateRedirectToProfile,
+  validateRedirectToGoals,
+};

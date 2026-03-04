@@ -1,0 +1,32 @@
+<%- include("partials/header", { title: "Thank You" }) %>
+<%- include("partials/navbar") %>
+
+<main class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <article class="card shadow-sm">
+        <div class="card-body text-center py-5">
+          <h1 class="h3 mb-3">Thank you for your order!</h1>
+          <p class="text-muted mb-2">Your order has been placed successfully.</p>
+          <p class="mb-1"><strong>Order #:</strong> <%= order.id %></p>
+          <p class="mb-4">
+            <strong>Total:</strong> R<%= Number(order.total).toFixed(2) %>
+          </p>
+
+          <a href="/auth/orders" class="btn btn-primary">Go to Order History</a>
+          <p class="small text-muted mt-3 mb-0">
+            Redirecting to your order history in 4 seconds...
+          </p>
+        </div>
+      </article>
+    </div>
+  </div>
+</main>
+
+<script>
+  setTimeout(function () {
+    window.location.href = "/auth/orders";
+  }, 4000);
+</script>
+
+<%- include("partials/footer") %>

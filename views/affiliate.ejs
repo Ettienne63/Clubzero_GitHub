@@ -1,0 +1,136 @@
+<%- include("partials/header", { title: "Affiliate Dashboard" }) %>
+<%- include("partials/navbar") %>
+
+<main class="container py-5 affiliate-page">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+      <p class="affiliate-kicker mb-2">User Affiliate Program</p>
+      <h1 class="h3 mb-1">Affiliate Earnings</h1>
+      <p class="text-muted mb-0">
+        Earnings are calculated from your total order amount.
+      </p>
+    </div>
+    <a href="/auth/products" class="btn btn-outline-primary">Order More</a>
+  </div>
+
+  <section class="row g-3 mb-4">
+    <div class="col-12 col-md-6 col-lg-3">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Total Orders</p>
+          <p class="h4 mb-0"><%= stats.totalOrders %></p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-md-6 col-lg-3">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Products Ordered</p>
+          <p class="h4 mb-0"><%= stats.totalProductsOrdered %></p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-md-6 col-lg-3">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Total Order Value</p>
+          <p class="h4 mb-0">R<%= Number(stats.totalSpent).toFixed(2) %></p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-md-6 col-lg-3">
+      <article class="card h-100 affiliate-earnings-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold mb-2">
+            Estimated Earnings (<%= Math.round(stats.affiliateRate * 100) %>%)
+          </p>
+          <p class="h4 mb-0">R<%= Number(stats.estimatedEarnings).toFixed(2) %></p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="row g-3 mb-4">
+    <div class="col-12 col-md-4">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Pending</p>
+          <p class="h5 mb-1"><%= stats.pendingCount %> orders</p>
+          <p class="mb-0 text-muted">R<%= Number(stats.pendingEarnings).toFixed(2) %></p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-md-4">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Approved</p>
+          <p class="h5 mb-1"><%= stats.approvedCount %> orders</p>
+          <p class="mb-0 text-muted">R<%= Number(stats.approvedEarnings).toFixed(2) %></p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-md-4">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Paid</p>
+          <p class="h5 mb-1"><%= stats.paidCount %> orders</p>
+          <p class="mb-0 text-muted">R<%= Number(stats.paidEarnings).toFixed(2) %></p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="card shadow-sm">
+    <div class="card-body">
+      <h2 class="h5 mb-3">Order Breakdown</h2>
+      <% if (!orders || orders.length === 0) { %>
+      <div class="alert alert-info mb-0">
+        You have not placed any orders yet. Place an order to start earning.
+      </div>
+      <% } else { %>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead>
+            <tr>
+              <th scope="col">Order #</th>
+              <th scope="col">Date</th>
+              <th scope="col">Affiliate Status</th>
+              <th scope="col">Approved At</th>
+              <th scope="col">Paid At</th>
+              <th scope="col">Order Total</th>
+              <th scope="col">Commission</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% orders.forEach((order) => { %>
+            <tr>
+              <td><%= order.id %></td>
+              <td><%= new Date(order.createdAt).toLocaleDateString() %></td>
+              <td>
+                <% if (order.affiliateStatus === "pending") { %>
+                <span class="badge text-bg-warning">Pending</span>
+                <% } else if (order.affiliateStatus === "approved") { %>
+                <span class="badge text-bg-primary">Approved</span>
+                <% } else { %>
+                <span class="badge text-bg-success">Paid</span>
+                <% } %>
+              </td>
+              <td>
+                <%= order.affiliateApprovedAt ? new Date(order.affiliateApprovedAt).toLocaleString() : "-" %>
+              </td>
+              <td>
+                <%= order.affiliatePaidAt ? new Date(order.affiliatePaidAt).toLocaleString() : "-" %>
+              </td>
+              <td>R<%= Number(order.total).toFixed(2) %></td>
+              <td>R<%= Number(order.commission).toFixed(2) %></td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% } %>
+    </div>
+  </section>
+</main>
+
+<%- include("partials/footer") %>

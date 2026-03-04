@@ -1,0 +1,144 @@
+<%- include("partials/header", { title: "Checkout" }) %>
+<%- include("partials/navbar") %>
+
+<main class="container py-5">
+  <h1 class="h3 mb-4">Checkout</h1>
+
+  <% if (error) { %>
+  <div class="alert alert-danger"><%= error %></div>
+  <% } %>
+
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h2 class="h5 mb-3">Delivery Information</h2>
+          <form action="/auth/checkout" method="POST" class="row g-3">
+            <div class="col-md-6">
+              <label for="deliveryName" class="form-label">Full Name *</label>
+              <input
+                id="deliveryName"
+                name="deliveryName"
+                class="form-control"
+                value="<%= formData.deliveryName %>"
+                required
+              />
+            </div>
+            <div class="col-md-6">
+              <label for="deliveryPhone" class="form-label">Phone *</label>
+              <input
+                id="deliveryPhone"
+                name="deliveryPhone"
+                class="form-control"
+                value="<%= formData.deliveryPhone %>"
+                required
+              />
+            </div>
+            <div class="col-12">
+              <label for="deliveryAddressLine1" class="form-label"
+                >Address Line 1 *</label
+              >
+              <input
+                id="deliveryAddressLine1"
+                name="deliveryAddressLine1"
+                class="form-control"
+                value="<%= formData.deliveryAddressLine1 %>"
+                required
+              />
+            </div>
+            <div class="col-12">
+              <label for="deliveryAddressLine2" class="form-label"
+                >Address Line 2</label
+              >
+              <input
+                id="deliveryAddressLine2"
+                name="deliveryAddressLine2"
+                class="form-control"
+                value="<%= formData.deliveryAddressLine2 %>"
+              />
+            </div>
+            <div class="col-md-4">
+              <label for="deliveryCity" class="form-label">City *</label>
+              <input
+                id="deliveryCity"
+                name="deliveryCity"
+                class="form-control"
+                value="<%= formData.deliveryCity %>"
+                required
+              />
+            </div>
+            <div class="col-md-4">
+              <label for="deliveryState" class="form-label">State *</label>
+              <input
+                id="deliveryState"
+                name="deliveryState"
+                class="form-control"
+                value="<%= formData.deliveryState %>"
+                required
+              />
+            </div>
+            <div class="col-md-4">
+              <label for="deliveryPostalCode" class="form-label"
+                >Postal Code *</label
+              >
+              <input
+                id="deliveryPostalCode"
+                name="deliveryPostalCode"
+                class="form-control"
+                value="<%= formData.deliveryPostalCode %>"
+                required
+              />
+            </div>
+            <div class="col-md-6">
+              <label for="deliveryCountry" class="form-label">Country *</label>
+              <input
+                id="deliveryCountry"
+                name="deliveryCountry"
+                class="form-control"
+                value="<%= formData.deliveryCountry %>"
+                required
+              />
+            </div>
+            <div class="col-12 d-flex gap-2">
+              <button type="submit" class="btn btn-primary">Place Order</button>
+              <a href="/auth/cart" class="btn btn-outline-secondary"
+                >Back to Cart</a
+              >
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h2 class="h5 mb-3">Order Summary</h2>
+          <ul class="list-group list-group-flush">
+            <% cartItems.forEach((item) => { %>
+            <li
+              class="list-group-item d-flex justify-content-between align-items-center px-0"
+            >
+              <span
+                ><%= item.product.name %>
+                x
+                <%= item.quantity %></span
+              >
+              <span
+                >R<%= (Number(item.product.price) * item.quantity).toFixed(2) %></span
+              >
+            </li>
+            <% }) %>
+          </ul>
+          <hr />
+          <div class="d-flex justify-content-between fw-bold">
+            <span>Total</span>
+            <span>R<%= Number(total).toFixed(2) %></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<%- include("partials/footer") %>

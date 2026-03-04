@@ -1,0 +1,62 @@
+<%- include("partials/header", { title: "Order History" }) %>
+<%- include("partials/navbar") %>
+
+<main class="container py-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Order History</h1>
+    <a href="/auth/products" class="btn btn-outline-secondary">Shop More</a>
+  </div>
+
+  <% if (!orders || orders.length === 0) { %>
+  <div class="alert alert-info mb-0">
+    No orders yet. Place your first order from the cart page.
+  </div>
+  <% } else { %>
+  <div class="vstack gap-3">
+    <% orders.forEach((order) => { %>
+    <article class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between gap-2 mb-3">
+          <div>
+            <h2 class="h5 mb-1">Order #<%= order.id %></h2>
+            <p class="text-muted mb-0">
+              <%= new Date(order.createdAt).toLocaleString() %>
+            </p>
+          </div>
+          <div class="text-end">
+            <span class="badge text-bg-primary"><%= order.status %></span>
+            <p class="fw-bold mb-0 mt-2">
+              R<%= Number(order.total).toFixed(2) %>
+            </p>
+          </div>
+        </div>
+
+        <ul class="list-group list-group-flush">
+          <% order.orderItems.forEach((item) => { %>
+          <li class="list-group-item d-flex justify-content-between px-0">
+            <span
+              ><%= item.productName %>
+              x
+              <%= item.quantity %></span
+            >
+            <span>R<%= Number(item.subtotal).toFixed(2) %></span>
+          </li>
+          <% }) %>
+        </ul>
+
+        <hr />
+        <p class="mb-0 small text-muted">
+          Deliver to: <%= order.deliveryName %>, <%= order.deliveryAddressLine1
+          %><% if (order.deliveryAddressLine2) { %>, <%=
+          order.deliveryAddressLine2 %><% } %>, <%= order.deliveryCity %>, <%=
+          order.deliveryState %> <%= order.deliveryPostalCode %>, <%=
+          order.deliveryCountry %>.
+        </p>
+      </div>
+    </article>
+    <% }) %>
+  </div>
+  <% } %>
+</main>
+
+<%- include("partials/footer") %>

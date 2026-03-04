@@ -1,0 +1,317 @@
+<%- include("partials/header", { title: "Admin Panel" }) %>
+<%- include("partials/navbar") %>
+
+<main class="container py-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Admin Product Manager</h1>
+    <div class="d-flex gap-2">
+      <a href="/admin/affiliate" class="btn btn-outline-primary">
+        Affiliate Panel
+      </a>
+      <a href="/auth/products" class="btn btn-outline-secondary">
+        View Products Page
+      </a>
+    </div>
+  </div>
+
+  <% if (success) { %>
+  <div class="alert alert-success" role="alert"><%= success %></div>
+  <% } %>
+
+  <% if (error) { %>
+  <div class="alert alert-danger" role="alert"><%= error %></div>
+  <% } %>
+
+  <section class="card mb-4">
+    <div class="card-body">
+      <h2 class="h5">Add New Product</h2>
+      <form
+        action="/admin/products"
+        method="POST"
+        enctype="multipart/form-data"
+        class="row g-3"
+      >
+        <div class="col-md-6">
+          <label for="createName" class="form-label">Name</label>
+          <input
+            id="createName"
+            name="name"
+            class="form-control"
+            value="<%= formData.name || '' %>"
+            required
+          />
+        </div>
+        <div class="col-md-6">
+          <label for="createPrice" class="form-label">Price</label>
+          <input
+            id="createPrice"
+            name="price"
+            type="number"
+            min="0"
+            step="0.01"
+            class="form-control"
+            value="<%= formData.price || '' %>"
+            required
+          />
+        </div>
+        <div class="col-md-6">
+          <label for="createImage" class="form-label">Upload Image</label>
+          <input
+            id="createImage"
+            name="image"
+            type="file"
+            class="form-control"
+            accept="image/*"
+          />
+        </div>
+        <div class="col-md-6">
+          <label for="createImageUrl" class="form-label">Or Image URL</label>
+          <input
+            id="createImageUrl"
+            name="imageUrl"
+            class="form-control"
+            value="<%= formData.imageUrl || '' %>"
+            placeholder="https://example.com/image.jpg"
+          />
+        </div>
+        <div class="col-12">
+          <label for="createDescription" class="form-label">Description</label>
+          <textarea
+            id="createDescription"
+            name="description"
+            class="form-control"
+            rows="3"
+            required
+          >
+<%= formData.description || '' %></textarea
+          >
+        </div>
+        <div class="col-md-6">
+          <label for="createNutritionInfo" class="form-label">Nutrition Info</label>
+          <textarea
+            id="createNutritionInfo"
+            name="nutritionInfo"
+            class="form-control"
+            rows="3"
+            placeholder="Example: 0g added sugar, 15 calories per serving"
+          >
+<%= formData.nutritionInfo || '' %></textarea
+          >
+        </div>
+        <div class="col-md-6">
+          <label for="createIngredients" class="form-label">Ingredients</label>
+          <textarea
+            id="createIngredients"
+            name="ingredients"
+            class="form-control"
+            rows="3"
+            placeholder="Example: Carbonated water, natural flavors"
+          >
+<%= formData.ingredients || '' %></textarea
+          >
+        </div>
+        <div class="col-md-6">
+          <label for="createBestFor" class="form-label">Best For</label>
+          <textarea
+            id="createBestFor"
+            name="bestFor"
+            class="form-control"
+            rows="2"
+            placeholder="Example: Post-workout hydration"
+          >
+<%= formData.bestFor || '' %></textarea
+          >
+        </div>
+        <div class="col-md-6">
+          <label for="createStorageInfo" class="form-label">Storage and Delivery</label>
+          <textarea
+            id="createStorageInfo"
+            name="storageInfo"
+            class="form-control"
+            rows="2"
+            placeholder="Example: Keep chilled, delivery in 2-4 business days"
+          >
+<%= formData.storageInfo || '' %></textarea
+          >
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary">Add Product</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="h5 mb-0">Edit Existing Products</h2>
+      <span class="badge text-bg-secondary"
+        ><%= products ? products.length : 0 %> total</span
+      >
+    </div>
+
+    <% if (!products || products.length === 0) { %>
+    <p class="text-muted">
+      No products found yet. Add your first product above.
+    </p>
+    <% } else { %>
+    <div class="accordion" id="editProductsAccordion">
+      <% products.forEach((product, index) => { %>
+      <div class="accordion-item">
+        <h3 class="accordion-header" id="heading-<%= product.id %>">
+          <button
+            class="accordion-button <%= index === 0 ? '' : 'collapsed' %>"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#collapse-<%= product.id %>"
+            aria-expanded="<%= index === 0 ? 'true' : 'false' %>"
+            aria-controls="collapse-<%= product.id %>"
+          >
+            <span class="me-3 text-muted">#<%= product.id %></span>
+            <span class="fw-semibold"><%= product.name %></span>
+            <span class="ms-auto me-3 fw-bold"
+              >R<%= Number(product.price).toFixed(2) %></span
+            >
+          </button>
+        </h3>
+        <div
+          id="collapse-<%= product.id %>"
+          class="accordion-collapse collapse <%= index === 0 ? 'show' : '' %>"
+          aria-labelledby="heading-<%= product.id %>"
+          data-bs-parent="#editProductsAccordion"
+        >
+          <div class="accordion-body">
+            <form
+              action="/admin/products/<%= product.id %>/edit"
+              method="POST"
+              enctype="multipart/form-data"
+              class="row g-3"
+            >
+              <div class="col-md-3">
+                <img
+                  src="<%= product.imageUrl %>"
+                  alt="<%= product.name %>"
+                  class="rounded border admin-image-frame"
+                />
+              </div>
+              <div class="col-md-9">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label">Name</label>
+                    <input
+                      name="name"
+                      class="form-control"
+                      value="<%= product.name %>"
+                      required
+                    />
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Price</label>
+                    <input
+                      name="price"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      class="form-control"
+                      value="<%= product.price %>"
+                      required
+                    />
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Replace Image</label>
+                    <input
+                      name="image"
+                      type="file"
+                      class="form-control"
+                      accept="image/*"
+                    />
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Or Image URL</label>
+                    <input
+                      name="imageUrl"
+                      class="form-control"
+                      value="<%= product.imageUrl %>"
+                    />
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label">Description</label>
+                    <textarea
+                      name="description"
+                      class="form-control"
+                      rows="3"
+                      required
+                    >
+<%= product.description || '' %></textarea
+                    >
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Nutrition Info</label>
+                    <textarea
+                      name="nutritionInfo"
+                      class="form-control"
+                      rows="3"
+                    >
+<%= product.nutritionInfo || '' %></textarea
+                    >
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Ingredients</label>
+                    <textarea
+                      name="ingredients"
+                      class="form-control"
+                      rows="3"
+                    >
+<%= product.ingredients || '' %></textarea
+                    >
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Best For</label>
+                    <textarea
+                      name="bestFor"
+                      class="form-control"
+                      rows="2"
+                    >
+<%= product.bestFor || '' %></textarea
+                    >
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Storage and Delivery</label>
+                    <textarea
+                      name="storageInfo"
+                      class="form-control"
+                      rows="2"
+                    >
+<%= product.storageInfo || '' %></textarea
+                    >
+                  </div>
+                  <div class="col-12 d-flex justify-content-end gap-2">
+                    <button
+                      type="submit"
+                      formaction="/admin/products/<%= product.id %>/delete"
+                      formmethod="POST"
+                      class="btn btn-outline-danger"
+                      onclick="
+                        return confirm(
+                          'Delete this product? This cannot be undone.',
+                        );
+                      "
+                    >
+                      Delete
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                      Save Changes
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+    <% } %>
+  </section>
+</main>
+
+<%- include("partials/footer") %>

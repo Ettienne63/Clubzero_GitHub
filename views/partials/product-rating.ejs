@@ -1,0 +1,13 @@
+<% const ratingWrapperClass = typeof wrapperClass !== "undefined" ? wrapperClass : "mb-2"; %>
+<p class="<%= ratingWrapperClass %>">
+  <% if (product.averageRating) { %>
+  <span class="badge text-bg-warning text-dark">
+    Rating <%= Number(product.averageRating).toFixed(1) %>/5
+  </span>
+  <span class="text-muted small">
+    (<%= product.reviewCount %> review<%= product.reviewCount === 1 ? "" : "s" %>)
+  </span>
+  <% } else { %>
+  <span class="text-muted small">No reviews yet</span>
+  <% } %>
+</p>

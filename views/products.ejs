@@ -1,0 +1,177 @@
+<%- include("partials/header", { title: "Products" }) %>
+<%- include("partials/navbar") %>
+<main class="container py-5">
+  <section class="products-fun-hero mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+      <div>
+        <p class="products-fun-kicker mb-1">Club Zero Picks</p>
+        <h2 class="h4 mb-0 text-white">Find your next favorite flavor</h2>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <span class="products-fun-chip">Low Sugar</span>
+        <span class="products-fun-chip">Big Flavor</span>
+        <span class="products-fun-chip">Fresh Drops</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Products</h1>
+    <% if (user && user.isAdmin) { %>
+    <a href="/admin" class="btn btn-outline-primary">Manage Products</a>
+    <% } %>
+  </div>
+
+  <% if (success) { %>
+  <div class="alert alert-success"><%= success %></div>
+  <% } %>
+
+  <% if (error) { %>
+  <div class="alert alert-danger"><%= error %></div>
+  <% } %>
+
+  <% if (searchQuery) { %>
+  <p class="text-muted">Showing results for "<%= searchQuery %>"</p>
+  <% } %>
+
+  <% if (recentlyViewedProducts && recentlyViewedProducts.length > 0) { %>
+  <section class="mb-4">
+    <h2 class="h5 mb-3">Recently Viewed</h2>
+    <div class="row g-3">
+      <% recentlyViewedProducts.forEach((product) => { %>
+      <%- include("partials/recently-viewed-card", { product }) %>
+      <% }) %>
+    </div>
+  </section>
+  <% } %>
+
+  <% if (!products || products.length === 0) { %>
+  <div class="alert alert-info mb-0">
+    <% if (searchQuery) { %>
+    No products matched your search.
+    <% } else { %>
+    No products available yet. Admin can add products from the admin page.
+    <% } %>
+  </div>
+  <% } else { %>
+  <div class="row g-4">
+    <% products.forEach((product) => { %>
+    <% const hasPurchased = Array.isArray(purchasedProductIds) &&
+    purchasedProductIds.includes(product.id); %> <% const myReview =
+    myReviewsByProduct ? myReviewsByProduct[product.id] : null; %>
+    <div class="col-12">
+      <article class="card shadow-sm product-list-card">
+        <div class="row g-0">
+          <div class="col-md-3">
+            <a href="/auth/products/<%= product.id %>" class="d-block h-100">
+              <img
+                src="<%= product.imageUrl %>"
+                class="img-fluid w-100 product-list-image rounded-start"
+                alt="<%= product.name %>"
+              />
+            </a>
+          </div>
+          <div class="col-md-9">
+            <div class="card-body">
+              <div
+                class="d-flex flex-column flex-lg-row justify-content-between gap-2"
+              >
+                <div>
+                  <h2 class="h5 card-title mb-1">
+                    <a
+                      href="/auth/products/<%= product.id %>"
+                      class="text-decoration-none product-title-link"
+                    >
+                      <%= product.name %>
+                    </a>
+                  </h2>
+                  <p class="card-text text-muted mb-2">
+                    <%= product.description || "No description" %>
+                  </p>
+                  <%- include("partials/product-rating", { product, wrapperClass: "mb-2" }) %>
+                </div>
+                <p class="fw-bold mb-0 align-self-start product-price-pill">
+                  R<%= Number(product.price).toFixed(2) %>
+                </p>
+              </div>
+
+              <p class="small text-muted mb-0">Tap image or product name for full details.</p>
+
+              <div class="d-flex flex-wrap gap-2 mt-3">
+                <% if (user) { %>
+                <form action="/auth/cart/add" method="POST" class="d-flex gap-2">
+                  <input type="hidden" name="productId" value="<%= product.id %>" />
+                  <input
+                    type="number"
+                    name="quantity"
+                    min="1"
+                    value="1"
+                    class="form-control"
+                    style="max-width: 90px"
+                  />
+                  <button type="submit" class="btn btn-primary">Add to Cart</button>
+                </form>
+                <% } else { %>
+                <a href="/auth/login" class="btn btn-outline-primary">Login to buy</a>
+                <% } %>
+              </div>
+
+              <% if (user) { %>
+              <div class="mt-4">
+                <% if (hasPurchased) { %>
+                <h3 class="h6 mb-2">
+                  <%= myReview ? "Update your review" : "Leave a review" %>
+                </h3>
+                <form
+                  action="/auth/products/<%= product.id %>/reviews"
+                  method="POST"
+                  class="row g-2"
+                >
+                  <div class="col-sm-3">
+                    <label class="form-label mb-1">Rating</label>
+                    <select name="rating" class="form-select" required>
+                      <% for (let i = 5; i >= 1; i--) { %>
+                      <option
+                        value="<%= i %>"
+                        <%=myReview && myReview.rating === i ? "selected" : "" %>
+                      >
+                        <%= i %>/5
+                      </option>
+                      <% } %>
+                    </select>
+                  </div>
+                  <div class="col-sm-9">
+                    <label class="form-label mb-1">Comment</label>
+                    <input
+                      type="text"
+                      name="comment"
+                      maxlength="300"
+                      class="form-control"
+                      value="<%= myReview ? myReview.comment : '' %>"
+                      placeholder="Share your experience"
+                    />
+                  </div>
+                  <div class="col-12">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm">
+                      Save Review
+                    </button>
+                  </div>
+                </form>
+                <% } else { %>
+                <p class="small text-muted mb-0">
+                  Buy this product first to leave a review.
+                </p>
+                <% } %>
+              </div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+    <% }) %>
+  </div>
+  <% } %>
+</main>
+<%- include("partials/footer") %>
+
