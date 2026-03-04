@@ -19,10 +19,13 @@ exports.getCart = async (req, res) => {
     (sum, item) => sum + Number(item.product.price) * item.quantity,
     0,
   );
+  const hasUnavailableItems = cartItems.some((item) => !item.product?.isActive);
 
   return res.render("cart", {
     cartItems,
     total,
+    error: req.query.error || null,
+    hasUnavailableItems,
   });
 };
 
@@ -39,13 +42,17 @@ exports.addToCart = async (req, res) => {
     return res.status(400).send("Invalid product id");
   }
 
-  const product = await prisma.product.findUnique({
-    where: { id: productId },
+  const product = await prisma.product.findFirst({
+    where: { id: productId, isActive: true },
     select: { id: true },
   });
 
   if (!product) {
-    return res.status(404).send("Product not found");
+    return res.redirect(
+      `/auth/products?error=${encodeURIComponent(
+        "This product is no longer available.",
+      )}`,
+    );
   }
 
   await prisma.cartItem.upsert({

@@ -38,7 +38,7 @@
       <ul class="navbar-nav ms-3">
         <% const isLoggedIn = typeof user !== "undefined" && Boolean(user); %>
         <% const showAdmin = isLoggedIn && Boolean(user.isAdmin); %>
-        <% const showGoalTracker = isLoggedIn && String(user.email || "").toLowerCase().trim().endsWith(".clubzero@gmail.co.za"); %>
+        <% const showGoalTracker = isLoggedIn && String(user.email || "").toLowerCase().trim().endsWith("@clubzero.co.za"); %>
         <% if (isLoggedIn) { %> <% if (showAdmin) { %>
         <li class="nav-item">
           <a class="nav-link" href="/admin">Admin</a>

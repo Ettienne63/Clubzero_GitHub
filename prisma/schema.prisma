@@ -33,6 +33,7 @@ model Product{
   description String?
   price Float
   imageUrl String
+  isActive Boolean @default(true)
   nutritionInfo String?
   ingredients String?
   bestFor String?

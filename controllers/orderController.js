@@ -40,6 +40,9 @@ const getCartWithTotal = async (userId) => {
   return { cartItems, total };
 };
 
+const hasUnavailableItems = (cartItems) =>
+  cartItems.some((item) => !item.product?.isActive);
+
 exports.getCheckout = async (req, res) => {
   const userId = getUserId(req);
 
@@ -51,6 +54,14 @@ exports.getCheckout = async (req, res) => {
 
   if (!cartItems.length) {
     return res.redirect("/auth/cart");
+  }
+
+  if (hasUnavailableItems(cartItems)) {
+    return res.redirect(
+      `/auth/cart?error=${encodeURIComponent(
+        "Some items are no longer available. Remove them to continue.",
+      )}`,
+    );
   }
 
   return res.render("checkout", {
@@ -73,6 +84,14 @@ exports.postCheckout = async (req, res) => {
 
   if (!cartItems.length) {
     return res.redirect("/auth/cart");
+  }
+
+  if (hasUnavailableItems(cartItems)) {
+    return res.redirect(
+      `/auth/cart?error=${encodeURIComponent(
+        "Some items are no longer available. Remove them to continue.",
+      )}`,
+    );
   }
 
   if (!hasAllRequiredDeliveryFields(formData)) {

@@ -378,11 +378,12 @@ main {
   border-radius: 18px;
   overflow: hidden;
   box-shadow: 0 14px 30px rgba(18, 38, 63, 0.12);
+  height: 420px;
 }
 
 .about-intro-image {
   width: 100%;
-  height: 340px;
+  height: 100%;
   display: block;
   object-fit: cover;
   object-position: center;
@@ -398,7 +399,11 @@ main {
   }
 
   .about-intro-image {
-    height: 260px;
+    height: 100%;
+  }
+
+  .about-image-wrap {
+    height: 300px;
   }
 
   .product-list-image {

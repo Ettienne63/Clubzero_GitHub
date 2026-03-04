@@ -1,6 +1,6 @@
 const { prisma } = require("../prisma/lib/prisma");
 
-const GOAL_TRACKER_EMAIL_SUFFIX = ".clubzero@gmail.co.za";
+const GOAL_TRACKER_EMAIL_SUFFIX = "@clubzero.co.za";
 
 const normalizeEmail = (value) => (value || "").toString().trim().toLowerCase();
 const getUsernameFromEmail = (email) => normalizeEmail(email).split("@")[0] || "";

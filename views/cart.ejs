@@ -7,13 +7,24 @@
     <a href="/auth/products" class="btn btn-outline-secondary">Continue Shopping</a>
   </div>
 
+  <% if (error) { %>
+  <div class="alert alert-danger"><%= error %></div>
+  <% } %>
+
   <% if (!cartItems || cartItems.length === 0) { %>
   <div class="alert alert-info mb-0">
     Your cart is empty. Add products from the products page.
   </div>
   <% } else { %>
+  <% if (hasUnavailableItems) { %>
+  <div class="alert alert-warning">
+    Some items in your cart are hidden and cannot be checked out.
+  </div>
+  <% } %>
   <div class="d-flex justify-content-end mb-3">
+    <% if (!hasUnavailableItems) { %>
     <a href="/auth/checkout" class="btn btn-success">Proceed to Checkout</a>
+    <% } %>
   </div>
   <div class="table-responsive">
     <table class="table align-middle">
@@ -42,6 +53,9 @@
                 <div class="text-muted small">
                   <%= item.product.description || "No description" %>
                 </div>
+                <% if (!item.product.isActive) { %>
+                <div class="small text-danger">Unavailable</div>
+                <% } %>
               </div>
             </div>
           </td>

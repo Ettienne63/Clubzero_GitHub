@@ -21,7 +21,10 @@ env.config();
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
-const uploadsDir = path.join(__dirname, "public", "uploads");
+const uploadsDir = process.env.UPLOAD_DIR
+  ? path.resolve(process.env.UPLOAD_DIR)
+  : path.join(__dirname, "public", "uploads");
+const legacyUploadsDir = path.join(__dirname, "public", "uploads");
 
 if (!fs.existsSync(uploadsDir)) {
   try {
@@ -62,6 +65,8 @@ app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
 app.use(express.urlencoded({ extended: true }));
+app.use("/uploads", express.static(uploadsDir));
+app.use("/uploads", express.static(legacyUploadsDir));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(
   session({
@@ -108,6 +113,13 @@ app.post(
   productIdParamValidationRules,
   validateRedirectToAdmin,
   asyncHandler(productController.deleteProduct),
+);
+app.post(
+  "/admin/products/:id/restore",
+  requireAdmin,
+  productIdParamValidationRules,
+  validateRedirectToAdmin,
+  asyncHandler(productController.restoreProduct),
 );
 app.post(
   "/admin/affiliate/:id/approve",

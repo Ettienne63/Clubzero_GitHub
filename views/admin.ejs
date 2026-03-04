@@ -168,6 +168,10 @@
           >
             <span class="me-3 text-muted">#<%= product.id %></span>
             <span class="fw-semibold"><%= product.name %></span>
+            <span
+              class="badge ms-2 <%= product.isActive ? 'text-bg-success' : 'text-bg-secondary' %>"
+              ><%= product.isActive ? "Visible" : "Hidden" %></span
+            >
             <span class="ms-auto me-3 fw-bold"
               >R<%= Number(product.price).toFixed(2) %></span
             >
@@ -285,6 +289,7 @@
                     >
                   </div>
                   <div class="col-12 d-flex justify-content-end gap-2">
+                    <% if (product.isActive) { %>
                     <button
                       type="submit"
                       formaction="/admin/products/<%= product.id %>/delete"
@@ -292,12 +297,22 @@
                       class="btn btn-outline-danger"
                       onclick="
                         return confirm(
-                          'Delete this product? This cannot be undone.',
+                          'Hide this product from the storefront?',
                         );
                       "
                     >
-                      Delete
+                      Hide Product
                     </button>
+                    <% } else { %>
+                    <button
+                      type="submit"
+                      formaction="/admin/products/<%= product.id %>/restore"
+                      formmethod="POST"
+                      class="btn btn-outline-primary"
+                    >
+                      Restore Product
+                    </button>
+                    <% } %>
                     <button type="submit" class="btn btn-success">
                       Save Changes
                     </button>

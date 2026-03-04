@@ -83,18 +83,23 @@ const parseProductInput = (body, file, options = {}) => {
   };
 };
 
-const getProducts = (search = "") => {
+const getProducts = (search = "", options = {}) => {
+  const { includeInactive = false } = options;
   const trimmedSearch = search.trim();
-
-  return prisma.product.findMany({
-    where: trimmedSearch
+  const where = {
+    ...(includeInactive ? {} : { isActive: true }),
+    ...(trimmedSearch
       ? {
           OR: [
             { name: { contains: trimmedSearch, mode: "insensitive" } },
             { description: { contains: trimmedSearch, mode: "insensitive" } },
           ],
         }
-      : undefined,
+      : {}),
+  };
+
+  return prisma.product.findMany({
+    where,
     include: productWithReviewsInclude,
     orderBy: { id: "desc" },
   });
@@ -106,7 +111,7 @@ exports.listProducts = async (req, res) => {
   const [products, recentlyViewedProductsRaw] = await Promise.all([
     getProducts(searchQuery),
     prisma.product.findMany({
-      where: { id: { in: getRecentlyViewedProductIds(req) } },
+      where: { id: { in: getRecentlyViewedProductIds(req) }, isActive: true },
       include: productWithReviewsInclude,
     }),
   ]);
@@ -162,9 +167,13 @@ exports.listProducts = async (req, res) => {
 
 exports.getProductDetails = async (req, res) => {
   const productId = Number.parseInt(req.params.id, 10);
+  const isAdmin = req.session?.user?.role === "ADMIN";
 
-  const product = await prisma.product.findUnique({
-    where: { id: productId },
+  const product = await prisma.product.findFirst({
+    where: {
+      id: productId,
+      ...(isAdmin ? {} : { isActive: true }),
+    },
     include: productWithReviewsInclude,
   });
 
@@ -192,6 +201,19 @@ exports.createReview = async (req, res) => {
 
   if (!Number.isInteger(userId)) {
     return res.redirect("/auth/login");
+  }
+
+  const product = await prisma.product.findFirst({
+    where: { id: productId, isActive: true },
+    select: { id: true },
+  });
+
+  if (!product) {
+    return res.redirect(
+      `/auth/products?error=${encodeURIComponent(
+        "This product is no longer available.",
+      )}`,
+    );
   }
 
   const purchased = await prisma.orderItem.findFirst({
@@ -233,7 +255,7 @@ exports.createReview = async (req, res) => {
 };
 
 exports.getAdminPage = async (req, res) => {
-  const products = await getProducts();
+  const products = await getProducts("", { includeInactive: true });
 
   res.render("admin", {
     products,
@@ -336,17 +358,51 @@ exports.deleteProduct = async (req, res) => {
     return res.status(400).send("Invalid product id");
   }
 
-  try {
-    await prisma.product.delete({
-      where: { id: productId },
-    });
+  const existingProduct = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { id: true, isActive: true },
+  });
 
-    return res.redirect("/admin?success=Product+deleted");
-  } catch (error) {
-    if (error.code === "P2025") {
-      return res.redirect("/admin?error=Product+not+found");
-    }
-
-    return res.redirect("/admin?error=Unable+to+delete+product");
+  if (!existingProduct) {
+    return res.redirect("/admin?error=Product+not+found");
   }
+
+  if (!existingProduct.isActive) {
+    return res.redirect("/admin?success=Product+already+hidden");
+  }
+
+  await prisma.product.update({
+    where: { id: productId },
+    data: { isActive: false },
+  });
+
+  return res.redirect("/admin?success=Product+hidden");
+};
+
+exports.restoreProduct = async (req, res) => {
+  const productId = Number.parseInt(req.params.id, 10);
+
+  if (!Number.isInteger(productId)) {
+    return res.status(400).send("Invalid product id");
+  }
+
+  const existingProduct = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { id: true, isActive: true },
+  });
+
+  if (!existingProduct) {
+    return res.redirect("/admin?error=Product+not+found");
+  }
+
+  if (existingProduct.isActive) {
+    return res.redirect("/admin?success=Product+already+visible");
+  }
+
+  await prisma.product.update({
+    where: { id: productId },
+    data: { isActive: true },
+  });
+
+  return res.redirect("/admin?success=Product+restored");
 };
