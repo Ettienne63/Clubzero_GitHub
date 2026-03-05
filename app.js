@@ -11,11 +11,14 @@ const {
   productValidationRules,
   productIdParamValidationRules,
   idParamValidationRules,
+  contactValidationRules,
   validateRedirectToAdmin,
   validateRedirectToAdminAffiliate,
+  validateRedirectToContact,
 } = require("./middleware/validation");
 const productController = require("./controllers/productController");
 const orderController = require("./controllers/orderController");
+const contactController = require("./controllers/contactController");
 
 env.config();
 
@@ -84,7 +87,13 @@ app.use((req, res, next) => {
 
 app.get("/", (_req, res) => res.render("home"));
 app.get("/about", (_req, res) => res.render("about"));
-app.get("/contact", (_req, res) => res.render("contact"));
+app.get("/contact", contactController.getContact);
+app.post(
+  "/contact",
+  contactValidationRules,
+  validateRedirectToContact,
+  asyncHandler(contactController.postContact),
+);
 app.get("/admin", requireAdmin, asyncHandler(productController.getAdminPage));
 app.get(
   "/admin/affiliate",

@@ -51,6 +51,10 @@ const validateRedirectToGoals = handleValidationError((_req, res, message) =>
   res.redirect(`/auth/goals?error=${encodeURIComponent(message)}`),
 );
 
+const validateRedirectToContact = handleValidationError((_req, res, message) =>
+  res.redirect(`/contact?error=${encodeURIComponent(message)}`),
+);
+
 const signupValidationRules = [
   body("name").trim().notEmpty().withMessage("Name is required."),
   body("email").trim().isEmail().withMessage("Valid email is required."),
@@ -161,6 +165,27 @@ const goalCreateValidationRules = [
     .withMessage("Target bottles must be at least 1."),
 ];
 
+const contactValidationRules = [
+  body("name")
+    .trim()
+    .notEmpty()
+    .withMessage("Name is required.")
+    .isLength({ max: 120 })
+    .withMessage("Name must be 120 characters or fewer."),
+  body("email")
+    .trim()
+    .isEmail()
+    .withMessage("Valid email is required.")
+    .isLength({ max: 254 })
+    .withMessage("Email must be 254 characters or fewer."),
+  body("message")
+    .trim()
+    .notEmpty()
+    .withMessage("Message is required.")
+    .isLength({ max: 2000 })
+    .withMessage("Message must be 2000 characters or fewer."),
+];
+
 module.exports = {
   signupValidationRules,
   loginValidationRules,
@@ -175,6 +200,7 @@ module.exports = {
   addressValidationRules,
   addressIdParamValidationRules,
   goalCreateValidationRules,
+  contactValidationRules,
   validateBadRequest,
   validateRedirectToSignup,
   validateRedirectToLogin,
@@ -183,4 +209,5 @@ module.exports = {
   validateRedirectToAdminAffiliate,
   validateRedirectToProfile,
   validateRedirectToGoals,
+  validateRedirectToContact,
 };
