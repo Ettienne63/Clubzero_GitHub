@@ -84,6 +84,7 @@ app.use((req, res, next) => {
 
 app.get("/", (_req, res) => res.render("home"));
 app.get("/about", (_req, res) => res.render("about"));
+app.get("/contact", (_req, res) => res.render("contact"));
 app.get("/admin", requireAdmin, asyncHandler(productController.getAdminPage));
 app.get(
   "/admin/affiliate",
