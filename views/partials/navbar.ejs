@@ -57,7 +57,12 @@
         <% } %>
         <% if (!showAdmin) { %>
         <li class="nav-item">
-          <a class="nav-link" href="/auth/cart">Cart</a>
+          <a class="nav-link d-flex align-items-center gap-2" href="/auth/cart">
+            <span>Cart</span>
+            <% if (Number(cartCount || 0) > 0) { %>
+            <span class="badge rounded-pill text-bg-primary"><%= Number(cartCount) %></span>
+            <% } %>
+          </a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="/auth/profile">Profile</a>

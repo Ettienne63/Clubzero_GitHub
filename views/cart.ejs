@@ -39,7 +39,7 @@
       </thead>
       <tbody>
         <% cartItems.forEach((item) => { %>
-        <tr>
+        <tr data-cart-item-row="<%= item.id %>">
           <td>
             <div class="d-flex align-items-center gap-3">
               <img
@@ -61,7 +61,12 @@
           </td>
           <td>R<%= Number(item.product.price).toFixed(2) %></td>
           <td>
-            <form action="/auth/cart/<%= item.id %>/update" method="POST" class="d-flex gap-2">
+            <form
+              action="/auth/cart/<%= item.id %>/update"
+              method="POST"
+              class="d-flex gap-2"
+              data-cart-update-form
+            >
               <input
                 type="number"
                 name="quantity"
@@ -69,12 +74,11 @@
                 value="<%= item.quantity %>"
                 class="form-control"
                 style="max-width: 90px"
-                onchange="this.form.requestSubmit()"
               />
             </form>
-            <div class="small text-muted mt-1"><%= item.quantity * 12 %> bottles</div>
+            <div class="small text-muted mt-1" data-bottles-count><%= item.quantity * 12 %> bottles</div>
           </td>
-          <td>R<%= (Number(item.product.price) * item.quantity).toFixed(2) %></td>
+          <td data-subtotal-cell>R<%= (Number(item.product.price) * item.quantity).toFixed(2) %></td>
           <td>
             <form action="/auth/cart/<%= item.id %>/delete" method="POST">
               <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
@@ -86,7 +90,7 @@
       <tfoot>
         <tr>
           <th colspan="3" class="text-end">Total</th>
-          <th>R<%= Number(total).toFixed(2) %></th>
+          <th id="cart-total-cell">R<%= Number(total).toFixed(2) %></th>
           <th></th>
         </tr>
       </tfoot>
@@ -94,5 +98,105 @@
   </div>
   <% } %>
 </main>
+
+<script>
+  (() => {
+    const updateForms = document.querySelectorAll("[data-cart-update-form]");
+    if (!updateForms.length) return;
+
+    const totalCell = document.getElementById("cart-total-cell");
+    const formatCurrency = (amount) => `R${Number(amount).toFixed(2)}`;
+
+    updateForms.forEach((form) => {
+      const quantityInput = form.querySelector('input[name="quantity"]');
+      if (!quantityInput) return;
+
+      let timerId = null;
+
+      const submitUpdate = async () => {
+        const formData = new URLSearchParams();
+        formData.set("quantity", quantityInput.value);
+
+        quantityInput.disabled = true;
+
+        try {
+          const response = await fetch(form.action, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+              "X-Requested-With": "XMLHttpRequest",
+              Accept: "application/json",
+            },
+            body: formData.toString(),
+          });
+
+          if (!response.ok) {
+            const message = await response.text();
+            throw new Error(message || "Unable to update cart item.");
+          }
+
+          const payload = await response.json();
+          if (!payload || payload.success !== true) {
+            throw new Error("Invalid update response.");
+          }
+
+          if (payload.removed) {
+            window.location.reload();
+            return;
+          }
+
+          const row = form.closest("[data-cart-item-row]");
+          if (row) {
+            const bottles = row.querySelector("[data-bottles-count]");
+            const subtotalCell = row.querySelector("[data-subtotal-cell]");
+            if (bottles) {
+              bottles.textContent = `${payload.bottles} bottles`;
+            }
+            if (subtotalCell) {
+              subtotalCell.textContent = formatCurrency(payload.subtotal);
+            }
+          }
+
+          quantityInput.value = payload.quantity;
+          if (totalCell) {
+            totalCell.textContent = formatCurrency(payload.total);
+          }
+
+          const cartLink = document.querySelector('a[href="/auth/cart"]');
+          if (cartLink) {
+            const badge = cartLink.querySelector(".badge");
+            const cartCount = Number(payload.cartCount || 0);
+            if (cartCount > 0) {
+              if (badge) {
+                badge.textContent = String(cartCount);
+              }
+            } else if (badge) {
+              badge.remove();
+            }
+          }
+
+        } catch (error) {
+          window.alert(error.message || "Unable to update cart item.");
+        } finally {
+          quantityInput.disabled = false;
+        }
+      };
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        submitUpdate();
+      });
+
+      quantityInput.addEventListener("input", () => {
+        if (timerId) {
+          clearTimeout(timerId);
+        }
+        timerId = setTimeout(() => {
+          form.requestSubmit();
+        }, 250);
+      });
+    });
+  })();
+</script>
 
 <%- include("partials/footer") %>

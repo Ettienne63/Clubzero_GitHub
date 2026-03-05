@@ -2,8 +2,11 @@ const { prisma } = require("../prisma/lib/prisma");
 const AFFILIATE_RATE = 0.05;
 
 const getUserId = (req) => Number.parseInt(req.session?.user?.id, 10);
+const hasAddressBookModel = () => Boolean(prisma.addressBookEntry);
 
 const buildCheckoutFormData = (body = {}) => ({
+  selectedAddressId: (body.selectedAddressId || "").toString().trim(),
+  saveAddress: body.saveAddress === "on",
   deliveryName: (body.deliveryName || "").trim(),
   deliveryPhone: (body.deliveryPhone || "").trim(),
   deliveryAddressLine1: (body.deliveryAddressLine1 || "").trim(),
@@ -43,6 +46,17 @@ const getCartWithTotal = async (userId) => {
 const hasUnavailableItems = (cartItems) =>
   cartItems.some((item) => !item.product?.isActive);
 
+const getAddressBookEntries = async (userId) => {
+  if (!hasAddressBookModel()) {
+    return [];
+  }
+
+  return prisma.addressBookEntry.findMany({
+    where: { userId },
+    orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+  });
+};
+
 exports.getCheckout = async (req, res) => {
   const userId = getUserId(req);
 
@@ -51,6 +65,7 @@ exports.getCheckout = async (req, res) => {
   }
 
   const { cartItems, total } = await getCartWithTotal(userId);
+  const savedAddresses = await getAddressBookEntries(userId);
 
   if (!cartItems.length) {
     return res.redirect("/auth/cart");
@@ -67,6 +82,7 @@ exports.getCheckout = async (req, res) => {
   return res.render("checkout", {
     cartItems,
     total,
+    savedAddresses,
     error: null,
     formData: buildCheckoutFormData(),
   });
@@ -81,6 +97,8 @@ exports.postCheckout = async (req, res) => {
 
   const formData = buildCheckoutFormData(req.body);
   const { cartItems, total } = await getCartWithTotal(userId);
+  const savedAddresses = await getAddressBookEntries(userId);
+  const selectedAddressId = Number.parseInt(formData.selectedAddressId, 10);
 
   if (!cartItems.length) {
     return res.redirect("/auth/cart");
@@ -94,10 +112,28 @@ exports.postCheckout = async (req, res) => {
     );
   }
 
+  if (!hasAllRequiredDeliveryFields(formData) && Number.isInteger(selectedAddressId)) {
+    const selectedAddress = savedAddresses.find(
+      (address) => address.id === selectedAddressId,
+    );
+
+    if (selectedAddress) {
+      formData.deliveryName = selectedAddress.recipientName || "";
+      formData.deliveryPhone = selectedAddress.phone || "";
+      formData.deliveryAddressLine1 = selectedAddress.addressLine1 || "";
+      formData.deliveryAddressLine2 = selectedAddress.addressLine2 || "";
+      formData.deliveryCity = selectedAddress.city || "";
+      formData.deliveryState = selectedAddress.state || "";
+      formData.deliveryPostalCode = selectedAddress.postalCode || "";
+      formData.deliveryCountry = selectedAddress.country || "";
+    }
+  }
+
   if (!hasAllRequiredDeliveryFields(formData)) {
     return res.status(400).render("checkout", {
       cartItems,
       total,
+      savedAddresses,
       error: "Please fill in all required delivery fields.",
       formData,
     });
@@ -127,6 +163,40 @@ exports.postCheckout = async (req, res) => {
         },
       },
     });
+
+    if (formData.saveAddress && hasAddressBookModel()) {
+      const existingAddress = await tx.addressBookEntry.findFirst({
+        where: {
+          userId,
+          recipientName: formData.deliveryName,
+          phone: formData.deliveryPhone,
+          addressLine1: formData.deliveryAddressLine1,
+          addressLine2: formData.deliveryAddressLine2 || null,
+          city: formData.deliveryCity,
+          state: formData.deliveryState,
+          postalCode: formData.deliveryPostalCode,
+          country: formData.deliveryCountry,
+        },
+        select: { id: true },
+      });
+
+      if (!existingAddress) {
+        await tx.addressBookEntry.create({
+          data: {
+            userId,
+            label: "Checkout Address",
+            recipientName: formData.deliveryName,
+            phone: formData.deliveryPhone,
+            addressLine1: formData.deliveryAddressLine1,
+            addressLine2: formData.deliveryAddressLine2 || null,
+            city: formData.deliveryCity,
+            state: formData.deliveryState,
+            postalCode: formData.deliveryPostalCode,
+            country: formData.deliveryCountry,
+          },
+        });
+      }
+    }
 
     await tx.cartItem.deleteMany({ where: { userId } });
 

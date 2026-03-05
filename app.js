@@ -19,6 +19,7 @@ const {
 const productController = require("./controllers/productController");
 const orderController = require("./controllers/orderController");
 const contactController = require("./controllers/contactController");
+const { prisma } = require("./prisma/lib/prisma");
 
 env.config();
 
@@ -80,9 +81,29 @@ app.use(
   }),
 );
 
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   res.locals.user = req.session.user || null;
-  next();
+  res.locals.cartCount = 0;
+
+  const userId = Number.parseInt(req.session?.user?.id, 10);
+  const isAdmin = Boolean(req.session?.user?.isAdmin);
+
+  if (!Number.isInteger(userId) || isAdmin) {
+    return next();
+  }
+
+  try {
+    const cartAggregate = await prisma.cartItem.aggregate({
+      where: { userId },
+      _sum: { quantity: true },
+    });
+
+    res.locals.cartCount = Number(cartAggregate._sum.quantity || 0);
+  } catch (error) {
+    console.error("Failed to load cart count:", error);
+  }
+
+  return next();
 });
 
 app.get("/", (_req, res) => res.render("home"));

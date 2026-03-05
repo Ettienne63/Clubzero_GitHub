@@ -14,6 +14,31 @@
         <div class="card-body">
           <h2 class="h5 mb-3">Delivery Information</h2>
           <form action="/auth/checkout" method="POST" class="row g-3">
+            <% if (savedAddresses && savedAddresses.length > 0) { %>
+            <div class="col-12">
+              <label for="selectedAddressId" class="form-label">Choose Saved Address</label>
+              <select id="selectedAddressId" name="selectedAddressId" class="form-select">
+                <option value="">Use manual entry</option>
+                <% savedAddresses.forEach((address) => { %>
+                <option
+                  value="<%= address.id %>"
+                  <%= String(formData.selectedAddressId || "") === String(address.id) ? "selected" : "" %>
+                  data-recipient-name="<%= address.recipientName %>"
+                  data-phone="<%= address.phone %>"
+                  data-address-line1="<%= address.addressLine1 %>"
+                  data-address-line2="<%= address.addressLine2 || "" %>"
+                  data-city="<%= address.city %>"
+                  data-state="<%= address.state %>"
+                  data-postal-code="<%= address.postalCode %>"
+                  data-country="<%= address.country %>"
+                >
+                  <%= address.label || "Saved Address" %> - <%= address.addressLine1 %>, <%= address.city %>
+                </option>
+                <% }) %>
+              </select>
+              <div class="form-text">Select an address to autofill the delivery fields.</div>
+            </div>
+            <% } %>
             <div class="col-md-6">
               <label for="deliveryName" class="form-label">Full Name *</label>
               <input
@@ -99,6 +124,20 @@
                 required
               />
             </div>
+            <div class="col-12">
+              <div class="form-check">
+                <input
+                  id="saveAddress"
+                  name="saveAddress"
+                  type="checkbox"
+                  class="form-check-input"
+                  <%= formData.saveAddress ? "checked" : "" %>
+                />
+                <label for="saveAddress" class="form-check-label">
+                  Save this as new address
+                </label>
+              </div>
+            </div>
             <div class="col-12 d-flex gap-2">
               <button type="submit" class="btn btn-primary">Place Order</button>
               <a href="/auth/cart" class="btn btn-outline-secondary"
@@ -140,5 +179,42 @@
     </div>
   </div>
 </main>
+
+<script>
+  (() => {
+    const addressSelect = document.getElementById("selectedAddressId");
+    if (!addressSelect) return;
+
+    const fieldMap = {
+      deliveryName: "recipientName",
+      deliveryPhone: "phone",
+      deliveryAddressLine1: "addressLine1",
+      deliveryAddressLine2: "addressLine2",
+      deliveryCity: "city",
+      deliveryState: "state",
+      deliveryPostalCode: "postalCode",
+      deliveryCountry: "country",
+    };
+
+    const applyAddress = () => {
+      const selectedOption = addressSelect.options[addressSelect.selectedIndex];
+      if (!selectedOption || !selectedOption.value) {
+        return;
+      }
+
+      Object.entries(fieldMap).forEach(([inputId, dataKey]) => {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        input.value = selectedOption.dataset[dataKey] || "";
+      });
+    };
+
+    addressSelect.addEventListener("change", applyAddress);
+
+    if (addressSelect.value) {
+      applyAddress();
+    }
+  })();
+</script>
 
 <%- include("partials/footer") %>

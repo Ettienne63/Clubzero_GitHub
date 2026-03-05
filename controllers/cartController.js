@@ -1,6 +1,8 @@
 const { prisma } = require("../prisma/lib/prisma");
 
 const getUserId = (req) => Number.parseInt(req.session?.user?.id, 10);
+const isAjaxRequest = (req) =>
+  req.xhr || req.get("X-Requested-With") === "XMLHttpRequest";
 
 exports.getCart = async (req, res) => {
   const userId = getUserId(req);
@@ -99,13 +101,70 @@ exports.updateCartItem = async (req, res) => {
 
   if (!Number.isInteger(quantity) || quantity < 1) {
     await prisma.cartItem.delete({ where: { id: itemId } });
+
+    if (isAjaxRequest(req)) {
+      const cartItems = await prisma.cartItem.findMany({
+        where: { userId },
+        include: {
+          product: {
+            select: { price: true },
+          },
+        },
+      });
+      const total = cartItems.reduce(
+        (sum, item) => sum + Number(item.product.price) * item.quantity,
+        0,
+      );
+      const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
+      return res.json({
+        success: true,
+        removed: true,
+        itemId,
+        total,
+        cartCount,
+      });
+    }
+
     return res.redirect("/auth/cart");
   }
 
-  await prisma.cartItem.update({
+  const updatedItem = await prisma.cartItem.update({
     where: { id: itemId },
     data: { quantity },
+    include: {
+      product: {
+        select: { price: true },
+      },
+    },
   });
+
+  if (isAjaxRequest(req)) {
+    const cartItems = await prisma.cartItem.findMany({
+      where: { userId },
+      include: {
+        product: {
+          select: { price: true },
+        },
+      },
+    });
+    const total = cartItems.reduce(
+      (sum, item) => sum + Number(item.product.price) * item.quantity,
+      0,
+    );
+    const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
+    return res.json({
+      success: true,
+      removed: false,
+      itemId,
+      quantity: updatedItem.quantity,
+      bottles: updatedItem.quantity * 12,
+      subtotal: Number(updatedItem.product.price) * updatedItem.quantity,
+      total,
+      cartCount,
+    });
+  }
 
   return res.redirect("/auth/cart");
 };
