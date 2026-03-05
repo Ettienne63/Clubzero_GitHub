@@ -5,6 +5,7 @@
   --brand-green: #43e97b;
   --brand-dark: #1e1e2f;
   --brand-light: #ffffff;
+  --image-radius: 14px;
 }
 html,
 body {
@@ -57,7 +58,7 @@ main {
   display: block;
   object-fit: cover;
   object-position: center;
-  border-radius: 16px;
+  border-radius: var(--image-radius);
   box-shadow: 0 14px 28px rgba(18, 38, 63, 0.14);
 }
 
@@ -152,6 +153,7 @@ main {
   object-fit: contain;
   object-position: center;
   margin: 0 auto;
+  border-radius: var(--image-radius);
   background:
     radial-gradient(circle at 20% 20%, rgba(79, 172, 254, 0.16), transparent 58%),
     radial-gradient(circle at 80% 30%, rgba(67, 233, 123, 0.16), transparent 58%),
@@ -195,11 +197,28 @@ main {
 }
 
 .product-price-pill {
-  padding: 0.35rem 0.75rem;
-  border-radius: 999px;
-  color: #12406e;
-  background: linear-gradient(90deg, #ddf1ff 0%, #defde9 100%);
-  border: 1px solid #bfe0ff;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0;
+  border-radius: 0;
+  color: #0f315a;
+  background: transparent;
+  border: 0;
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+  position: relative;
+}
+
+.product-price-pill::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 2px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #0d6efd 0%, #43e97b 100%);
+  opacity: 0.45;
 }
 
 .recently-viewed-card {
@@ -217,6 +236,7 @@ main {
   display: block;
   object-fit: contain;
   object-position: center;
+  border-radius: var(--image-radius);
   background:
     radial-gradient(circle at 20% 20%, rgba(79, 172, 254, 0.14), transparent 60%),
     radial-gradient(circle at 80% 30%, rgba(67, 233, 123, 0.15), transparent 60%),
@@ -267,6 +287,7 @@ main {
   object-fit: contain;
   object-position: center;
   margin: 0 auto;
+  border-radius: var(--image-radius);
   background: transparent;
 }
 
@@ -348,6 +369,7 @@ main {
   display: block;
   object-fit: contain;
   object-position: center;
+  border-radius: var(--image-radius);
   background: #f8f9fa;
 }
 
@@ -393,7 +415,7 @@ main {
 }
 
 .about-image-wrap {
-  border-radius: 18px;
+  border-radius: var(--image-radius);
   overflow: hidden;
   box-shadow: 0 14px 30px rgba(18, 38, 63, 0.12);
   height: 420px;
@@ -434,6 +456,20 @@ main {
 
   .recently-viewed-image {
     height: 96px;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .about-intro-section .about-image-wrap {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .about-intro-section .about-intro-image {
+    height: auto;
+    max-height: 70vh;
+    object-fit: contain;
   }
 }
 

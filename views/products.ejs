@@ -91,7 +91,7 @@
                   <%- include("partials/product-rating", { product, wrapperClass: "mb-2" }) %>
                 </div>
                 <p class="fw-bold mb-0 align-self-start product-price-pill">
-                  R<%= Number(product.price).toFixed(2) %>
+                  R<%= Number(product.price).toFixed(2) %> / case (12 bottles)
                 </p>
               </div>
 
@@ -108,8 +108,9 @@
                     value="1"
                     class="form-control"
                     style="max-width: 90px"
+                    aria-label="Cases"
                   />
-                  <button type="submit" class="btn btn-primary">Add to Cart</button>
+                  <button type="submit" class="btn btn-primary">Add Case(s)</button>
                 </form>
                 <% } else { %>
                 <a href="/auth/login" class="btn btn-outline-primary">Login to buy</a>

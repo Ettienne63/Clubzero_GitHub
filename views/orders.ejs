@@ -37,7 +37,7 @@
             <span
               ><%= item.productName %>
               x
-              <%= item.quantity %></span
+              <%= item.quantity %> case<%= item.quantity === 1 ? "" : "s" %> (<%= item.quantity * 12 %> bottles)</span
             >
             <span>R<%= Number(item.subtotal).toFixed(2) %></span>
           </li>

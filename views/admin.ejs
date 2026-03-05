@@ -42,7 +42,7 @@
           />
         </div>
         <div class="col-md-6">
-          <label for="createPrice" class="form-label">Price</label>
+          <label for="createPrice" class="form-label">Price (Per Case)</label>
           <input
             id="createPrice"
             name="price"
@@ -173,7 +173,7 @@
               ><%= product.isActive ? "Visible" : "Hidden" %></span
             >
             <span class="ms-auto me-3 fw-bold"
-              >R<%= Number(product.price).toFixed(2) %></span
+              >R<%= Number(product.price).toFixed(2) %> / case</span
             >
           </button>
         </h3>
@@ -209,7 +209,7 @@
                     />
                   </div>
                   <div class="col-md-6">
-                    <label class="form-label">Price</label>
+                    <label class="form-label">Price (Per Case)</label>
                     <input
                       name="price"
                       type="number"

@@ -24,8 +24,9 @@
     <div class="col-12 col-md-6 col-xl-3">
       <article class="card h-100 affiliate-stat-card">
         <div class="card-body">
-          <p class="small text-uppercase fw-semibold text-muted mb-2">Total Items Sold</p>
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Total Cases Sold</p>
           <p class="h4 mb-0"><%= summary.totalItemsSold %></p>
+          <p class="small text-muted mb-0"><%= summary.totalItemsSold * 12 %> bottles</p>
         </div>
       </article>
     </div>
@@ -109,7 +110,7 @@
               <th scope="col">Order</th>
               <th scope="col">User</th>
               <th scope="col">Date</th>
-              <th scope="col">Items</th>
+              <th scope="col">Cases</th>
               <th scope="col">Order Total</th>
               <th scope="col">Commission</th>
               <th scope="col">Affiliate Status</th>
@@ -125,7 +126,7 @@
                 <div class="small text-muted"><%= order.user?.email || "No email" %></div>
               </td>
               <td><%= new Date(order.createdAt).toLocaleString() %></td>
-              <td><%= order.itemsCount %></td>
+              <td><%= order.itemsCount %> (<%= order.itemsCount * 12 %> bottles)</td>
               <td>R<%= Number(order.total).toFixed(2) %></td>
               <td>R<%= Number(order.commission).toFixed(2) %></td>
               <td>

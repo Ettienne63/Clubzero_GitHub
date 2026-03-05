@@ -31,8 +31,8 @@
       <thead>
         <tr>
           <th scope="col">Product</th>
-          <th scope="col">Price</th>
-          <th scope="col">Quantity</th>
+          <th scope="col">Price (Per Case)</th>
+          <th scope="col">Cases</th>
           <th scope="col">Subtotal</th>
           <th scope="col">Actions</th>
         </tr>
@@ -72,6 +72,7 @@
               />
               <button type="submit" class="btn btn-sm btn-outline-primary">Update</button>
             </form>
+            <div class="small text-muted mt-1"><%= item.quantity * 12 %> bottles</div>
           </td>
           <td>R<%= (Number(item.product.price) * item.quantity).toFixed(2) %></td>
           <td>
