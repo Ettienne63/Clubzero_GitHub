@@ -136,11 +136,6 @@ router.post(
   requireAuth,
   asyncHandler(orderController.postAffiliateJoin),
 );
-router.post(
-  "/affiliate/leave",
-  requireAuth,
-  asyncHandler(orderController.postAffiliateLeave),
-);
 router.get(
   "/affiliate",
   requireAuth,

@@ -1070,47 +1070,6 @@ exports.postAffiliateJoin = async (req, res) => {
   );
 };
 
-exports.postAffiliateLeave = async (req, res) => {
-  const userId = getUserId(req);
-
-  if (!Number.isInteger(userId)) {
-    return res.redirect("/auth/login");
-  }
-
-  const affiliateState = await getAffiliateUserState(userId);
-
-  if (!affiliateState.exists) {
-    return res.redirect("/auth/logout");
-  }
-
-  if (affiliateState.affiliateProgramStatus !== AFFILIATE_STATUS.NONE) {
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        role: "USER",
-        affiliateProgramStatus: AFFILIATE_STATUS.NONE,
-        affiliateCode: null,
-        affiliateAppliedAt: null,
-        affiliateApprovedAt: null,
-        affiliateRejectedAt: null,
-      },
-    });
-  }
-
-  if (req.session?.user) {
-    req.session.user.role = "USER";
-    req.session.user.isAffiliate = false;
-    req.session.user.affiliateProgramStatus = AFFILIATE_STATUS.NONE;
-    req.session.user.affiliateCode = null;
-  }
-
-  return res.redirect(
-    `/auth/affiliate/join?success=${encodeURIComponent(
-      "You have left the affiliate program.",
-    )}`,
-  );
-};
-
 const getAffiliateStatus = (order) => {
   const rawAffiliateStatus = (order.affiliateStatus || "").toUpperCase();
 
