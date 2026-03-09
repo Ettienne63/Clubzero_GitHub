@@ -30,6 +30,15 @@ const validateRedirectToSignup = handleValidationError((_req, res, message) =>
   res.redirect(`/auth/signup?error=${encodeURIComponent(message)}`),
 );
 
+const validateRedirectToForgotPassword = handleValidationError((_req, res, message) =>
+  res.redirect(`/auth/forgot-password?error=${encodeURIComponent(message)}`),
+);
+
+const validateRedirectToResetPassword = handleValidationError((req, res, message) => {
+  const token = encodeURIComponent((req.body.token || req.query.token || "").toString());
+  return res.redirect(`/auth/reset-password?token=${token}&error=${encodeURIComponent(message)}`);
+});
+
 const validateRedirectToProducts = handleValidationError((_req, res, message) =>
   res.redirect(`/auth/products?error=${encodeURIComponent(message)}`),
 );
@@ -71,6 +80,20 @@ const signupValidationRules = [
 const loginValidationRules = [
   body("email").trim().isEmail().withMessage("Valid email is required."),
   body("password").notEmpty().withMessage("Password is required."),
+];
+
+const forgotPasswordValidationRules = [
+  body("email").trim().isEmail().withMessage("Valid email is required."),
+];
+
+const resetPasswordValidationRules = [
+  body("token").trim().notEmpty().withMessage("Reset token is required."),
+  body("password")
+    .isLength({ min: 6 })
+    .withMessage("Password must be at least 6 characters."),
+  body("confirmPassword")
+    .custom((value, { req }) => value === req.body.password)
+    .withMessage("Passwords do not match."),
 ];
 
 const reviewValidationRules = [
@@ -194,6 +217,8 @@ const contactValidationRules = [
 module.exports = {
   signupValidationRules,
   loginValidationRules,
+  forgotPasswordValidationRules,
+  resetPasswordValidationRules,
   reviewValidationRules,
   cartAddValidationRules,
   cartUpdateValidationRules,
@@ -208,6 +233,8 @@ module.exports = {
   contactValidationRules,
   validateBadRequest,
   validateRedirectToSignup,
+  validateRedirectToForgotPassword,
+  validateRedirectToResetPassword,
   validateRedirectToLogin,
   validateRedirectToProducts,
   validateRedirectToAdmin,

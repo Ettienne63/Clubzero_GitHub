@@ -11,6 +11,8 @@ const { asyncHandler } = require("../middleware/asyncHandler");
 const {
   signupValidationRules,
   loginValidationRules,
+  forgotPasswordValidationRules,
+  resetPasswordValidationRules,
   reviewValidationRules,
   productIdParamValidationRules,
   cartAddValidationRules,
@@ -23,6 +25,8 @@ const {
   idParamValidationRules,
   validateBadRequest,
   validateRedirectToSignup,
+  validateRedirectToForgotPassword,
+  validateRedirectToResetPassword,
   validateRedirectToLogin,
   validateRedirectToProducts,
   validateRedirectToProfile,
@@ -43,6 +47,20 @@ router.post(
   loginValidationRules,
   validateRedirectToLogin,
   asyncHandler(authController.postLogin),
+);
+router.get("/forgot-password", authController.getForgotPassword);
+router.post(
+  "/forgot-password",
+  forgotPasswordValidationRules,
+  validateRedirectToForgotPassword,
+  asyncHandler(authController.postForgotPassword),
+);
+router.get("/reset-password", asyncHandler(authController.getResetPassword));
+router.post(
+  "/reset-password",
+  resetPasswordValidationRules,
+  validateRedirectToResetPassword,
+  asyncHandler(authController.postResetPassword),
 );
 router.get("/logout", authController.logout);
 

@@ -317,6 +317,8 @@ app.post(
 );
 app.use("/auth/login", authRateLimit);
 app.use("/auth/signup", authRateLimit);
+app.use("/auth/forgot-password", authRateLimit);
+app.use("/auth/reset-password", authRateLimit);
 app.use("/auth/checkout", checkoutRateLimit);
 app.use("/auth", authRoutes);
 

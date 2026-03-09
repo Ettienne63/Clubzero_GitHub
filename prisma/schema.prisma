@@ -35,9 +35,24 @@ model User {
   addressBookEntries AddressBookEntry[]
   goalsCreated Goal[]
   referralClicks AffiliateReferralClick[] @relation("AffiliateOwner")
+  passwordResetTokens PasswordResetToken[]
 
   @@index([affiliateProgramStatus])
   @@index([referredByAffiliateId])
+}
+
+model PasswordResetToken {
+  id Int @id @default(autoincrement())
+  userId Int
+  tokenHash String @unique
+  expiresAt DateTime
+  usedAt DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Product{
