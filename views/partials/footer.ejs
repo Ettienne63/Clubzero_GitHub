@@ -18,6 +18,20 @@
       return;
     }
 
+    const appendTokenToUrl = (value) => {
+      if (!value) {
+        return value;
+      }
+
+      try {
+        const url = new URL(value, window.location.origin);
+        url.searchParams.set("_csrf", token);
+        return `${url.pathname}${url.search}${url.hash}`;
+      } catch {
+        return value;
+      }
+    };
+
     document
       .querySelectorAll('form[method="POST"], form[method="post"]')
       .forEach((form) => {
@@ -30,6 +44,22 @@
         }
 
         csrfField.value = token;
+
+        const isMultipart =
+          String(form.getAttribute("enctype") || "").toLowerCase() ===
+          "multipart/form-data";
+
+        if (isMultipart) {
+          form.action = appendTokenToUrl(form.action);
+          form
+            .querySelectorAll('button[formaction], input[formaction]')
+            .forEach((submitter) => {
+              submitter.setAttribute(
+                "formaction",
+                appendTokenToUrl(submitter.getAttribute("formaction")),
+              );
+            });
+        }
       });
   })();
 </script>

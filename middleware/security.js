@@ -71,6 +71,7 @@ const csrfProtection = (req, res, next) => {
 
   const candidate =
     req.body?._csrf ||
+    req.query?._csrf ||
     req.get("X-CSRF-Token") ||
     req.get("csrf-token") ||
     "";
