@@ -1,6 +1,7 @@
 const { prisma } = require("../prisma/lib/prisma");
 
 const GOAL_TRACKER_EMAIL_SUFFIX = "@clubzero.co.za";
+const BOTTLES_PER_CASE = 12;
 
 const normalizeEmail = (value) => (value || "").toString().trim().toLowerCase();
 const getUsernameFromEmail = (email) => normalizeEmail(email).split("@")[0] || "";
@@ -18,7 +19,7 @@ const getTotalBottlesSold = async () => {
     _sum: { quantity: true },
   });
 
-  return totals._sum.quantity || 0;
+  return Number(totals._sum.quantity || 0) * BOTTLES_PER_CASE;
 };
 
 const getCreatorUsername = (goal) => {
