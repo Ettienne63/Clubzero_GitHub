@@ -68,6 +68,56 @@
   </section>
 
   <section class="card shadow-sm mb-4">
+    <div class="card-body">
+      <h2 class="h5 mb-3">Affiliate Applications</h2>
+      <% if (!applicants || applicants.length === 0) { %>
+      <div class="alert alert-info mb-0">No pending or rejected applications.</div>
+      <% } else { %>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead>
+            <tr>
+              <th scope="col">User</th>
+              <th scope="col">Applied At</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% applicants.forEach((applicant) => { %>
+            <tr>
+              <td>
+                <div class="fw-semibold"><%= applicant.name || "Unnamed User" %></div>
+                <div class="small text-muted"><%= applicant.email %></div>
+              </td>
+              <td><%= applicant.affiliateAppliedAt ? new Date(applicant.affiliateAppliedAt).toLocaleString() : "-" %></td>
+              <td>
+                <% if (applicant.affiliateProgramStatus === "PENDING") { %>
+                <span class="badge text-bg-warning">Pending</span>
+                <% } else { %>
+                <span class="badge text-bg-secondary">Rejected</span>
+                <% } %>
+              </td>
+              <td class="text-end">
+                <div class="d-inline-flex gap-2">
+                  <form action="/admin/affiliate/applicants/<%= applicant.id %>/approve" method="POST">
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Approve</button>
+                  </form>
+                  <form action="/admin/affiliate/applicants/<%= applicant.id %>/reject" method="POST">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Reject</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% } %>
+    </div>
+  </section>
+
+  <section class="card shadow-sm mb-4">
     <div class="card-body d-flex flex-wrap align-items-center gap-2">
       <span class="fw-semibold me-2">Filter:</span>
       <a
@@ -108,7 +158,8 @@
           <thead>
             <tr>
               <th scope="col">Order</th>
-              <th scope="col">User</th>
+              <th scope="col">Customer</th>
+              <th scope="col">Affiliate</th>
               <th scope="col">Date</th>
               <th scope="col">Cases</th>
               <th scope="col">Order Total</th>
@@ -124,6 +175,12 @@
               <td>
                 <div class="fw-semibold"><%= order.user?.name || "Unnamed User" %></div>
                 <div class="small text-muted"><%= order.user?.email || "No email" %></div>
+              </td>
+              <td>
+                <div class="fw-semibold"><%= order.affiliateReferrer?.name || "Affiliate" %></div>
+                <div class="small text-muted">
+                  <%= order.affiliateReferrer?.affiliateCode || "-" %>
+                </div>
               </td>
               <td><%= new Date(order.createdAt).toLocaleString() %></td>
               <td><%= order.itemsCount %> (<%= order.itemsCount * 12 %> bottles)</td>

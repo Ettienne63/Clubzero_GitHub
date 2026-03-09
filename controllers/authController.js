@@ -1,9 +1,31 @@
 const { prisma } = require("../prisma/lib/prisma");
 const bcrypt = require("bcrypt");
+const APPROVED_AFFILIATE_STATUS = "APPROVED";
+
+const normalizeAffiliateStatus = (value) =>
+  (value || "").toString().trim().toUpperCase();
+
+const buildSessionUser = (user, isAdmin) => {
+  const affiliateProgramStatus = normalizeAffiliateStatus(
+    user.affiliateProgramStatus,
+  );
+
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name || "",
+    isAdmin,
+    role: user.role || "USER",
+    isAffiliate: affiliateProgramStatus === APPROVED_AFFILIATE_STATUS,
+    affiliateProgramStatus: affiliateProgramStatus || "NONE",
+    affiliateCode: user.affiliateCode || null,
+  };
+};
 
 exports.getSignup = (req, res) => {
   res.render("auth/signup", {
     error: req.query.error || null,
+    referralCode: req.query.ref || req.session?.refAffiliateCode || null,
   });
 };
 
@@ -18,12 +40,33 @@ exports.postSignup = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const referralAffiliateUserId = Number.parseInt(
+      req.session?.refAffiliateUserId,
+      10,
+    );
+
+    let referredByAffiliateId = null;
+    if (Number.isInteger(referralAffiliateUserId)) {
+      const affiliateUser = await prisma.user.findUnique({
+        where: { id: referralAffiliateUserId },
+        select: { id: true, affiliateProgramStatus: true },
+      });
+
+      if (
+        affiliateUser &&
+        normalizeAffiliateStatus(affiliateUser.affiliateProgramStatus) ===
+          APPROVED_AFFILIATE_STATUS
+      ) {
+        referredByAffiliateId = affiliateUser.id;
+      }
+    }
 
     await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name,
+        referredByAffiliateId,
       },
     });
     return res.redirect("/auth/login");
@@ -71,10 +114,7 @@ exports.postLogin = async (req, res) => {
     }
     const userEmail = (user.email || "").toLowerCase().trim();
     req.session.user = {
-      id: user.id,
-      email: user.email,
-      name: user.name || "",
-      isAdmin: Boolean(adminEmail && userEmail === adminEmail),
+      ...buildSessionUser(user, Boolean(adminEmail && userEmail === adminEmail)),
     };
     return req.session.save(() => {
       res.redirect("/");

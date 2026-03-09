@@ -122,6 +122,21 @@ router.get(
 );
 router.get("/orders", requireAuth, asyncHandler(orderController.getOrderHistory));
 router.get(
+  "/affiliate/join",
+  requireAuth,
+  asyncHandler(orderController.getAffiliateJoinPage),
+);
+router.post(
+  "/affiliate/join",
+  requireAuth,
+  asyncHandler(orderController.postAffiliateJoin),
+);
+router.post(
+  "/affiliate/leave",
+  requireAuth,
+  asyncHandler(orderController.postAffiliateLeave),
+);
+router.get(
   "/affiliate",
   requireAuth,
   asyncHandler(orderController.getAffiliateDashboard),

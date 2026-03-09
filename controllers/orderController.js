@@ -1,11 +1,18 @@
 const { prisma } = require("../prisma/lib/prisma");
 const AFFILIATE_RATE = 0.05;
+const AFFILIATE_STATUS = {
+  NONE: "NONE",
+  PENDING: "PENDING",
+  APPROVED: "APPROVED",
+  REJECTED: "REJECTED",
+};
 
 const getUserId = (req) => Number.parseInt(req.session?.user?.id, 10);
 const hasAddressBookModel = () => Boolean(prisma.addressBookEntry);
 
 const buildCheckoutFormData = (body = {}) => ({
   selectedAddressId: (body.selectedAddressId || "").toString().trim(),
+  affiliateCode: (body.affiliateCode || "").toString().trim().toUpperCase(),
   saveAddress: body.saveAddress === "on",
   deliveryName: (body.deliveryName || "").trim(),
   deliveryPhone: (body.deliveryPhone || "").trim(),
@@ -57,6 +64,95 @@ const getAddressBookEntries = async (userId) => {
   });
 };
 
+const getAffiliateUserState = async (userId) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      role: true,
+      affiliateProgramStatus: true,
+      affiliateCode: true,
+      referredByAffiliateId: true,
+      _count: {
+        select: {
+          referredUsers: true,
+          referralClicks: true,
+        },
+      },
+    },
+  });
+
+  const role = (user?.role || "").toUpperCase();
+  const affiliateProgramStatus = (user?.affiliateProgramStatus || "NONE")
+    .toString()
+    .toUpperCase();
+
+  return {
+    exists: Boolean(user),
+    role,
+    affiliateProgramStatus,
+    affiliateCode: user?.affiliateCode || null,
+    referredByAffiliateId: user?.referredByAffiliateId || null,
+    referredSignupsCount: user?._count?.referredUsers || 0,
+    referralClicksCount: user?._count?.referralClicks || 0,
+    isAffiliate: affiliateProgramStatus === AFFILIATE_STATUS.APPROVED,
+  };
+};
+
+const buildAffiliateCodePrefix = (nameOrEmail = "") => {
+  const cleaned = (nameOrEmail || "")
+    .toString()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+
+  if (!cleaned) {
+    return "CLUB";
+  }
+
+  return cleaned.slice(0, 5);
+};
+
+const randomAffiliateSuffix = () =>
+  Math.random().toString(36).slice(2, 6).toUpperCase();
+
+const generateUniqueAffiliateCode = async (seed) => {
+  const prefix = buildAffiliateCodePrefix(seed);
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const code = `${prefix}-${randomAffiliateSuffix()}`;
+    const existing = await prisma.user.findFirst({
+      where: { affiliateCode: code },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      return code;
+    }
+  }
+
+  return `${prefix}-${Date.now().toString(36).slice(-5).toUpperCase()}`;
+};
+
+const findApprovedAffiliateByCode = async (affiliateCode) => {
+  const normalizedCode = (affiliateCode || "").toString().trim().toUpperCase();
+
+  if (!normalizedCode) {
+    return null;
+  }
+
+  return prisma.user.findFirst({
+    where: {
+      affiliateCode: normalizedCode,
+      affiliateProgramStatus: AFFILIATE_STATUS.APPROVED,
+    },
+    select: {
+      id: true,
+      affiliateCode: true,
+      affiliateProgramStatus: true,
+    },
+  });
+};
+
 exports.getCheckout = async (req, res) => {
   const userId = getUserId(req);
 
@@ -84,7 +180,9 @@ exports.getCheckout = async (req, res) => {
     total,
     savedAddresses,
     error: null,
-    formData: buildCheckoutFormData(),
+    formData: buildCheckoutFormData({
+      affiliateCode: req.session?.refAffiliateCode || "",
+    }),
   });
 };
 
@@ -139,10 +237,79 @@ exports.postCheckout = async (req, res) => {
     });
   }
 
+  const buyer = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      referredByAffiliateId: true,
+    },
+  });
+
+  let affiliateReferrerUserId = Number.parseInt(
+    req.session?.refAffiliateUserId,
+    10,
+  );
+
+  if (formData.affiliateCode) {
+    const affiliateFromCode = await findApprovedAffiliateByCode(
+      formData.affiliateCode,
+    );
+
+    if (!affiliateFromCode) {
+      return res.status(400).render("checkout", {
+        cartItems,
+        total,
+        savedAddresses,
+        error: "Affiliate code is invalid or not approved yet.",
+        formData,
+      });
+    }
+
+    affiliateReferrerUserId = affiliateFromCode.id;
+    formData.affiliateCode = affiliateFromCode.affiliateCode;
+
+    if (req.session) {
+      req.session.refAffiliateUserId = affiliateFromCode.id;
+      req.session.refAffiliateCode = affiliateFromCode.affiliateCode;
+    }
+  }
+
+  if (!Number.isInteger(affiliateReferrerUserId)) {
+    affiliateReferrerUserId = Number.parseInt(buyer?.referredByAffiliateId, 10);
+  }
+
+  if (affiliateReferrerUserId === userId) {
+    affiliateReferrerUserId = null;
+  }
+
+  let affiliateReferrerCode = null;
+  if (Number.isInteger(affiliateReferrerUserId)) {
+    const affiliateReferrer = await prisma.user.findUnique({
+      where: { id: affiliateReferrerUserId },
+      select: {
+        id: true,
+        affiliateProgramStatus: true,
+        affiliateCode: true,
+      },
+    });
+
+    if (
+      !affiliateReferrer ||
+      affiliateReferrer.affiliateProgramStatus !== AFFILIATE_STATUS.APPROVED
+    ) {
+      affiliateReferrerUserId = null;
+      affiliateReferrerCode = null;
+    } else {
+      affiliateReferrerCode = affiliateReferrer.affiliateCode || null;
+    }
+  }
+
   const createdOrder = await prisma.$transaction(async (tx) => {
     const order = await tx.order.create({
       data: {
         userId,
+        affiliateReferrerUserId: affiliateReferrerUserId || null,
+        affiliateReferrerCode,
         total,
         deliveryName: formData.deliveryName,
         deliveryPhone: formData.deliveryPhone,
@@ -257,9 +424,26 @@ exports.getAffiliateDashboard = async (req, res) => {
     return res.redirect("/auth/login");
   }
 
+  const affiliateState = await getAffiliateUserState(userId);
+
+  if (!affiliateState.exists) {
+    return res.redirect("/auth/logout");
+  }
+
+  if (!affiliateState.isAffiliate) {
+    return res.redirect("/auth/affiliate/join");
+  }
+
   const orders = await prisma.order.findMany({
-    where: { userId },
+    where: { affiliateReferrerUserId: userId },
     include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
       orderItems: {
         select: {
           quantity: true,
@@ -270,7 +454,10 @@ exports.getAffiliateDashboard = async (req, res) => {
   });
 
   const totalOrders = orders.length;
-  const totalSpent = orders.reduce((sum, order) => sum + Number(order.total), 0);
+  const totalSpent = orders.reduce(
+    (sum, order) => sum + Number(order.total),
+    0,
+  );
   const totalProductsOrdered = orders.reduce(
     (sum, order) =>
       sum +
@@ -315,17 +502,136 @@ exports.getAffiliateDashboard = async (req, res) => {
     },
   );
 
+  const referralLink = `${req.protocol}://${req.get("host")}/auth/signup?ref=${encodeURIComponent(
+    affiliateState.affiliateCode || "",
+  )}`;
+
   return res.render("affiliate", {
     orders: normalizedOrders,
+    success: req.query.success || null,
+    error: req.query.error || null,
+    affiliateState,
+    referralLink,
     stats: {
       totalOrders,
       totalSpent,
       totalProductsOrdered,
+      referralClicksCount: affiliateState.referralClicksCount,
+      referredSignupsCount: affiliateState.referredSignupsCount,
       affiliateRate,
       estimatedEarnings,
       ...affiliateSummary,
     },
   });
+};
+
+exports.getAffiliateJoinPage = async (req, res) => {
+  const userId = getUserId(req);
+
+  if (!Number.isInteger(userId)) {
+    return res.redirect("/auth/login");
+  }
+
+  const affiliateState = await getAffiliateUserState(userId);
+
+  if (!affiliateState.exists) {
+    return res.redirect("/auth/logout");
+  }
+
+  if (affiliateState.affiliateProgramStatus === AFFILIATE_STATUS.APPROVED) {
+    return res.redirect("/auth/affiliate");
+  }
+
+  return res.render("affiliate-join", {
+    success: req.query.success || null,
+    error: req.query.error || null,
+    affiliateState,
+  });
+};
+
+exports.postAffiliateJoin = async (req, res) => {
+  const userId = getUserId(req);
+
+  if (!Number.isInteger(userId)) {
+    return res.redirect("/auth/login");
+  }
+
+  const affiliateState = await getAffiliateUserState(userId);
+
+  if (!affiliateState.exists) {
+    return res.redirect("/auth/logout");
+  }
+
+  if (affiliateState.affiliateProgramStatus === AFFILIATE_STATUS.APPROVED) {
+    return res.redirect("/auth/affiliate");
+  }
+
+  if (affiliateState.affiliateProgramStatus === AFFILIATE_STATUS.PENDING) {
+    return res.redirect(
+      "/auth/affiliate/join?success=Your+affiliate+application+is+pending+admin+approval",
+    );
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      affiliateProgramStatus: AFFILIATE_STATUS.PENDING,
+      affiliateAppliedAt: new Date(),
+      affiliateRejectedAt: null,
+    },
+  });
+
+  if (req.session?.user) {
+    req.session.user.isAffiliate = false;
+    req.session.user.affiliateProgramStatus = AFFILIATE_STATUS.PENDING;
+  }
+
+  return res.redirect(
+    `/auth/affiliate/join?success=${encodeURIComponent(
+      "Application submitted. Awaiting admin approval.",
+    )}`,
+  );
+};
+
+exports.postAffiliateLeave = async (req, res) => {
+  const userId = getUserId(req);
+
+  if (!Number.isInteger(userId)) {
+    return res.redirect("/auth/login");
+  }
+
+  const affiliateState = await getAffiliateUserState(userId);
+
+  if (!affiliateState.exists) {
+    return res.redirect("/auth/logout");
+  }
+
+  if (affiliateState.affiliateProgramStatus !== AFFILIATE_STATUS.NONE) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        role: "USER",
+        affiliateProgramStatus: AFFILIATE_STATUS.NONE,
+        affiliateCode: null,
+        affiliateAppliedAt: null,
+        affiliateApprovedAt: null,
+        affiliateRejectedAt: null,
+      },
+    });
+  }
+
+  if (req.session?.user) {
+    req.session.user.role = "USER";
+    req.session.user.isAffiliate = false;
+    req.session.user.affiliateProgramStatus = AFFILIATE_STATUS.NONE;
+    req.session.user.affiliateCode = null;
+  }
+
+  return res.redirect(
+    `/auth/affiliate/join?success=${encodeURIComponent(
+      "You have left the affiliate program.",
+    )}`,
+  );
 };
 
 const getAffiliateStatus = (order) => {
@@ -348,13 +654,41 @@ exports.getAdminAffiliatePage = async (req, res) => {
   const allowedFilters = new Set(["all", "pending", "approved", "paid"]);
   const activeStatusFilter = allowedFilters.has(statusFilter) ? statusFilter : "all";
 
+  const applicants = await prisma.user.findMany({
+    where: {
+      affiliateProgramStatus: {
+        in: [AFFILIATE_STATUS.PENDING, AFFILIATE_STATUS.REJECTED],
+      },
+    },
+    orderBy: [{ affiliateAppliedAt: "desc" }, { id: "desc" }],
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      affiliateProgramStatus: true,
+      affiliateAppliedAt: true,
+      affiliateRejectedAt: true,
+    },
+  });
+
   const orders = await prisma.order.findMany({
+    where: {
+      affiliateReferrerUserId: { not: null },
+    },
     include: {
       user: {
         select: {
           id: true,
           name: true,
           email: true,
+        },
+      },
+      affiliateReferrer: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          affiliateCode: true,
         },
       },
       orderItems: {
@@ -420,6 +754,7 @@ exports.getAdminAffiliatePage = async (req, res) => {
   );
 
   return res.render("admin-affiliate", {
+    applicants,
     orders: filteredOrders,
     summary,
     activeStatusFilter,
@@ -427,6 +762,83 @@ exports.getAdminAffiliatePage = async (req, res) => {
     success: req.query.success || null,
     error: req.query.error || null,
   });
+};
+
+exports.approveAffiliateApplicant = async (req, res) => {
+  const userId = Number.parseInt(req.params.id, 10);
+
+  if (!Number.isInteger(userId)) {
+    return res.redirect("/admin/affiliate?error=Invalid+user+id");
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      affiliateProgramStatus: true,
+      affiliateCode: true,
+    },
+  });
+
+  if (!user) {
+    return res.redirect("/admin/affiliate?error=User+not+found");
+  }
+
+  if (user.affiliateProgramStatus === AFFILIATE_STATUS.APPROVED) {
+    return res.redirect("/admin/affiliate?success=Affiliate+already+approved");
+  }
+
+  const affiliateCode =
+    user.affiliateCode || (await generateUniqueAffiliateCode(user.name || user.email));
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      role: "AFFILIATE",
+      affiliateProgramStatus: AFFILIATE_STATUS.APPROVED,
+      affiliateCode,
+      affiliateApprovedAt: new Date(),
+      affiliateRejectedAt: null,
+    },
+  });
+
+  return res.redirect(
+    `/admin/affiliate?success=${encodeURIComponent(
+      `Affiliate approved (${affiliateCode})`,
+    )}`,
+  );
+};
+
+exports.rejectAffiliateApplicant = async (req, res) => {
+  const userId = Number.parseInt(req.params.id, 10);
+
+  if (!Number.isInteger(userId)) {
+    return res.redirect("/admin/affiliate?error=Invalid+user+id");
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, affiliateProgramStatus: true },
+  });
+
+  if (!user) {
+    return res.redirect("/admin/affiliate?error=User+not+found");
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      role: "USER",
+      affiliateProgramStatus: AFFILIATE_STATUS.REJECTED,
+      affiliateRejectedAt: new Date(),
+      affiliateApprovedAt: null,
+      affiliateCode: null,
+    },
+  });
+
+  return res.redirect("/admin/affiliate?success=Affiliate+application+rejected");
 };
 
 exports.approveAffiliatePayout = async (req, res) => {
@@ -444,11 +856,16 @@ exports.approveAffiliatePayout = async (req, res) => {
       affiliateStatus: true,
       affiliateApprovedAt: true,
       affiliatePaidAt: true,
+      affiliateReferrerUserId: true,
     },
   });
 
   if (!order) {
     return res.redirect("/admin/affiliate?error=Order+not+found");
+  }
+
+  if (!order.affiliateReferrerUserId) {
+    return res.redirect("/admin/affiliate?error=Order+has+no+affiliate+referrer");
   }
 
   const affiliateStatus = getAffiliateStatus(order);
@@ -491,11 +908,16 @@ exports.markAffiliatePayoutPaid = async (req, res) => {
       affiliateStatus: true,
       affiliateApprovedAt: true,
       affiliatePaidAt: true,
+      affiliateReferrerUserId: true,
     },
   });
 
   if (!order) {
     return res.redirect("/admin/affiliate?error=Order+not+found");
+  }
+
+  if (!order.affiliateReferrerUserId) {
+    return res.redirect("/admin/affiliate?error=Order+has+no+affiliate+referrer");
   }
 
   const affiliateStatus = getAffiliateStatus(order);

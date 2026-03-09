@@ -22,6 +22,11 @@
               <% if (error) { %>
               <div class="alert alert-danger"><%= error %></div>
               <% } %>
+              <% if (referralCode) { %>
+              <div class="alert alert-info">
+                You are signing up with affiliate code: <strong><%= referralCode %></strong>
+              </div>
+              <% } %>
               <form action="/auth/signup" method="POST" class="d-grid gap-3">
                 <div>
                   <label for="name" class="form-label">Full name</label>

@@ -17,14 +17,27 @@ model User {
   name  String?
   phone String?
   role String @default("USER")
+  affiliateProgramStatus String @default("NONE")
+  affiliateCode String? @unique
+  affiliateAppliedAt DateTime?
+  affiliateApprovedAt DateTime?
+  affiliateRejectedAt DateTime?
+  referredByAffiliateId Int?
   password String
   createdAt DateTime @default(now())
   
+  referredByAffiliate User? @relation("AffiliateReferrals", fields: [referredByAffiliateId], references: [id], onDelete: SetNull)
+  referredUsers User[] @relation("AffiliateReferrals")
   cartItems CartItem[]
   orders Order[]
+  referredOrders Order[] @relation("OrderAffiliateReferrer")
   reviews Review[]
   addressBookEntries AddressBookEntry[]
   goalsCreated Goal[]
+  referralClicks AffiliateReferralClick[] @relation("AffiliateOwner")
+
+  @@index([affiliateProgramStatus])
+  @@index([referredByAffiliateId])
 }
 
 model Product{
@@ -62,6 +75,8 @@ model CartItem{
 model Order {
   id Int @id @default(autoincrement())
   userId Int
+  affiliateReferrerUserId Int?
+  affiliateReferrerCode String?
   total Float
   status String @default("PLACED")
   affiliateStatus String @default("PENDING")
@@ -80,10 +95,13 @@ model Order {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  affiliateReferrer User? @relation("OrderAffiliateReferrer", fields: [affiliateReferrerUserId], references: [id], onDelete: SetNull)
   orderItems OrderItem[]
 
   @@index([userId])
   @@index([affiliateStatus])
+  @@index([affiliateReferrerUserId])
+  @@index([affiliateReferrerCode])
 }
 
 model OrderItem {
@@ -160,4 +178,21 @@ model ContactMessage {
   email String
   message String
   createdAt DateTime @default(now())
+}
+
+model AffiliateReferralClick {
+  id Int @id @default(autoincrement())
+  affiliateUserId Int
+  referralCode String
+  sessionId String?
+  landingPath String?
+  referrerUrl String?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  affiliateUser User @relation("AffiliateOwner", fields: [affiliateUserId], references: [id], onDelete: Cascade)
+
+  @@index([affiliateUserId, createdAt])
+  @@index([referralCode])
 }

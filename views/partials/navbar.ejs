@@ -71,7 +71,11 @@
           <a class="nav-link" href="/auth/orders">Orders</a>
         </li>
         <li class="nav-item">
+          <% if (Boolean(user.isAffiliate)) { %>
           <a class="nav-link" href="/auth/affiliate">Affiliate</a>
+          <% } else { %>
+          <a class="nav-link" href="/auth/affiliate/join">Become Affiliate</a>
+          <% } %>
         </li>
         <% } %>
         <li class="nav-item">

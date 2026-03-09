@@ -20,6 +20,7 @@ const productController = require("./controllers/productController");
 const orderController = require("./controllers/orderController");
 const contactController = require("./controllers/contactController");
 const { prisma } = require("./prisma/lib/prisma");
+const APPROVED_AFFILIATE_STATUS = "APPROVED";
 
 env.config();
 
@@ -81,9 +82,69 @@ app.use(
   }),
 );
 
+app.use(async (req, _res, next) => {
+  const referralCode = (req.query.ref || "").toString().trim().toUpperCase();
+
+  if (!referralCode) {
+    return next();
+  }
+
+  try {
+    const affiliateUser = await prisma.user.findFirst({
+      where: {
+        affiliateCode: referralCode,
+        affiliateProgramStatus: APPROVED_AFFILIATE_STATUS,
+      },
+      select: { id: true, affiliateCode: true },
+    });
+
+    if (affiliateUser) {
+      if (req.session) {
+        req.session.refAffiliateUserId = affiliateUser.id;
+        req.session.refAffiliateCode = affiliateUser.affiliateCode;
+      }
+
+      await prisma.affiliateReferralClick.create({
+        data: {
+          affiliateUserId: affiliateUser.id,
+          referralCode: affiliateUser.affiliateCode,
+          sessionId: req.sessionID || null,
+          landingPath: req.originalUrl || req.path || null,
+          referrerUrl: req.get("referer") || null,
+          ipAddress: req.ip || null,
+          userAgent: req.get("user-agent") || null,
+        },
+      });
+    }
+  } catch (error) {
+    console.error("Failed to capture referral:", error);
+  }
+
+  return next();
+});
+
 app.use(async (req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.cartCount = 0;
+
+  if (res.locals.user) {
+    const affiliateProgramStatus = String(
+      res.locals.user.affiliateProgramStatus || "",
+    )
+      .toUpperCase()
+      .trim();
+    const isAffiliate =
+      affiliateProgramStatus === APPROVED_AFFILIATE_STATUS ||
+      String(res.locals.user.role || "").toUpperCase().trim() === "AFFILIATE";
+
+    res.locals.user.isAffiliate = isAffiliate;
+    if (req.session?.user) {
+      req.session.user.isAffiliate = isAffiliate;
+      if (!req.session.user.affiliateProgramStatus && affiliateProgramStatus) {
+        req.session.user.affiliateProgramStatus = affiliateProgramStatus;
+      }
+    }
+  }
 
   const userId = Number.parseInt(req.session?.user?.id, 10);
   const isAdmin = Boolean(req.session?.user?.isAdmin);
@@ -158,6 +219,20 @@ app.post(
   idParamValidationRules,
   validateRedirectToAdminAffiliate,
   asyncHandler(orderController.approveAffiliatePayout),
+);
+app.post(
+  "/admin/affiliate/applicants/:id/approve",
+  requireAdmin,
+  idParamValidationRules,
+  validateRedirectToAdminAffiliate,
+  asyncHandler(orderController.approveAffiliateApplicant),
+);
+app.post(
+  "/admin/affiliate/applicants/:id/reject",
+  requireAdmin,
+  idParamValidationRules,
+  validateRedirectToAdminAffiliate,
+  asyncHandler(orderController.rejectAffiliateApplicant),
 );
 app.post(
   "/admin/affiliate/:id/pay",

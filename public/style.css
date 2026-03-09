@@ -566,6 +566,59 @@ main {
   color: rgba(255, 255, 255, 0.92) !important;
 }
 
+.affiliate-join-page {
+  max-width: 980px;
+}
+
+.affiliate-join-hero {
+  position: relative;
+  background:
+    radial-gradient(circle at 10% 15%, rgba(79, 172, 254, 0.2), transparent 35%),
+    radial-gradient(circle at 90% 10%, rgba(67, 233, 123, 0.2), transparent 35%),
+    linear-gradient(150deg, #ffffff 0%, #f4f9ff 58%, #f3fff8 100%);
+  border: 1px solid #d6e8ff;
+}
+
+.affiliate-join-kicker {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: #0d6efd;
+  background: rgba(13, 110, 253, 0.12);
+  border: 1px solid #cfe1ff;
+}
+
+.affiliate-join-benefit {
+  border: 1px solid #dbe9ff;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fcff 100%);
+  border-radius: 12px;
+  padding: 0.95rem;
+  box-shadow: 0 8px 18px rgba(16, 43, 78, 0.05);
+}
+
+.affiliate-join-benefit-title {
+  color: #0e417c;
+  font-weight: 700;
+}
+
+.affiliate-join-btn {
+  border: 0;
+  color: #fff;
+  font-weight: 700;
+  background: linear-gradient(135deg, #0d6efd 0%, #4facfe 45%, #43e97b 100%);
+  box-shadow: 0 10px 20px rgba(13, 110, 253, 0.25);
+}
+
+.affiliate-join-btn:hover {
+  color: #fff;
+  transform: translateY(-1px);
+}
+
 .goals-page {
   max-width: 980px;
 }

@@ -125,6 +125,19 @@
               />
             </div>
             <div class="col-12">
+              <label for="affiliateCode" class="form-label">Affiliate Code</label>
+              <input
+                id="affiliateCode"
+                name="affiliateCode"
+                class="form-control"
+                value="<%= formData.affiliateCode || '' %>"
+                placeholder="Enter affiliate code if you have one"
+              />
+              <div class="form-text">
+                If you came from an affiliate link, this code may already be filled in.
+              </div>
+            </div>
+            <div class="col-12">
               <div class="form-check">
                 <input
                   id="saveAddress"
