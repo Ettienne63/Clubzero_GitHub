@@ -1,5 +1,6 @@
 const { prisma } = require("../prisma/lib/prisma");
 const nodemailer = require("nodemailer");
+const { logger } = require("../lib/logger");
 
 const getSmtpConfig = () => {
   const host = (process.env.SMTP_HOST || "").trim();
@@ -75,7 +76,10 @@ exports.postContact = async (req, res) => {
     try {
       await sendContactNotification({ name, email, message });
     } catch (error) {
-      console.error("Contact notification email failed:", error);
+      logger.warn("contact_notification_failed", {
+        email,
+        error: error.message,
+      });
     }
 
     return res.redirect(

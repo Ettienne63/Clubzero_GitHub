@@ -105,6 +105,9 @@
     if (!updateForms.length) return;
 
     const totalCell = document.getElementById("cart-total-cell");
+    const csrfToken = document
+      .querySelector('meta[name="csrf-token"]')
+      ?.getAttribute("content");
     const formatCurrency = (amount) => `R${Number(amount).toFixed(2)}`;
 
     updateForms.forEach((form) => {
@@ -125,6 +128,7 @@
             headers: {
               "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
               "X-Requested-With": "XMLHttpRequest",
+              "X-CSRF-Token": csrfToken || "",
               Accept: "application/json",
             },
             body: formData.toString(),

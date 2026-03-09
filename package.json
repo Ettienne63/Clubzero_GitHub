@@ -22,9 +22,11 @@
     "express": "^5.2.1",
     "express-session": "^1.19.0",
     "express-validator": "^7.3.1",
+    "helmet": "^8.1.0",
     "multer": "^2.0.2",
     "nodemailer": "^8.0.1",
     "nodemon": "^3.1.14",
+    "pdfkit": "^0.17.2",
     "pg": "^8.18.0"
   },
   "devDependencies": {

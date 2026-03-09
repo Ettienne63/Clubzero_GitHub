@@ -97,6 +97,7 @@ model Order {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   affiliateReferrer User? @relation("OrderAffiliateReferrer", fields: [affiliateReferrerUserId], references: [id], onDelete: SetNull)
   orderItems OrderItem[]
+  invoice Invoice?
 
   @@index([userId])
   @@index([affiliateStatus])
@@ -195,4 +196,26 @@ model AffiliateReferralClick {
 
   @@index([affiliateUserId, createdAt])
   @@index([referralCode])
+}
+
+model Invoice {
+  id Int @id @default(autoincrement())
+  orderId Int @unique
+  invoiceNumber String @unique
+  status String @default("DRAFT")
+  currency String @default("ZAR")
+  recipientName String
+  recipientEmail String
+  subtotal Float
+  total Float
+  notes String?
+  issuedAt DateTime @default(now())
+  dueAt DateTime?
+  sentAt DateTime?
+  paidAt DateTime?
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([issuedAt])
 }

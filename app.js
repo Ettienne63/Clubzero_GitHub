@@ -1,12 +1,22 @@
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
-const env = require("dotenv");
+const helmet = require("helmet");
+require("dotenv").config();
 const session = require("express-session");
 const multer = require("multer");
 const authRoutes = require("./routes/authRoutes");
+const { loadConfig } = require("./config/env");
+const { notifyCritical } = require("./lib/alerting");
+const { logger } = require("./lib/logger");
+const { PostgresSessionStore } = require("./lib/pgSessionStore");
 const { requireAdmin } = require("./middleware/adminMiddleware");
 const { asyncHandler } = require("./middleware/asyncHandler");
+const {
+  createRateLimit,
+  csrfProtection,
+  requestLogger,
+} = require("./middleware/security");
 const {
   productValidationRules,
   productIdParamValidationRules,
@@ -14,6 +24,7 @@ const {
   contactValidationRules,
   validateRedirectToAdmin,
   validateRedirectToAdminAffiliate,
+  validateRedirectToAdminInvoices,
   validateRedirectToContact,
 } = require("./middleware/validation");
 const productController = require("./controllers/productController");
@@ -22,14 +33,33 @@ const contactController = require("./controllers/contactController");
 const { prisma } = require("./prisma/lib/prisma");
 const APPROVED_AFFILIATE_STATUS = "APPROVED";
 
-env.config();
+const config = loadConfig();
 
 const app = express();
-const PORT = Number(process.env.PORT) || 3000;
-const uploadsDir = process.env.UPLOAD_DIR
-  ? path.resolve(process.env.UPLOAD_DIR)
+const uploadsDir = config.uploadsDir
+  ? path.resolve(config.uploadsDir)
   : path.join(__dirname, "public", "uploads");
 const legacyUploadsDir = path.join(__dirname, "public", "uploads");
+const sessionStore = new PostgresSessionStore({
+  connectionString: config.databaseUrl,
+  schema: config.dbSchema,
+  ttlMs: 1000 * 60 * 60 * 24,
+});
+const authRateLimit = createRateLimit({
+  windowMs: 1000 * 60 * 15,
+  max: 10,
+  message: "Too many authentication attempts. Please try again in 15 minutes.",
+});
+const contactRateLimit = createRateLimit({
+  windowMs: 1000 * 60 * 10,
+  max: 5,
+  message: "Too many contact submissions. Please try again in 10 minutes.",
+});
+const checkoutRateLimit = createRateLimit({
+  windowMs: 1000 * 60 * 15,
+  max: 8,
+  message: "Too many checkout attempts. Please try again in 15 minutes.",
+});
 
 if (!fs.existsSync(uploadsDir)) {
   try {
@@ -69,18 +99,39 @@ const upload = multer({
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
-app.use(express.urlencoded({ extended: true }));
+if (config.trustProxy) {
+  app.set("trust proxy", config.trustProxy === "true" ? 1 : config.trustProxy);
+}
+
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  }),
+);
+app.use(express.urlencoded({ extended: true, limit: "100kb" }));
+app.use(express.json({ limit: "100kb" }));
+app.use(requestLogger);
 app.use("/uploads", express.static(uploadsDir));
 app.use("/uploads", express.static(legacyUploadsDir));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "dev-secret",
+    name: config.sessionCookieName,
+    secret: config.sessionSecret,
+    store: sessionStore,
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 1000 * 60 * 60 * 24 },
+    rolling: true,
+    cookie: {
+      maxAge: 1000 * 60 * 60 * 24,
+      httpOnly: true,
+      sameSite: "lax",
+      secure: config.isProduction,
+    },
   }),
 );
+app.use(csrfProtection);
 
 app.use(async (req, _res, next) => {
   const referralCode = (req.query.ref || "").toString().trim().toUpperCase();
@@ -117,7 +168,7 @@ app.use(async (req, _res, next) => {
       });
     }
   } catch (error) {
-    console.error("Failed to capture referral:", error);
+    logger.warn("referral_capture_failed", { error: error.message });
   }
 
   return next();
@@ -161,7 +212,10 @@ app.use(async (req, res, next) => {
 
     res.locals.cartCount = Number(cartAggregate._sum.quantity || 0);
   } catch (error) {
-    console.error("Failed to load cart count:", error);
+    logger.warn("cart_count_load_failed", {
+      userId,
+      error: error.message,
+    });
   }
 
   return next();
@@ -172,6 +226,7 @@ app.get("/about", (_req, res) => res.render("about"));
 app.get("/contact", contactController.getContact);
 app.post(
   "/contact",
+  contactRateLimit,
   contactValidationRules,
   validateRedirectToContact,
   asyncHandler(contactController.postContact),
@@ -181,6 +236,11 @@ app.get(
   "/admin/affiliate",
   requireAdmin,
   asyncHandler(orderController.getAdminAffiliatePage),
+);
+app.get(
+  "/admin/invoices",
+  requireAdmin,
+  asyncHandler(orderController.getAdminInvoicesPage),
 );
 app.post(
   "/admin/products",
@@ -241,6 +301,23 @@ app.post(
   validateRedirectToAdminAffiliate,
   asyncHandler(orderController.markAffiliatePayoutPaid),
 );
+app.post(
+  "/admin/invoices/:id/send",
+  requireAdmin,
+  idParamValidationRules,
+  validateRedirectToAdminInvoices,
+  asyncHandler(orderController.sendInvoiceToCustomer),
+);
+app.post(
+  "/admin/invoices/:id/paid",
+  requireAdmin,
+  idParamValidationRules,
+  validateRedirectToAdminInvoices,
+  asyncHandler(orderController.markInvoicePaid),
+);
+app.use("/auth/login", authRateLimit);
+app.use("/auth/signup", authRateLimit);
+app.use("/auth/checkout", checkoutRateLimit);
 app.use("/auth", authRoutes);
 
 app.use((error, _req, res, next) => {
@@ -255,10 +332,50 @@ app.use((error, _req, res, next) => {
 });
 
 app.use((error, _req, res, _next) => {
-  console.error(error);
+  logger.error("request_failed", {
+    requestId: res.locals.requestId || null,
+    error: error.message,
+    stack: error.stack,
+  });
+  void notifyCritical("clubzero_request_failed", {
+    requestId: res.locals.requestId || null,
+    error: error.message,
+  });
   return res.status(500).send("Something went wrong. Please try again.");
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+process.on("unhandledRejection", (error) => {
+  logger.error("unhandled_rejection", {
+    error: error instanceof Error ? error.message : String(error),
+  });
+  void notifyCritical("clubzero_unhandled_rejection", {
+    error: error instanceof Error ? error.message : String(error),
+  });
 });
+
+process.on("uncaughtException", (error) => {
+  logger.error("uncaught_exception", {
+    error: error.message,
+    stack: error.stack,
+  });
+  void notifyCritical("clubzero_uncaught_exception", {
+    error: error.message,
+  });
+});
+
+sessionStore.ready
+  .then(() => {
+    app.listen(config.port, () => {
+      logger.info("server_started", {
+        port: config.port,
+        nodeEnv: config.nodeEnv,
+      });
+    });
+  })
+  .catch((error) => {
+    logger.error("session_store_boot_failed", {
+      error: error.message,
+      stack: error.stack,
+    });
+    process.exit(1);
+  });

@@ -25,6 +25,11 @@
           </div>
           <div class="text-end">
             <span class="badge text-bg-primary"><%= order.status %></span>
+            <% if (order.invoice) { %>
+            <div class="mt-2">
+              <span class="badge text-bg-secondary"><%= order.invoiceStatus %></span>
+            </div>
+            <% } %>
             <p class="fw-bold mb-0 mt-2">
               R<%= Number(order.total).toFixed(2) %>
             </p>
@@ -45,13 +50,31 @@
         </ul>
 
         <hr />
-        <p class="mb-0 small text-muted">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+          <p class="mb-0 small text-muted">
           Deliver to: <%= order.deliveryName %>, <%= order.deliveryAddressLine1
           %><% if (order.deliveryAddressLine2) { %>, <%=
           order.deliveryAddressLine2 %><% } %>, <%= order.deliveryCity %>, <%=
           order.deliveryState %> <%= order.deliveryPostalCode %>, <%=
           order.deliveryCountry %>.
-        </p>
+          </p>
+          <% if (order.invoice) { %>
+          <div class="d-flex gap-2">
+            <a
+              href="/auth/orders/<%= order.id %>/invoice"
+              class="btn btn-sm btn-outline-primary"
+            >
+              View Invoice
+            </a>
+            <a
+              href="/auth/orders/<%= order.id %>/invoice?download=1"
+              class="btn btn-sm btn-outline-secondary"
+            >
+              Download Invoice
+            </a>
+          </div>
+          <% } %>
+        </div>
       </div>
     </article>
     <% }) %>

@@ -1,4 +1,7 @@
 const { prisma } = require("../prisma/lib/prisma");
+const nodemailer = require("nodemailer");
+const { logger } = require("../lib/logger");
+const { renderInvoicePdf } = require("../lib/invoicePdf");
 const AFFILIATE_RATE = 0.05;
 const AFFILIATE_STATUS = {
   NONE: "NONE",
@@ -6,6 +9,12 @@ const AFFILIATE_STATUS = {
   APPROVED: "APPROVED",
   REJECTED: "REJECTED",
 };
+const INVOICE_STATUS = {
+  DRAFT: "DRAFT",
+  SENT: "SENT",
+  PAID: "PAID",
+};
+const INVOICE_PAYMENT_TERMS_DAYS = 7;
 
 const getUserId = (req) => Number.parseInt(req.session?.user?.id, 10);
 const hasAddressBookModel = () => Boolean(prisma.addressBookEntry);
@@ -49,6 +58,116 @@ const getCartWithTotal = async (userId) => {
 
   return { cartItems, total };
 };
+
+const addDays = (date, days) => {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + days);
+  return nextDate;
+};
+
+const buildInvoiceNumber = (order) =>
+  `CZ-${new Date(order.createdAt).getFullYear()}-${String(order.id).padStart(6, "0")}`;
+
+const buildInvoiceNotes = () =>
+  "Please use your invoice number as the payment reference.";
+
+const getSmtpConfig = () => {
+  const host = (process.env.SMTP_HOST || "").trim();
+  const port = Number.parseInt(process.env.SMTP_PORT || "", 10);
+  const secure = String(process.env.SMTP_SECURE || "false").toLowerCase() === "true";
+  const user = (process.env.SMTP_USER || "").trim();
+  const pass = process.env.SMTP_PASS || "";
+  const from =
+    (process.env.CONTACT_FROM_EMAIL || "").trim() || "no-reply@clubzero.local";
+
+  return {
+    host,
+    port,
+    secure,
+    user,
+    pass,
+    from,
+    isConfigured: Boolean(host && Number.isInteger(port) && user && pass),
+  };
+};
+
+const createInvoiceRecord = async (tx, order, recipientEmail) =>
+  tx.invoice.create({
+    data: {
+      orderId: order.id,
+      invoiceNumber: buildInvoiceNumber(order),
+      recipientName: order.deliveryName,
+      recipientEmail,
+      subtotal: Number(order.total),
+      total: Number(order.total),
+      notes: buildInvoiceNotes(),
+      dueAt: addDays(order.createdAt, INVOICE_PAYMENT_TERMS_DAYS),
+    },
+  });
+
+const buildInvoiceUrl = (req, orderId) =>
+  `${req.protocol}://${req.get("host")}/auth/orders/${orderId}/invoice`;
+
+const sendInvoiceEmail = async ({ invoice, order, req }) => {
+  const smtp = getSmtpConfig();
+  if (!smtp.isConfigured) {
+    return false;
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: smtp.host,
+    port: smtp.port,
+    secure: smtp.secure,
+    auth: {
+      user: smtp.user,
+      pass: smtp.pass,
+    },
+  });
+
+  const invoiceUrl = buildInvoiceUrl(req, order.id);
+  const pdfBuffer = await renderInvoicePdf({
+    invoice: {
+      ...invoice,
+      status: getInvoiceStatusBadge(invoice),
+    },
+    order,
+  });
+
+  const result = await transporter.sendMail({
+    from: smtp.from,
+    to: invoice.recipientEmail,
+    subject: `Invoice ${invoice.invoiceNumber} for Club Zero order #${order.id}`,
+    text: [
+      `Hi ${invoice.recipientName},`,
+      "",
+      `Your invoice ${invoice.invoiceNumber} for order #${order.id} is ready.`,
+      `Amount due: R${Number(invoice.total).toFixed(2)}`,
+      invoice.dueAt ? `Due date: ${new Date(invoice.dueAt).toLocaleDateString()}` : "",
+      "",
+      `View invoice: ${invoiceUrl}`,
+      "",
+      invoice.notes || "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    attachments: [
+      {
+        filename: `${invoice.invoiceNumber}.pdf`,
+        content: pdfBuffer,
+        contentType: "application/pdf",
+      },
+    ],
+  });
+
+  return {
+    accepted: result.accepted || [],
+    rejected: result.rejected || [],
+    response: result.response || null,
+  };
+};
+
+const getInvoiceStatusBadge = (invoice) =>
+  String(invoice?.status || INVOICE_STATUS.DRAFT).toUpperCase();
 
 const hasUnavailableItems = (cartItems) =>
   cartItems.some((item) => !item.product?.isActive);
@@ -241,6 +360,8 @@ exports.postCheckout = async (req, res) => {
     where: { id: userId },
     select: {
       id: true,
+      email: true,
+      name: true,
       referredByAffiliateId: true,
     },
   });
@@ -329,7 +450,16 @@ exports.postCheckout = async (req, res) => {
           })),
         },
       },
+      include: {
+        orderItems: true,
+      },
     });
+
+    const invoice = await createInvoiceRecord(
+      tx,
+      order,
+      buyer?.email || req.session?.user?.email || "customer@clubzero.local",
+    );
 
     if (formData.saveAddress && hasAddressBookModel()) {
       const existingAddress = await tx.addressBookEntry.findFirst({
@@ -367,8 +497,71 @@ exports.postCheckout = async (req, res) => {
 
     await tx.cartItem.deleteMany({ where: { userId } });
 
-    return order;
+    return {
+      ...order,
+      invoice,
+    };
   });
+
+  if (createdOrder.invoice) {
+    try {
+      const sent = await sendInvoiceEmail({
+        invoice: createdOrder.invoice,
+        order: createdOrder,
+        req,
+      });
+
+      if (sent) {
+        await prisma.invoice.update({
+          where: { id: createdOrder.invoice.id },
+          data: {
+            status:
+              getInvoiceStatusBadge(createdOrder.invoice) === INVOICE_STATUS.PAID
+                ? INVOICE_STATUS.PAID
+                : INVOICE_STATUS.SENT,
+            sentAt: new Date(),
+          },
+        });
+        createdOrder.invoice.status = INVOICE_STATUS.SENT;
+        if (req.session) {
+          req.session.lastOrderInvoiceNotice = {
+            orderId: createdOrder.id,
+            kind: "success",
+            message: `Invoice ${createdOrder.invoice.invoiceNumber} was emailed to ${
+              createdOrder.invoice.recipientEmail
+            }.`,
+          };
+        }
+        logger.info("checkout_invoice_email_sent", {
+          orderId: createdOrder.id,
+          invoiceId: createdOrder.invoice.id,
+          invoiceNumber: createdOrder.invoice.invoiceNumber,
+          accepted: sent.accepted,
+          rejected: sent.rejected,
+          response: sent.response,
+        });
+      }
+    } catch (error) {
+      logger.warn("checkout_invoice_email_failed", {
+        orderId: createdOrder.id,
+        invoiceId: createdOrder.invoice.id,
+        invoiceNumber: createdOrder.invoice.invoiceNumber,
+        error: error.message,
+        code: error.code || null,
+        command: error.command || null,
+        response: error.response || null,
+        responseCode: error.responseCode || null,
+      });
+      if (req.session) {
+        req.session.lastOrderInvoiceNotice = {
+          orderId: createdOrder.id,
+          kind: "warning",
+          message:
+            "Your invoice was created, but it could not be emailed right now. You can still view or download it below.",
+        };
+      }
+    }
+  }
 
   return res.redirect(`/auth/orders/thank-you/${createdOrder.id}`);
 };
@@ -383,6 +576,7 @@ exports.getOrderHistory = async (req, res) => {
   const orders = await prisma.order.findMany({
     where: { userId },
     include: {
+      invoice: true,
       orderItems: {
         orderBy: { id: "asc" },
       },
@@ -390,7 +584,12 @@ exports.getOrderHistory = async (req, res) => {
     orderBy: { id: "desc" },
   });
 
-  return res.render("orders", { orders });
+  return res.render("orders", {
+    orders: orders.map((order) => ({
+      ...order,
+      invoiceStatus: getInvoiceStatusBadge(order.invoice),
+    })),
+  });
 };
 
 exports.getOrderThankYou = async (req, res) => {
@@ -407,14 +606,292 @@ exports.getOrderThankYou = async (req, res) => {
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    select: { id: true, userId: true, total: true, createdAt: true },
+    select: {
+      id: true,
+      userId: true,
+      total: true,
+      createdAt: true,
+      invoice: {
+        select: {
+          id: true,
+          invoiceNumber: true,
+          status: true,
+        },
+      },
+    },
   });
 
   if (!order || order.userId !== userId) {
     return res.status(404).send("Order not found");
   }
 
-  return res.render("thank-you", { order });
+  let invoiceNotice = null;
+  if (req.session?.lastOrderInvoiceNotice?.orderId === order.id) {
+    invoiceNotice = req.session.lastOrderInvoiceNotice;
+    delete req.session.lastOrderInvoiceNotice;
+  }
+
+  return res.render("thank-you", { order, invoiceNotice });
+};
+
+exports.getOrderInvoice = async (req, res) => {
+  const userId = getUserId(req);
+  const orderId = Number.parseInt(req.params.id, 10);
+  const isAdmin = Boolean(req.session?.user?.isAdmin);
+
+  if (!Number.isInteger(userId) && !isAdmin) {
+    return res.redirect("/auth/login");
+  }
+
+  if (!Number.isInteger(orderId)) {
+    return res.status(400).send("Invalid order id");
+  }
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          email: true,
+          name: true,
+        },
+      },
+      invoice: true,
+      orderItems: {
+        orderBy: { id: "asc" },
+      },
+    },
+  });
+
+  if (!order || !order.invoice || (!isAdmin && order.userId !== userId)) {
+    return res.status(404).send("Invoice not found");
+  }
+
+  if (req.query.download === "1") {
+    const pdfBuffer = await renderInvoicePdf({
+      invoice: {
+        ...order.invoice,
+        status: getInvoiceStatusBadge(order.invoice),
+      },
+      order,
+    });
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=\"${order.invoice.invoiceNumber}.pdf\"`,
+    );
+    return res.send(pdfBuffer);
+  }
+
+  return res.render("invoice", {
+    order,
+    invoice: {
+      ...order.invoice,
+      status: getInvoiceStatusBadge(order.invoice),
+    },
+    invoiceUrl: buildInvoiceUrl(req, order.id),
+  });
+};
+
+exports.getAdminInvoicesPage = async (req, res) => {
+  const statusFilter = (req.query.status || "all").toString().trim().toUpperCase();
+  const allowedStatuses = new Set([
+    "ALL",
+    INVOICE_STATUS.DRAFT,
+    INVOICE_STATUS.SENT,
+    INVOICE_STATUS.PAID,
+  ]);
+  const activeStatusFilter = allowedStatuses.has(statusFilter)
+    ? statusFilter
+    : "ALL";
+
+  const invoices = await prisma.invoice.findMany({
+    where:
+      activeStatusFilter === "ALL"
+        ? undefined
+        : {
+            status: activeStatusFilter,
+          },
+    include: {
+      order: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            },
+          },
+          orderItems: {
+            select: {
+              quantity: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: [{ issuedAt: "desc" }, { id: "desc" }],
+  });
+
+  const summary = invoices.reduce(
+    (acc, invoice) => {
+      const status = getInvoiceStatusBadge(invoice);
+      acc.totalCount += 1;
+      acc.totalValue += Number(invoice.total);
+      if (status === INVOICE_STATUS.DRAFT) {
+        acc.draftCount += 1;
+      } else if (status === INVOICE_STATUS.SENT) {
+        acc.sentCount += 1;
+      } else if (status === INVOICE_STATUS.PAID) {
+        acc.paidCount += 1;
+      }
+      return acc;
+    },
+    {
+      totalCount: 0,
+      totalValue: 0,
+      draftCount: 0,
+      sentCount: 0,
+      paidCount: 0,
+    },
+  );
+
+  return res.render("admin-invoices", {
+    invoices: invoices.map((invoice) => ({
+      ...invoice,
+      status: getInvoiceStatusBadge(invoice),
+      itemCount: invoice.order.orderItems.reduce(
+        (sum, item) => sum + Number(item.quantity),
+        0,
+      ),
+    })),
+    summary,
+    activeStatusFilter,
+    success: req.query.success || null,
+    error: req.query.error || null,
+  });
+};
+
+exports.sendInvoiceToCustomer = async (req, res) => {
+  const invoiceId = Number.parseInt(req.params.id, 10);
+
+  if (!Number.isInteger(invoiceId)) {
+    return res.redirect("/admin/invoices?error=Invalid+invoice+id");
+  }
+
+  const invoice = await prisma.invoice.findUnique({
+    where: { id: invoiceId },
+    include: {
+      order: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          orderItems: {
+            orderBy: { id: "asc" },
+          },
+        },
+      },
+    },
+  });
+
+  if (!invoice || !invoice.order) {
+    return res.redirect("/admin/invoices?error=Invoice+not+found");
+  }
+
+  try {
+    const sent = await sendInvoiceEmail({
+      invoice,
+      order: invoice.order,
+      req,
+    });
+
+    if (!sent) {
+      return res.redirect(
+        "/admin/invoices?error=SMTP+is+not+configured+for+invoice+email",
+      );
+    }
+
+    await prisma.invoice.update({
+      where: { id: invoiceId },
+      data: {
+        status:
+          getInvoiceStatusBadge(invoice) === INVOICE_STATUS.PAID
+            ? INVOICE_STATUS.PAID
+            : INVOICE_STATUS.SENT,
+        sentAt: new Date(),
+      },
+    });
+
+    return res.redirect(
+      `/admin/invoices?success=${encodeURIComponent(
+        `Invoice ${invoice.invoiceNumber} sent to ${invoice.recipientEmail}`,
+      )}`,
+    );
+  } catch (error) {
+    logger.warn("invoice_email_failed", {
+      invoiceId,
+      invoiceNumber: invoice?.invoiceNumber || null,
+      error: error.message,
+      code: error.code || null,
+      command: error.command || null,
+      response: error.response || null,
+      responseCode: error.responseCode || null,
+    });
+    return res.redirect(
+      "/admin/invoices?error=Unable+to+send+invoice+right+now",
+    );
+  }
+};
+
+exports.markInvoicePaid = async (req, res) => {
+  const invoiceId = Number.parseInt(req.params.id, 10);
+
+  if (!Number.isInteger(invoiceId)) {
+    return res.redirect("/admin/invoices?error=Invalid+invoice+id");
+  }
+
+  const invoice = await prisma.invoice.findUnique({
+    where: { id: invoiceId },
+    select: {
+      id: true,
+      invoiceNumber: true,
+      orderId: true,
+      status: true,
+      paidAt: true,
+    },
+  });
+
+  if (!invoice) {
+    return res.redirect("/admin/invoices?error=Invoice+not+found");
+  }
+
+  await prisma.$transaction([
+    prisma.invoice.update({
+      where: { id: invoiceId },
+      data: {
+        status: INVOICE_STATUS.PAID,
+        paidAt: invoice.paidAt || new Date(),
+      },
+    }),
+    prisma.order.update({
+      where: { id: invoice.orderId },
+      data: {
+        status: "PAID",
+      },
+    }),
+  ]);
+
+  return res.redirect(
+    `/admin/invoices?success=${encodeURIComponent(
+      `Invoice ${invoice.invoiceNumber} marked as paid`,
+    )}`,
+  );
 };
 
 exports.getAffiliateDashboard = async (req, res) => {

@@ -120,6 +120,11 @@ router.get(
   requireAuth,
   asyncHandler(orderController.getOrderThankYou),
 );
+router.get(
+  "/orders/:id/invoice",
+  requireAuth,
+  asyncHandler(orderController.getOrderInvoice),
+);
 router.get("/orders", requireAuth, asyncHandler(orderController.getOrderHistory));
 router.get(
   "/affiliate/join",

@@ -43,6 +43,11 @@ const validateRedirectToAdminAffiliate = handleValidationError(
     res.redirect(`/admin/affiliate?error=${encodeURIComponent(message)}`),
 );
 
+const validateRedirectToAdminInvoices = handleValidationError(
+  (_req, res, message) =>
+    res.redirect(`/admin/invoices?error=${encodeURIComponent(message)}`),
+);
+
 const validateRedirectToProfile = handleValidationError((_req, res, message) =>
   res.redirect(`/auth/profile?error=${encodeURIComponent(message)}`),
 );
@@ -207,6 +212,7 @@ module.exports = {
   validateRedirectToProducts,
   validateRedirectToAdmin,
   validateRedirectToAdminAffiliate,
+  validateRedirectToAdminInvoices,
   validateRedirectToProfile,
   validateRedirectToGoals,
   validateRedirectToContact,

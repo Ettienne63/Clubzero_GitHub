@@ -8,6 +8,31 @@
   integrity="sha384-G/EV+4j2dNv+tEPo3++6LCgdCROaejBqfUeNjuKAiuXbjrxilcCdDz6ZAVfHWe1Y"
   crossorigin="anonymous"
 ></script>
+<script>
+  (() => {
+    const token = document
+      .querySelector('meta[name="csrf-token"]')
+      ?.getAttribute("content");
+
+    if (!token) {
+      return;
+    }
+
+    document
+      .querySelectorAll('form[method="POST"], form[method="post"]')
+      .forEach((form) => {
+        let csrfField = form.querySelector('input[name="_csrf"]');
+        if (!csrfField) {
+          csrfField = document.createElement("input");
+          csrfField.type = "hidden";
+          csrfField.name = "_csrf";
+          form.appendChild(csrfField);
+        }
+
+        csrfField.value = token;
+      });
+  })();
+</script>
 <footer class="footer text-black pt-3 pb-4">
   <div
     class="container d-flex flex-column flex-md-row justify-content-between align-items-center"
