@@ -11,57 +11,54 @@
       <div class="alert alert-danger"><%= error %></div>
       <% } %>
 
-      <section class="affiliate-join-hero card border-0 shadow-sm overflow-hidden">
+      <section
+        class="affiliate-join-hero card border-0 shadow-sm overflow-hidden"
+      >
         <div class="card-body p-4 p-md-5">
           <p class="affiliate-join-kicker mb-2">Affiliate Program</p>
-          <% const status = (affiliateState && affiliateState.affiliateProgramStatus) || "NONE"; %>
-          <% if (status === "PENDING") { %>
-          <h1 class="h3 mb-2">Application Pending</h1>
+          <h1 class="h3 mb-2">Join and Start Earning</h1>
           <p class="text-muted mb-4">
-            Your affiliate application is under review. You will get access once approved by admin.
+            Get instant access to your affiliate dashboard and referral link.
           </p>
-          <% } else if (status === "REJECTED") { %>
-          <h1 class="h3 mb-2">Apply Again to Join</h1>
-          <p class="text-muted mb-4">
-            Your previous application was not approved. You can submit a new application now.
-          </p>
-          <% } else { %>
-          <h1 class="h3 mb-2">Apply and Start Earning Back</h1>
-          <p class="text-muted mb-4">
-            Submit your affiliate application to unlock your dashboard after admin approval.
-          </p>
-          <% } %>
 
           <div class="row g-3 mb-4">
             <div class="col-md-4">
               <article class="affiliate-join-benefit h-100">
-                <p class="affiliate-join-benefit-title mb-1">Live Earnings</p>
-                <p class="small text-muted mb-0">Track estimated commissions in one place.</p>
+                <p class="affiliate-join-benefit-title mb-1">Instant Access</p>
+                <p class="small text-muted mb-0">
+                  Get your referral link the moment you join.
+                </p>
               </article>
             </div>
             <div class="col-md-4">
               <article class="affiliate-join-benefit h-100">
                 <p class="affiliate-join-benefit-title mb-1">Clear Status</p>
-                <p class="small text-muted mb-0">See pending, approved, and paid payouts.</p>
+                <p class="small text-muted mb-0">
+                  Track payout stages and totals in real time.
+                </p>
               </article>
             </div>
             <div class="col-md-4">
               <article class="affiliate-join-benefit h-100">
-                <p class="affiliate-join-benefit-title mb-1">Order Breakdown</p>
-                <p class="small text-muted mb-0">View each order and its commission value.</p>
+                <p class="affiliate-join-benefit-title mb-1">
+                  Transparent Earnings
+                </p>
+                <p class="small text-muted mb-0">
+                  Track every order and the commission earned.
+                </p>
               </article>
             </div>
           </div>
 
-          <form action="/auth/affiliate/join" method="POST" class="d-flex gap-2 flex-wrap">
-            <button
-              type="submit"
-              class="btn affiliate-join-btn"
-              <%= status === "PENDING" ? "disabled" : "" %>
-            >
-              <%= status === "REJECTED" ? "Re-Apply for Affiliate Program" : "Apply for Affiliate Program" %>
+          <form
+            action="/auth/affiliate/join"
+            method="POST"
+            class="d-flex gap-2 flex-wrap"
+          >
+            <button type="submit" class="btn affiliate-join-btn">
+              Join Affiliate Program
             </button>
-            <a href="/auth/products" class="btn btn-outline-secondary">Not Now</a>
+            <a href="/" class="btn btn-outline-secondary">Not Now</a>
           </form>
         </div>
       </section>

@@ -1,6 +1,6 @@
 <%- include("partials/header", { title: "Products" }) %>
 <%- include("partials/navbar") %>
-<main class="container py-5">
+<main class="container py-5 products-page">
   <section class="products-fun-hero mb-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
       <div>
@@ -34,12 +34,12 @@
   <p class="text-muted">Showing results for "<%= searchQuery %>"</p>
   <% } %>
 
-  <% if (recentlyViewedProducts && recentlyViewedProducts.length > 0) { %>
-  <section class="mb-4">
-    <h2 class="h5 mb-3">Recently Viewed</h2>
-    <div class="row g-3">
-      <% recentlyViewedProducts.forEach((product) => { %>
-      <%- include("partials/recently-viewed-card", { product }) %>
+    <% if (recentlyViewedProducts && recentlyViewedProducts.length > 0) { %>
+    <section class="mb-4">
+      <h2 class="h5 mb-3">Recently Viewed</h2>
+      <div class="row g-3">
+        <% recentlyViewedProducts.forEach((product) => { %>
+        <%- include("partials/recently-viewed-card", { product }) %>
       <% }) %>
     </div>
   </section>
@@ -50,15 +50,18 @@
     <% if (searchQuery) { %>
     No products matched your search.
     <% } else { %>
-    No products available yet. Admin can add products from the admin page.
+    No products available yet. 
     <% } %>
   </div>
   <% } else { %>
-  <div class="row g-4">
-    <% products.forEach((product) => { %>
+  <section class="products-list-section">
+    <div class="row g-3">
+      <% products.forEach((product) => { %>
     <% const hasPurchased = Array.isArray(purchasedProductIds) &&
     purchasedProductIds.includes(product.id); %> <% const myReview =
     myReviewsByProduct ? myReviewsByProduct[product.id] : null; %>
+    <% const isTopRated = product.averageRating && product.averageRating >= 4.5 && product.reviewCount >= 3; %>
+    <% const isNew = product.createdAt && (Date.now() - new Date(product.createdAt).getTime()) < 1000 * 60 * 60 * 24 * 30; %>
     <div class="col-12">
       <article class="card shadow-sm product-list-card">
         <div class="row g-0">
@@ -68,6 +71,8 @@
                 src="<%= product.imageUrl %>"
                 class="img-fluid w-100 product-list-image rounded-start"
                 alt="<%= product.name %>"
+                loading="lazy"
+                decoding="async"
               />
             </a>
           </div>
@@ -77,6 +82,15 @@
                 class="d-flex flex-column flex-lg-row justify-content-between gap-2"
               >
                 <div>
+                  <div class="product-card-tags mb-2">
+                    <% if (isTopRated) { %>
+                    <span class="product-pill">Top Rated</span>
+                    <% } %>
+                    <% if (isNew) { %>
+                    <span class="product-pill product-pill-alt">New</span>
+                    <% } %>
+                    <span class="product-pill product-pill-muted">Zero Sugar</span>
+                  </div>
                   <h2 class="h5 card-title mb-1">
                     <a
                       href="/auth/products/<%= product.id %>"
@@ -171,7 +185,8 @@
       </article>
     </div>
     <% }) %>
-  </div>
+    </div>
+  </section>
   <% } %>
 </main>
 <%- include("partials/footer") %>

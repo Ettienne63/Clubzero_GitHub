@@ -46,7 +46,86 @@
               src="/images/Mango,passion,tropical flavours with people.jpeg"
               alt="Club Zero drink lineup"
               class="about-intro-image"
+              loading="lazy"
+              decoding="async"
             />
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-5">
+    <div class="container">
+      <div class="row g-4 align-items-center">
+        <div class="col-lg-6">
+          <h2 class="h3 fw-bold mb-3">Clean refreshment, built for everyday</h2>
+          <p class="text-secondary mb-3">
+            Club Zero is a sparkling hydration drink crafted for people who want
+            bright flavor without the sugar crash.
+          </p>
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <div class="home-feature-card h-100">
+                <span class="home-feature-icon">0 Sugar</span>
+                <h3 class="h6 fw-bold mt-2">Zero added sugar</h3>
+                <p class="text-secondary mb-0">
+                  Built to keep your day light without sacrificing taste.
+                </p>
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="home-feature-card h-100">
+                <span class="home-feature-icon">Low Cal</span>
+                <h3 class="h6 fw-bold mt-2">Low calorie refresh</h3>
+                <p class="text-secondary mb-0">
+                  A crisp option that fits workouts, workdays, and weekends.
+                </p>
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="home-feature-card h-100">
+                <span class="home-feature-icon">Real Taste</span>
+                <h3 class="h6 fw-bold mt-2">Bold flavor profiles</h3>
+                <p class="text-secondary mb-0">
+                  Bright, fruit-forward flavors that stay vibrant to the last
+                  sip.
+                </p>
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="home-feature-card h-100">
+                <span class="home-feature-icon">Anytime</span>
+                <h3 class="h6 fw-bold mt-2">All-day friendly</h3>
+                <p class="text-secondary mb-0">
+                  Hydration you can enjoy at any time of day.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="home-feature-card h-100">
+            <span class="home-feature-icon">Inside</span>
+            <h3 class="h5 fw-bold mt-2">What makes Club Zero different</h3>
+            <p class="text-secondary mb-3">
+              We focus on clean refreshment with bold flavor and a smoother
+              finish.
+            </p>
+            <ul class="list-unstyled mb-0 text-secondary">
+              <li class="d-flex gap-2 mb-2">
+                <span class="fw-semibold text-dark">Sparkling base</span>
+                <span>for a crisp, uplifting texture.</span>
+              </li>
+              <li class="d-flex gap-2 mb-2">
+                <span class="fw-semibold text-dark">Balanced sweetness</span>
+                <span>so flavor stays bright, never heavy.</span>
+              </li>
+              <li class="d-flex gap-2">
+                <span class="fw-semibold text-dark">Flavor-forward</span>
+                <span>tropical and citrus profiles that stand out.</span>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
@@ -85,6 +164,109 @@
             <p class="text-secondary mb-0">
               Easy to pair with your routine from workouts to late-day refresh.
             </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-5 bg-light">
+    <div class="container">
+      <div
+        class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-4"
+      >
+        <div>
+          <p class="text-uppercase fw-semibold text-secondary small mb-2">
+            Reviews
+          </p>
+          <h2 class="h3 fw-bold mb-0">What customers are saying</h2>
+        </div>
+        <span class="text-secondary small">
+          <%= typeof averageRating === "number" ? `${averageRating.toFixed(1)} average rating` : "Top rated by customers" %>
+        </span>
+      </div>
+
+      <% if (!testimonials || testimonials.length === 0) { %>
+      <div class="alert alert-info mb-0">
+        Reviews are coming soon. Check back after your first order!
+      </div>
+      <% } else { %>
+      <div
+        id="homeTestimonials"
+        class="carousel slide"
+        data-bs-ride="carousel"
+        data-bs-interval="6000"
+        data-bs-pause="false"
+        data-bs-wrap="true"
+      >
+        <div class="carousel-inner">
+          <% for (let i = 0; i < testimonials.length; i += 3) { %>
+          <div class="carousel-item <%= i === 0 ? 'active' : '' %>">
+            <div class="row g-4">
+              <% testimonials.slice(i, i + 3).forEach((review) => { %>
+              <div class="col-lg-4">
+                <article class="testimonial-card h-100">
+                  <p class="testimonial-quote">"<%= review.comment %>"</p>
+                  <p class="mb-1 fw-semibold"><%= review.reviewer %></p>
+                  <% if (review.productName) { %>
+                  <div class="small text-muted mb-1">
+                    Reviewed: <%= review.productName %>
+                  </div>
+                  <% } %>
+                  <div class="small text-muted">Rating: <%= review.rating %>/5</div>
+                </article>
+              </div>
+              <% }) %>
+            </div>
+          </div>
+          <% } %>
+        </div>
+
+      </div>
+      <% } %>
+    </div>
+  </section>
+
+  <section class="py-5 affiliate-cta-section">
+    <div class="container">
+      <div class="row g-4 align-items-center">
+        <div class="col-lg-7">
+          <p class="text-uppercase fw-semibold text-secondary small mb-2">
+            Affiliate Program
+          </p>
+          <h2 class="h3 fw-bold mb-3">Earn by sharing Club Zero</h2>
+          <p class="text-secondary mb-3">
+            Get your personal referral link instantly and earn commission on
+            every order your community places.
+          </p>
+          <div class="d-flex flex-wrap gap-2 mb-4">
+            <span class="home-chip">Instant access</span>
+            <span class="home-chip">Track earnings</span>
+            <span class="home-chip">Flexible payouts</span>
+          </div>
+          <a
+            href="/auth/affiliate/join"
+            class="btn btn-primary btn-lg px-4 fw-semibold"
+          >
+            Become an Affiliate
+          </a>
+        </div>
+        <div class="col-lg-5">
+          <div class="affiliate-cta-card">
+            <div class="d-flex flex-column gap-2">
+              <div class="d-flex justify-content-between">
+                <span class="text-white-50">Referral link setup</span>
+                <span class="text-white fw-semibold">Instant</span>
+              </div>
+              <div class="d-flex justify-content-between">
+                <span class="text-white-50">Commission rate</span>
+                <span class="text-white fw-semibold">5%</span>
+              </div>
+              <div class="d-flex justify-content-between">
+                <span class="text-white-50">Tracking</span>
+                <span class="text-white fw-semibold">Live dashboard</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

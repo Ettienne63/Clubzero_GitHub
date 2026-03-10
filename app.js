@@ -23,7 +23,6 @@ const {
   idParamValidationRules,
   contactValidationRules,
   validateRedirectToAdmin,
-  validateRedirectToAdminAffiliate,
   validateRedirectToAdminInvoices,
   validateRedirectToContact,
 } = require("./middleware/validation");
@@ -221,7 +220,41 @@ app.use(async (req, res, next) => {
   return next();
 });
 
-app.get("/", (_req, res) => res.render("home"));
+app.get("/", async (_req, res) => {
+  const rawReviews = await prisma.review.findMany({
+    where: {
+      rating: { gte: 4 },
+      product: { isActive: true },
+    },
+    include: {
+      user: { select: { name: true, email: true } },
+      product: { select: { name: true } },
+    },
+    orderBy: { id: "desc" },
+    take: 12,
+  });
+
+  const testimonials = rawReviews.map((review) => ({
+    id: review.id,
+    rating: review.rating,
+    comment:
+      (review.comment || "").trim() ||
+      `Loved the ${review.product?.name || "Club Zero"} flavor.`,
+    reviewer: review.user?.name || review.user?.email || "Club Zero Customer",
+    productName: review.product?.name || null,
+  }));
+
+  const averageRating =
+    testimonials.length > 0
+      ? testimonials.reduce((sum, review) => sum + review.rating, 0) /
+        testimonials.length
+      : null;
+
+  return res.render("home", {
+    testimonials,
+    averageRating,
+  });
+});
 app.get("/about", (_req, res) => res.render("about"));
 app.get("/contact", contactController.getContact);
 app.post(
@@ -272,34 +305,6 @@ app.post(
   productIdParamValidationRules,
   validateRedirectToAdmin,
   asyncHandler(productController.restoreProduct),
-);
-app.post(
-  "/admin/affiliate/:id/approve",
-  requireAdmin,
-  idParamValidationRules,
-  validateRedirectToAdminAffiliate,
-  asyncHandler(orderController.approveAffiliatePayout),
-);
-app.post(
-  "/admin/affiliate/applicants/:id/approve",
-  requireAdmin,
-  idParamValidationRules,
-  validateRedirectToAdminAffiliate,
-  asyncHandler(orderController.approveAffiliateApplicant),
-);
-app.post(
-  "/admin/affiliate/applicants/:id/reject",
-  requireAdmin,
-  idParamValidationRules,
-  validateRedirectToAdminAffiliate,
-  asyncHandler(orderController.rejectAffiliateApplicant),
-);
-app.post(
-  "/admin/affiliate/:id/pay",
-  requireAdmin,
-  idParamValidationRules,
-  validateRedirectToAdminAffiliate,
-  asyncHandler(orderController.markAffiliatePayoutPaid),
 );
 app.post(
   "/admin/invoices/:id/send",

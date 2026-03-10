@@ -5,9 +5,7 @@ const { renderInvoicePdf } = require("../lib/invoicePdf");
 const AFFILIATE_RATE = 0.05;
 const AFFILIATE_STATUS = {
   NONE: "NONE",
-  PENDING: "PENDING",
   APPROVED: "APPROVED",
-  REJECTED: "REJECTED",
 };
 const INVOICE_STATUS = {
   DRAFT: "DRAFT",
@@ -1043,29 +1041,33 @@ exports.postAffiliateJoin = async (req, res) => {
     return res.redirect("/auth/affiliate");
   }
 
-  if (affiliateState.affiliateProgramStatus === AFFILIATE_STATUS.PENDING) {
-    return res.redirect(
-      "/auth/affiliate/join?success=Your+affiliate+application+is+pending+admin+approval",
-    );
-  }
+  const affiliateCode =
+    affiliateState.affiliateCode ||
+    (await generateUniqueAffiliateCode(
+      req.session?.user?.name || req.session?.user?.email || "",
+    ));
 
   await prisma.user.update({
     where: { id: userId },
     data: {
-      affiliateProgramStatus: AFFILIATE_STATUS.PENDING,
+      role: "AFFILIATE",
+      affiliateProgramStatus: AFFILIATE_STATUS.APPROVED,
+      affiliateCode,
       affiliateAppliedAt: new Date(),
+      affiliateApprovedAt: new Date(),
       affiliateRejectedAt: null,
     },
   });
 
   if (req.session?.user) {
-    req.session.user.isAffiliate = false;
-    req.session.user.affiliateProgramStatus = AFFILIATE_STATUS.PENDING;
+    req.session.user.isAffiliate = true;
+    req.session.user.affiliateProgramStatus = AFFILIATE_STATUS.APPROVED;
+    req.session.user.affiliateCode = affiliateCode;
   }
 
   return res.redirect(
-    `/auth/affiliate/join?success=${encodeURIComponent(
-      "Application submitted. Awaiting admin approval.",
+    `/auth/affiliate?success=${encodeURIComponent(
+      "Welcome to the affiliate program. Your referral link is ready.",
     )}`,
   );
 };
@@ -1086,27 +1088,6 @@ const getAffiliateStatus = (order) => {
 };
 
 exports.getAdminAffiliatePage = async (req, res) => {
-  const statusFilter = (req.query.status || "all").toString().toLowerCase();
-  const allowedFilters = new Set(["all", "pending", "approved", "paid"]);
-  const activeStatusFilter = allowedFilters.has(statusFilter) ? statusFilter : "all";
-
-  const applicants = await prisma.user.findMany({
-    where: {
-      affiliateProgramStatus: {
-        in: [AFFILIATE_STATUS.PENDING, AFFILIATE_STATUS.REJECTED],
-      },
-    },
-    orderBy: [{ affiliateAppliedAt: "desc" }, { id: "desc" }],
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      affiliateProgramStatus: true,
-      affiliateAppliedAt: true,
-      affiliateRejectedAt: true,
-    },
-  });
-
   const orders = await prisma.order.findMany({
     where: {
       affiliateReferrerUserId: { not: null },
@@ -1152,13 +1133,6 @@ exports.getAdminAffiliatePage = async (req, res) => {
     };
   });
 
-  const filteredOrders =
-    activeStatusFilter === "all"
-      ? normalizedOrders
-      : normalizedOrders.filter(
-          (order) => order.affiliateStatus === activeStatusFilter,
-        );
-
   const summary = normalizedOrders.reduce(
     (acc, order) => {
       acc.totalOrders += 1;
@@ -1190,192 +1164,9 @@ exports.getAdminAffiliatePage = async (req, res) => {
   );
 
   return res.render("admin-affiliate", {
-    applicants,
-    orders: filteredOrders,
     summary,
-    activeStatusFilter,
     affiliateRate: AFFILIATE_RATE,
     success: req.query.success || null,
     error: req.query.error || null,
   });
-};
-
-exports.approveAffiliateApplicant = async (req, res) => {
-  const userId = Number.parseInt(req.params.id, 10);
-
-  if (!Number.isInteger(userId)) {
-    return res.redirect("/admin/affiliate?error=Invalid+user+id");
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      affiliateProgramStatus: true,
-      affiliateCode: true,
-    },
-  });
-
-  if (!user) {
-    return res.redirect("/admin/affiliate?error=User+not+found");
-  }
-
-  if (user.affiliateProgramStatus === AFFILIATE_STATUS.APPROVED) {
-    return res.redirect("/admin/affiliate?success=Affiliate+already+approved");
-  }
-
-  const affiliateCode =
-    user.affiliateCode || (await generateUniqueAffiliateCode(user.name || user.email));
-
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      role: "AFFILIATE",
-      affiliateProgramStatus: AFFILIATE_STATUS.APPROVED,
-      affiliateCode,
-      affiliateApprovedAt: new Date(),
-      affiliateRejectedAt: null,
-    },
-  });
-
-  return res.redirect(
-    `/admin/affiliate?success=${encodeURIComponent(
-      `Affiliate approved (${affiliateCode})`,
-    )}`,
-  );
-};
-
-exports.rejectAffiliateApplicant = async (req, res) => {
-  const userId = Number.parseInt(req.params.id, 10);
-
-  if (!Number.isInteger(userId)) {
-    return res.redirect("/admin/affiliate?error=Invalid+user+id");
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, affiliateProgramStatus: true },
-  });
-
-  if (!user) {
-    return res.redirect("/admin/affiliate?error=User+not+found");
-  }
-
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      role: "USER",
-      affiliateProgramStatus: AFFILIATE_STATUS.REJECTED,
-      affiliateRejectedAt: new Date(),
-      affiliateApprovedAt: null,
-      affiliateCode: null,
-    },
-  });
-
-  return res.redirect("/admin/affiliate?success=Affiliate+application+rejected");
-};
-
-exports.approveAffiliatePayout = async (req, res) => {
-  const orderId = Number.parseInt(req.params.id, 10);
-
-  if (!Number.isInteger(orderId)) {
-    return res.redirect("/admin/affiliate?error=Invalid+order+id");
-  }
-
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    select: {
-      id: true,
-      status: true,
-      affiliateStatus: true,
-      affiliateApprovedAt: true,
-      affiliatePaidAt: true,
-      affiliateReferrerUserId: true,
-    },
-  });
-
-  if (!order) {
-    return res.redirect("/admin/affiliate?error=Order+not+found");
-  }
-
-  if (!order.affiliateReferrerUserId) {
-    return res.redirect("/admin/affiliate?error=Order+has+no+affiliate+referrer");
-  }
-
-  const affiliateStatus = getAffiliateStatus(order);
-
-  if (affiliateStatus === "paid") {
-    return res.redirect(
-      "/admin/affiliate?error=This+order+is+already+marked+as+paid",
-    );
-  }
-
-  if (affiliateStatus === "approved") {
-    return res.redirect(
-      "/admin/affiliate?success=This+order+is+already+approved",
-    );
-  }
-
-  await prisma.order.update({
-    where: { id: orderId },
-    data: {
-      affiliateStatus: "APPROVED",
-      affiliateApprovedAt: order.affiliateApprovedAt || new Date(),
-    },
-  });
-
-  return res.redirect("/admin/affiliate?success=Affiliate+payout+approved");
-};
-
-exports.markAffiliatePayoutPaid = async (req, res) => {
-  const orderId = Number.parseInt(req.params.id, 10);
-
-  if (!Number.isInteger(orderId)) {
-    return res.redirect("/admin/affiliate?error=Invalid+order+id");
-  }
-
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    select: {
-      id: true,
-      status: true,
-      affiliateStatus: true,
-      affiliateApprovedAt: true,
-      affiliatePaidAt: true,
-      affiliateReferrerUserId: true,
-    },
-  });
-
-  if (!order) {
-    return res.redirect("/admin/affiliate?error=Order+not+found");
-  }
-
-  if (!order.affiliateReferrerUserId) {
-    return res.redirect("/admin/affiliate?error=Order+has+no+affiliate+referrer");
-  }
-
-  const affiliateStatus = getAffiliateStatus(order);
-
-  if (affiliateStatus === "paid") {
-    return res.redirect("/admin/affiliate?success=This+order+is+already+paid");
-  }
-
-  if (affiliateStatus !== "approved") {
-    return res.redirect(
-      "/admin/affiliate?error=Approve+the+order+before+marking+as+paid",
-    );
-  }
-
-  await prisma.order.update({
-    where: { id: orderId },
-    data: {
-      affiliateStatus: "PAID",
-      affiliateApprovedAt: order.affiliateApprovedAt || new Date(),
-      affiliatePaidAt: order.affiliatePaidAt || new Date(),
-    },
-  });
-
-  return res.redirect("/admin/affiliate?success=Affiliate+payout+marked+as+paid");
 };

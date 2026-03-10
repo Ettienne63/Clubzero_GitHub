@@ -17,6 +17,9 @@
         Earnings are calculated from referred order amounts.
       </p>
       <p class="small text-muted mb-0">
+        Self-referrals are not eligible for commission.
+      </p>
+      <p class="small text-muted mb-0">
         Code: <strong><%= affiliateState.affiliateCode %></strong>
       </p>
     </div>
@@ -126,12 +129,45 @@
     </div>
   </section>
 
+  <section class="row g-3 mb-4">
+    <div class="col-12 col-lg-4">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">How It Works</p>
+          <p class="mb-2">Share your referral link with customers.</p>
+          <p class="mb-2">We track signups and orders from your link.</p>
+          <p class="mb-0">Earn <%= Math.round(stats.affiliateRate * 100) %>% on referred order totals.</p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-lg-4">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Payout Timeline</p>
+          <p class="mb-2">Orders move from pending to approved after verification.</p>
+          <p class="mb-2">Approved orders are marked paid when payouts are issued.</p>
+          <p class="mb-0">You can monitor every status change above.</p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-lg-4">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Promotion Tips</p>
+          <p class="mb-2">Add your link to social bios and email signatures.</p>
+          <p class="mb-2">Share product benefits and tasting notes.</p>
+          <p class="mb-0">Remind customers to use your link at signup.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
   <section class="card shadow-sm">
     <div class="card-body">
       <h2 class="h5 mb-3">Order Breakdown</h2>
       <% if (!orders || orders.length === 0) { %>
       <div class="alert alert-info mb-0">
-        You have not placed any orders yet. Place an order to start earning.
+        No referred orders yet. Share your link to start earning.
       </div>
       <% } else { %>
       <div class="table-responsive">

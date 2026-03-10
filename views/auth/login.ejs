@@ -39,13 +39,22 @@
                 </div>
                 <div>
                   <label for="password" class="form-label">Password</label>
-                  <input
-                    id="password"
-                    type="password"
-                    name="password"
-                    class="form-control"
-                    required
-                  />
+                  <div class="input-group">
+                    <input
+                      id="password"
+                      type="password"
+                      name="password"
+                      class="form-control"
+                      required
+                    />
+                    <button
+                      class="btn btn-outline-secondary"
+                      type="button"
+                      data-toggle-password="#password"
+                    >
+                      Show
+                    </button>
+                  </div>
                 </div>
                 <button type="submit" class="btn btn-primary w-100">
                   Log in
@@ -70,3 +79,19 @@
 </div>
 
 <%- include("../partials/footer") %>
+<script>
+  (() => {
+    const toggles = document.querySelectorAll("[data-toggle-password]");
+    if (!toggles.length) return;
+    toggles.forEach((btn) => {
+      const selector = btn.getAttribute("data-toggle-password");
+      const input = selector ? document.querySelector(selector) : null;
+      if (!input) return;
+      btn.addEventListener("click", () => {
+        const isHidden = input.type === "password";
+        input.type = isHidden ? "text" : "password";
+        btn.textContent = isHidden ? "Hide" : "Show";
+      });
+    });
+  })();
+</script>
