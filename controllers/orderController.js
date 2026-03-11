@@ -26,6 +26,7 @@ const hasAddressBookModel = () => Boolean(prisma.addressBookEntry);
 const buildCheckoutFormData = (body = {}) => ({
   selectedAddressId: (body.selectedAddressId || "").toString().trim(),
   affiliateCode: (body.affiliateCode || "").toString().trim().toUpperCase(),
+  applyAffiliateCredit: body.applyAffiliateCredit === "on",
   saveAddress: body.saveAddress === "on",
   deliveryName: (body.deliveryName || "").trim(),
   deliveryPhone: (body.deliveryPhone || "").trim(),
@@ -93,6 +94,18 @@ const getSmtpConfig = () => {
     from,
     isConfigured: Boolean(host && Number.isInteger(port) && user && pass),
   };
+};
+
+const getInternalOrderEmail = () => {
+  const preferred = (process.env.ORDER_NOTIFICATION_EMAIL || "").trim();
+  if (preferred) {
+    return preferred;
+  }
+  const contactTo = (process.env.CONTACT_TO_EMAIL || "").trim();
+  if (contactTo) {
+    return contactTo;
+  }
+  return (process.env.ADMIN_EMAIL || "").trim();
 };
 
 const getPaystackConfig = () => {
@@ -321,6 +334,94 @@ const buildOrderConfirmationHtml = (order) => {
   `;
 };
 
+const buildInternalOrderText = (order) => {
+  const lines = [
+    `New order received: #${order.id}`,
+    "",
+    "Customer:",
+    `${order.user?.name || ""} ${order.user?.email ? `<${order.user.email}>` : ""}`
+      .trim(),
+    "",
+    "Order summary:",
+  ];
+
+  order.orderItems.forEach((item) => {
+    lines.push(
+      `- ${item.productName} x ${item.quantity} case${
+        item.quantity === 1 ? "" : "s"
+      } (R${Number(item.subtotal).toFixed(2)})`,
+    );
+  });
+
+  lines.push(
+    "",
+    `Total: R${Number(order.total).toFixed(2)}`,
+    "",
+    "Delivery:",
+    `${order.deliveryName || ""}`,
+    `${order.deliveryAddressLine1 || ""}`,
+    `${order.deliveryAddressLine2 || ""}`.trim(),
+    `${order.deliveryCity || ""}, ${order.deliveryState || ""} ${
+      order.deliveryPostalCode || ""
+    }`,
+    `${order.deliveryCountry || ""}`,
+  );
+
+  return lines.filter(Boolean).join("\n");
+};
+
+const buildInternalOrderHtml = (order) => {
+  const itemsHtml = order.orderItems
+    .map(
+      (item) => `
+        <tr>
+          <td style="padding:6px 0;">${item.productName}</td>
+          <td style="padding:6px 0; text-align:right;">${item.quantity}</td>
+          <td style="padding:6px 0; text-align:right;">R${Number(
+            item.subtotal,
+          ).toFixed(2)}</td>
+        </tr>`,
+    )
+    .join("");
+
+  const customerName = order.user?.name || "";
+  const customerEmail = order.user?.email || "";
+
+  return `
+    <div style="font-family:Arial, sans-serif; color:#1f2a44;">
+      <h2 style="margin:0 0 12px;">New order received</h2>
+      <p style="margin:0 0 12px;">Order #${order.id}</p>
+      <p style="margin:0 0 12px;">
+        <strong>Customer:</strong> ${customerName} ${customerEmail ? `&lt;${customerEmail}&gt;` : ""}
+      </p>
+      <h3 style="margin:16px 0 8px;">Order summary</h3>
+      <table style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th style="text-align:left; padding:6px 0;">Item</th>
+            <th style="text-align:right; padding:6px 0;">Cases</th>
+            <th style="text-align:right; padding:6px 0;">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>${itemsHtml}</tbody>
+      </table>
+      <p style="margin:12px 0 0;"><strong>Total:</strong> R${Number(
+        order.total,
+      ).toFixed(2)}</p>
+      <h3 style="margin:16px 0 8px;">Delivery</h3>
+      <p style="margin:0;">
+        ${order.deliveryName || ""}<br />
+        ${order.deliveryAddressLine1 || ""}<br />
+        ${order.deliveryAddressLine2 || ""}<br />
+        ${order.deliveryCity || ""}, ${order.deliveryState || ""} ${
+          order.deliveryPostalCode || ""
+        }<br />
+        ${order.deliveryCountry || ""}
+      </p>
+    </div>
+  `;
+};
+
 const sendOrderConfirmationEmail = async ({ order, req }) => {
   const smtp = getSmtpConfig();
   if (!smtp.isConfigured) {
@@ -346,6 +447,38 @@ const sendOrderConfirmationEmail = async ({ order, req }) => {
     subject: `Order confirmation for Club Zero #${order.id}`,
     text: buildOrderConfirmationText(order),
     html: buildOrderConfirmationHtml(order),
+  });
+
+  return true;
+};
+
+const sendInternalOrderEmail = async ({ order }) => {
+  const smtp = getSmtpConfig();
+  if (!smtp.isConfigured) {
+    return false;
+  }
+
+  const to = getInternalOrderEmail();
+  if (!to) {
+    return false;
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: smtp.host,
+    port: smtp.port,
+    secure: smtp.secure,
+    auth: {
+      user: smtp.user,
+      pass: smtp.pass,
+    },
+  });
+
+  await transporter.sendMail({
+    from: smtp.from,
+    to,
+    subject: `New Club Zero order #${order.id}`,
+    text: buildInternalOrderText(order),
+    html: buildInternalOrderHtml(order),
   });
 
   return true;
@@ -377,6 +510,7 @@ const getAffiliateUserState = async (userId) => {
       affiliateProgramStatus: true,
       affiliateCode: true,
       referredByAffiliateId: true,
+      affiliateBalance: true,
       _count: {
         select: {
           referredUsers: true,
@@ -397,6 +531,7 @@ const getAffiliateUserState = async (userId) => {
     affiliateProgramStatus,
     affiliateCode: user?.affiliateCode || null,
     referredByAffiliateId: user?.referredByAffiliateId || null,
+    affiliateBalance: Number(user?.affiliateBalance || 0),
     referredSignupsCount: user?._count?.referredUsers || 0,
     referralClicksCount: user?._count?.referralClicks || 0,
     isAffiliate: affiliateProgramStatus === AFFILIATE_STATUS.APPROVED,
@@ -492,6 +627,31 @@ const finalizePaidOrder = async ({ orderId, paidAt = new Date() }) =>
 
     await tx.cartItem.deleteMany({ where: { userId: order.userId } });
 
+    if (
+      Number.isInteger(order.affiliateReferrerUserId) &&
+      String(order.affiliateStatus || "").toUpperCase() !== "PAID"
+    ) {
+      const commission = Number(order.total) * AFFILIATE_RATE;
+      if (Number.isFinite(commission) && commission > 0) {
+        await tx.order.update({
+          where: { id: order.id },
+          data: {
+            affiliateStatus: "PAID",
+            affiliateApprovedAt: order.affiliateApprovedAt || new Date(),
+            affiliatePaidAt: order.affiliatePaidAt || new Date(),
+          },
+        });
+        await tx.user.update({
+          where: { id: order.affiliateReferrerUserId },
+          data: {
+            affiliateBalance: {
+              increment: commission,
+            },
+          },
+        });
+      }
+    }
+
     return {
       order: { ...order, status: "PAID" },
       invoice,
@@ -541,6 +701,12 @@ exports.getCheckout = async (req, res) => {
     );
   }
 
+  const buyer = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { affiliateBalance: true },
+  });
+  const affiliateBalance = Number(buyer?.affiliateBalance || 0);
+
   return res.render("checkout", {
     cartItems,
     total,
@@ -549,6 +715,9 @@ exports.getCheckout = async (req, res) => {
     formData: buildCheckoutFormData({
       affiliateCode: req.session?.refAffiliateCode || "",
     }),
+    affiliateBalance,
+    creditApplied: 0,
+    payableTotal: total,
   });
 };
 
@@ -600,6 +769,9 @@ exports.postCheckout = async (req, res) => {
       savedAddresses,
       error: "Please fill in all required delivery fields.",
       formData,
+      affiliateBalance: availableAffiliateBalance,
+      creditApplied,
+      payableTotal,
     });
   }
 
@@ -610,8 +782,18 @@ exports.postCheckout = async (req, res) => {
       email: true,
       name: true,
       referredByAffiliateId: true,
+      affiliateBalance: true,
     },
   });
+  const availableAffiliateBalance = Math.max(
+    Number(buyer?.affiliateBalance || 0),
+    0,
+  );
+  const wantsAffiliateCredit = Boolean(formData.applyAffiliateCredit);
+  const creditApplied = wantsAffiliateCredit
+    ? Math.min(availableAffiliateBalance, Number(total))
+    : 0;
+  const payableTotal = Math.max(Number(total) - creditApplied, 0);
 
   let affiliateReferrerUserId = Number.parseInt(
     req.session?.refAffiliateUserId,
@@ -630,6 +812,9 @@ exports.postCheckout = async (req, res) => {
         savedAddresses,
         error: "Affiliate code is invalid or not approved yet.",
         formData,
+        affiliateBalance: availableAffiliateBalance,
+        creditApplied,
+        payableTotal,
       });
     }
 
@@ -673,13 +858,25 @@ exports.postCheckout = async (req, res) => {
   }
 
   const createdOrder = await prisma.$transaction(async (tx) => {
+    if (creditApplied > 0) {
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          affiliateBalance: {
+            decrement: creditApplied,
+          },
+        },
+      });
+    }
+
     const order = await tx.order.create({
       data: {
         userId,
         affiliateReferrerUserId: affiliateReferrerUserId || null,
         affiliateReferrerCode,
-        total,
+        total: payableTotal,
         status: "PENDING_PAYMENT",
+        affiliateCreditApplied: creditApplied,
         deliveryName: formData.deliveryName,
         deliveryPhone: formData.deliveryPhone,
         deliveryAddressLine1: formData.deliveryAddressLine1,
@@ -742,16 +939,91 @@ exports.postCheckout = async (req, res) => {
 
   const paystack = getPaystackConfig();
   if (!paystack.isConfigured) {
+    if (creditApplied > 0) {
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: userId },
+          data: {
+            affiliateBalance: {
+              increment: creditApplied,
+            },
+          },
+        }),
+        prisma.order.update({
+          where: { id: createdOrder.id },
+          data: {
+            affiliateCreditApplied: 0,
+            total,
+            status: "PAYMENT_FAILED",
+          },
+        }),
+      ]);
+    } else {
+      await prisma.order.update({
+        where: { id: createdOrder.id },
+        data: { status: "PAYMENT_FAILED" },
+      });
+    }
     return res.status(500).render("checkout", {
       cartItems,
       total,
       savedAddresses,
       error: "Payments are not configured yet. Please try again later.",
       formData,
+      affiliateBalance: availableAffiliateBalance,
+      creditApplied,
+      payableTotal,
     });
   }
 
-  const amount = Math.round(Number(total) * 100);
+  if (payableTotal <= 0) {
+    const finalized = await finalizePaidOrder({
+      orderId: createdOrder.id,
+      paidAt: new Date(),
+    });
+
+    if (finalized?.invoice) {
+      await sendInvoiceForOrder({
+        invoice: finalized.invoice,
+        order: finalized.order,
+        req,
+      });
+    }
+
+    if (finalized && !finalized.alreadyPaid) {
+      try {
+        await sendOrderConfirmationEmail({
+          order: finalized.order,
+          req,
+        });
+      } catch (error) {
+        logger.warn("order_confirmation_email_failed", {
+          orderId: finalized.order.id,
+          error: error.message,
+        });
+      }
+
+      try {
+        await sendInternalOrderEmail({
+          order: finalized.order,
+        });
+      } catch (error) {
+        logger.warn("internal_order_email_failed", {
+          orderId: finalized.order.id,
+          error: error.message,
+        });
+      }
+    }
+
+    if (req.session) {
+      req.session.pendingOrderId = null;
+      req.session.paystackReference = null;
+    }
+
+    return res.redirect(`/auth/orders/thank-you/${createdOrder.id}`);
+  }
+
+  const amount = Math.round(Number(payableTotal) * 100);
   const callbackUrl = buildPaystackCallbackUrl(req);
 
   try {
@@ -782,6 +1054,25 @@ exports.postCheckout = async (req, res) => {
       orderId: createdOrder.id,
       error: error.message,
     });
+    if (creditApplied > 0) {
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: userId },
+          data: {
+            affiliateBalance: {
+              increment: creditApplied,
+            },
+          },
+        }),
+        prisma.order.update({
+          where: { id: createdOrder.id },
+          data: {
+            affiliateCreditApplied: 0,
+            total,
+          },
+        }),
+      ]);
+    }
     await prisma.order.update({
       where: { id: createdOrder.id },
       data: { status: "PAYMENT_FAILED" },
@@ -792,6 +1083,9 @@ exports.postCheckout = async (req, res) => {
       savedAddresses,
       error: "Unable to start payment. Please try again.",
       formData,
+      affiliateBalance: availableAffiliateBalance,
+      creditApplied,
+      payableTotal,
     });
   }
 };
@@ -882,6 +1176,17 @@ exports.handlePaystackCallback = async (req, res) => {
           error: error.message,
         });
       }
+
+      try {
+        await sendInternalOrderEmail({
+          order: finalized.order,
+        });
+      } catch (error) {
+        logger.warn("internal_order_email_failed", {
+          orderId: finalized.order.id,
+          error: error.message,
+        });
+      }
     }
 
     if (req.session) {
@@ -954,6 +1259,17 @@ exports.handlePaystackWebhook = async (req, res) => {
         order: finalized.order,
         req: null,
       });
+
+      try {
+        await sendInternalOrderEmail({
+          order: finalized.order,
+        });
+      } catch (error) {
+        logger.warn("internal_order_email_failed", {
+          orderId: finalized.order.id,
+          error: error.message,
+        });
+      }
     }
   } catch (error) {
     logger.warn("paystack_webhook_failed", {
@@ -1251,18 +1567,20 @@ exports.getAdminInvoicesPage = async (req, res) => {
 };
 
 exports.getAdminPaymentsPage = async (req, res) => {
-  const statusFilter = (req.query.status || "all").toString().toUpperCase();
+  const statusFilter = (req.query.status || "paid").toString().toUpperCase();
   const allowedStatuses = new Set([
-    "ALL",
-    "PENDING_PAYMENT",
-    "PAYMENT_FAILED",
     "PAID",
+    "PAID",
+    "PENDING_PAYMENT",
   ]);
   const activeStatusFilter = allowedStatuses.has(statusFilter)
     ? statusFilter
-    : "ALL";
+    : "PAID";
 
   const orders = await prisma.order.findMany({
+    where: {
+      status: { in: ["PAID", "PENDING_PAYMENT"] },
+    },
     include: {
       user: {
         select: { id: true, name: true, email: true },
@@ -1289,9 +1607,9 @@ exports.getAdminPaymentsPage = async (req, res) => {
   });
 
   const filteredOrders =
-    activeStatusFilter === "ALL"
-      ? normalizedOrders
-      : normalizedOrders.filter((order) => order.status === activeStatusFilter);
+    activeStatusFilter === "PAID"
+      ? normalizedOrders.filter((order) => order.status === "PAID")
+      : normalizedOrders.filter((order) => order.status === "PENDING_PAYMENT");
 
   const summary = normalizedOrders.reduce(
     (acc, order) => {
@@ -1299,8 +1617,6 @@ exports.getAdminPaymentsPage = async (req, res) => {
       acc.totalValue += Number(order.total || 0);
       if (order.status === "PAID") {
         acc.paidCount += 1;
-      } else if (order.status === "PAYMENT_FAILED") {
-        acc.failedCount += 1;
       } else if (order.status === "PENDING_PAYMENT") {
         acc.pendingCount += 1;
       }
@@ -1310,7 +1626,6 @@ exports.getAdminPaymentsPage = async (req, res) => {
       totalOrders: 0,
       totalValue: 0,
       pendingCount: 0,
-      failedCount: 0,
       paidCount: 0,
     },
   );
@@ -1394,9 +1709,6 @@ exports.getAffiliateDashboard = async (req, res) => {
       if (order.affiliateStatus === "pending") {
         acc.pendingCount += 1;
         acc.pendingEarnings += order.commission;
-      } else if (order.affiliateStatus === "approved") {
-        acc.approvedCount += 1;
-        acc.approvedEarnings += order.commission;
       } else if (order.affiliateStatus === "paid") {
         acc.paidCount += 1;
         acc.paidEarnings += order.commission;
@@ -1406,8 +1718,6 @@ exports.getAffiliateDashboard = async (req, res) => {
     {
       pendingCount: 0,
       pendingEarnings: 0,
-      approvedCount: 0,
-      approvedEarnings: 0,
       paidCount: 0,
       paidEarnings: 0,
     },
@@ -1429,6 +1739,7 @@ exports.getAffiliateDashboard = async (req, res) => {
       totalProductsOrdered,
       referralClicksCount: affiliateState.referralClicksCount,
       referredSignupsCount: affiliateState.referredSignupsCount,
+      availableBalance: affiliateState.affiliateBalance,
       affiliateRate,
       estimatedEarnings,
       ...affiliateSummary,
@@ -1511,14 +1822,13 @@ exports.postAffiliateJoin = async (req, res) => {
 const getAffiliateStatus = (order) => {
   const rawAffiliateStatus = (order.affiliateStatus || "").toUpperCase();
 
-  if (rawAffiliateStatus === "PAID" || order.status === "AFFILIATE_PAID") {
-    return "paid";
-  }
   if (
+    rawAffiliateStatus === "PAID" ||
     rawAffiliateStatus === "APPROVED" ||
+    order.status === "AFFILIATE_PAID" ||
     order.status === "AFFILIATE_APPROVED"
   ) {
-    return "approved";
+    return "paid";
   }
   return "pending";
 };
@@ -1577,9 +1887,6 @@ exports.getAdminAffiliatePage = async (req, res) => {
       if (order.affiliateStatus === "pending") {
         acc.pendingCount += 1;
         acc.pendingCommission += order.commission;
-      } else if (order.affiliateStatus === "approved") {
-        acc.approvedCount += 1;
-        acc.approvedCommission += order.commission;
       } else if (order.affiliateStatus === "paid") {
         acc.paidCount += 1;
         acc.paidCommission += order.commission;
@@ -1592,8 +1899,6 @@ exports.getAdminAffiliatePage = async (req, res) => {
       totalCommission: 0,
       pendingCount: 0,
       pendingCommission: 0,
-      approvedCount: 0,
-      approvedCommission: 0,
       paidCount: 0,
       paidCommission: 0,
     },

@@ -6,7 +6,7 @@
     <div>
       <h1 class="h3 mb-1">Affiliate Stats</h1>
       <p class="text-muted mb-0">
-        Program overview and payout performance at a glance.
+        Program overview and earnings performance at a glance.
       </p>
     </div>
     <a href="/admin" class="btn btn-outline-secondary">Back to Product Admin</a>
@@ -66,18 +66,9 @@
       </article>
     </div>
     <div class="col-12 col-md-6 col-xl-3">
-      <article class="card h-100 affiliate-stat-card">
-        <div class="card-body">
-          <p class="small text-uppercase fw-semibold text-muted mb-2">Approved</p>
-          <p class="h4 mb-0"><%= summary.approvedCount %></p>
-          <p class="small text-muted mb-0">R<%= Number(summary.approvedCommission).toFixed(2) %></p>
-        </div>
-      </article>
-    </div>
-    <div class="col-12 col-md-6 col-xl-3">
       <article class="card h-100 affiliate-earnings-card">
         <div class="card-body">
-          <p class="small text-uppercase fw-semibold mb-2">Paid Out</p>
+          <p class="small text-uppercase fw-semibold mb-2">Paid</p>
           <p class="h4 mb-0"><%= summary.paidCount %></p>
           <p class="small mb-0">R<%= Number(summary.paidCommission).toFixed(2) %></p>
         </div>
@@ -87,25 +78,18 @@
 
   <section class="card shadow-sm">
     <div class="card-body">
-      <h2 class="h5 mb-3">Payout Summary</h2>
+      <h2 class="h5 mb-3">Earnings Summary</h2>
       <div class="row g-3">
-        <div class="col-12 col-md-4">
+        <div class="col-12 col-md-6">
           <div class="p-3 border rounded-3 h-100">
             <p class="small text-uppercase fw-semibold text-muted mb-2">Pending</p>
             <p class="h5 mb-1"><%= summary.pendingCount %> orders</p>
             <p class="mb-0 text-muted">R<%= Number(summary.pendingCommission).toFixed(2) %></p>
           </div>
         </div>
-        <div class="col-12 col-md-4">
+        <div class="col-12 col-md-6">
           <div class="p-3 border rounded-3 h-100">
-            <p class="small text-uppercase fw-semibold text-muted mb-2">Approved</p>
-            <p class="h5 mb-1"><%= summary.approvedCount %> orders</p>
-            <p class="mb-0 text-muted">R<%= Number(summary.approvedCommission).toFixed(2) %></p>
-          </div>
-        </div>
-        <div class="col-12 col-md-4">
-          <div class="p-3 border rounded-3 h-100">
-            <p class="small text-uppercase fw-semibold text-muted mb-2">Paid Out</p>
+            <p class="small text-uppercase fw-semibold text-muted mb-2">Paid</p>
             <p class="h5 mb-1"><%= summary.paidCount %> orders</p>
             <p class="mb-0 text-muted">R<%= Number(summary.paidCommission).toFixed(2) %></p>
           </div>

@@ -49,8 +49,31 @@ const getSmtpConfig = () => {
 const hashResetToken = (token) =>
   crypto.createHash("sha256").update(token).digest("hex");
 
-const buildPasswordResetUrl = (req, token) =>
-  `${req.protocol}://${req.get("host")}/auth/reset-password?token=${encodeURIComponent(token)}`;
+const buildPasswordResetUrl = (req, token) => {
+  const fromEnv = (process.env.PUBLIC_BASE_URL || "").trim();
+  const baseUrl = fromEnv
+    ? fromEnv.replace(/\/+$/, "")
+    : `${req.get("x-forwarded-proto") === "https" ? "https" : req.protocol}://${req.get("host")}`;
+
+  return `${baseUrl}/auth/reset-password?token=${encodeURIComponent(token)}`;
+};
+
+const getSessionTableRef = () => {
+  const schema = (process.env.DB_SCHEMA || "clubzero_setup").trim() || "clubzero_setup";
+  return `"${schema}"."user_sessions"`;
+};
+
+const invalidateUserSessions = async (userId) => {
+  if (!Number.isInteger(userId)) {
+    return;
+  }
+
+  const tableRef = getSessionTableRef();
+  await prisma.$executeRawUnsafe(
+    `DELETE FROM ${tableRef} WHERE (sess->'user'->>'id')::int = $1`,
+    userId,
+  );
+};
 
 const sendPasswordResetEmail = async ({ user, token, req }) => {
   const smtp = getSmtpConfig();
@@ -326,6 +349,14 @@ exports.postResetPassword = async (req, res) => {
         },
       }),
     ]);
+    try {
+      await invalidateUserSessions(resetToken.userId);
+    } catch (error) {
+      logger.warn("password_reset_session_invalidation_failed", {
+        userId: resetToken.userId,
+        error: error.message,
+      });
+    }
 
     return res.redirect(
       `/auth/login?success=${encodeURIComponent("Your password has been reset. You can now log in.")}`,

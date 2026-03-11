@@ -43,6 +43,7 @@ npm run dev
 - `SESSION_COOKIE_NAME`: Session cookie name. Defaults to `clubzero.sid`.
 - `UPLOAD_DIR`: Override local upload storage path.
 - `ADMIN_EMAIL`: Email address treated as admin during login.
+- `PUBLIC_BASE_URL`: Base URL used for building absolute links in emails (like password resets).
 
 ### Contact Email
 
@@ -53,6 +54,7 @@ npm run dev
 - `SMTP_PASS`
 - `CONTACT_TO_EMAIL`
 - `CONTACT_FROM_EMAIL`
+- `ORDER_NOTIFICATION_EMAIL`: Optional internal recipient for new order emails (defaults to `CONTACT_TO_EMAIL` or `ADMIN_EMAIL`).
 
 If SMTP is not configured, contact messages are still saved to the database but notification emails are skipped.
 

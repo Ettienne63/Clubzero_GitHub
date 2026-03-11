@@ -46,14 +46,6 @@
     <div class="col-12 col-md-6 col-xl-2">
       <article class="card h-100">
         <div class="card-body">
-          <p class="small text-uppercase fw-semibold text-muted mb-2">Failed</p>
-          <p class="h4 mb-0"><%= summary.failedCount %></p>
-        </div>
-      </article>
-    </div>
-    <div class="col-12 col-md-6 col-xl-2">
-      <article class="card h-100">
-        <div class="card-body">
           <p class="small text-uppercase fw-semibold text-muted mb-2">Paid</p>
           <p class="h4 mb-0"><%= summary.paidCount %></p>
         </div>
@@ -64,12 +56,12 @@
   <section class="card shadow-sm mb-4">
     <div class="card-body d-flex flex-wrap align-items-center gap-2">
       <span class="fw-semibold me-2">Filter:</span>
-      <% ["ALL", "PENDING_PAYMENT", "PAYMENT_FAILED", "PAID"].forEach((status) => { %>
+      <% ["PAID", "PENDING_PAYMENT"].forEach((status) => { %>
       <a
         href="/admin/payments?status=<%= status.toLowerCase() %>"
         class="btn btn-sm <%= activeStatusFilter === status ? 'btn-primary' : 'btn-outline-primary' %>"
       >
-        <%= status === "PENDING_PAYMENT" ? "PENDING" : status === "PAYMENT_FAILED" ? "FAILED" : status %>
+        <%= status === "PENDING_PAYMENT" ? "PENDING" : status %>
       </a>
       <% }) %>
     </div>
@@ -110,8 +102,6 @@
               <td>
                 <% if (order.status === "PAID") { %>
                 <span class="badge text-bg-success">Paid</span>
-                <% } else if (order.status === "PAYMENT_FAILED") { %>
-                <span class="badge text-bg-danger">Failed</span>
                 <% } else { %>
                 <span class="badge text-bg-warning">Not paid</span>
                 <% } %>

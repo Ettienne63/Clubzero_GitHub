@@ -97,28 +97,19 @@
         </div>
       </article>
     </div>
+    <div class="col-12 col-md-6 col-lg-3">
+      <article class="card h-100 affiliate-earnings-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold mb-2">Available Balance</p>
+          <p class="h4 mb-0">R<%= Number(stats.availableBalance || 0).toFixed(2) %></p>
+          <p class="small text-muted mb-0">Use this on your next order</p>
+        </div>
+      </article>
+    </div>
   </section>
 
   <section class="row g-3 mb-4">
-    <div class="col-12 col-md-4">
-      <article class="card h-100 affiliate-stat-card">
-        <div class="card-body">
-          <p class="small text-uppercase fw-semibold text-muted mb-2">Pending</p>
-          <p class="h5 mb-1"><%= stats.pendingCount %> orders</p>
-          <p class="mb-0 text-muted">R<%= Number(stats.pendingEarnings).toFixed(2) %></p>
-        </div>
-      </article>
-    </div>
-    <div class="col-12 col-md-4">
-      <article class="card h-100 affiliate-stat-card">
-        <div class="card-body">
-          <p class="small text-uppercase fw-semibold text-muted mb-2">Approved</p>
-          <p class="h5 mb-1"><%= stats.approvedCount %> orders</p>
-          <p class="mb-0 text-muted">R<%= Number(stats.approvedEarnings).toFixed(2) %></p>
-        </div>
-      </article>
-    </div>
-    <div class="col-12 col-md-4">
+    <div class="col-12 col-md-6">
       <article class="card h-100 affiliate-stat-card">
         <div class="card-body">
           <p class="small text-uppercase fw-semibold text-muted mb-2">Paid</p>
@@ -144,9 +135,9 @@
       <article class="card h-100 affiliate-stat-card">
         <div class="card-body">
           <p class="small text-uppercase fw-semibold text-muted mb-2">Payout Timeline</p>
-          <p class="mb-2">Orders move from pending to approved after verification.</p>
-          <p class="mb-2">Approved orders are marked paid when payouts are issued.</p>
-          <p class="mb-0">You can monitor every status change above.</p>
+          <p class="mb-2">Orders are marked paid after payment.</p>
+          <p class="mb-2">Paid earnings are added to your balance immediately.</p>
+          <p class="mb-0">Use your available balance at checkout.</p>
         </div>
       </article>
     </div>
@@ -178,7 +169,6 @@
               <th scope="col">Customer</th>
               <th scope="col">Date</th>
               <th scope="col">Affiliate Status</th>
-              <th scope="col">Approved At</th>
               <th scope="col">Paid At</th>
               <th scope="col">Order Total</th>
               <th scope="col">Commission</th>
@@ -193,14 +183,9 @@
               <td>
                 <% if (order.affiliateStatus === "pending") { %>
                 <span class="badge text-bg-warning">Pending</span>
-                <% } else if (order.affiliateStatus === "approved") { %>
-                <span class="badge text-bg-primary">Approved</span>
                 <% } else { %>
                 <span class="badge text-bg-success">Paid</span>
                 <% } %>
-              </td>
-              <td>
-                <%= order.affiliateApprovedAt ? new Date(order.affiliateApprovedAt).toLocaleString() : "-" %>
               </td>
               <td>
                 <%= order.affiliatePaidAt ? new Date(order.affiliatePaidAt).toLocaleString() : "-" %>

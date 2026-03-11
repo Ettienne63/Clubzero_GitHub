@@ -23,6 +23,7 @@ model User {
   affiliateApprovedAt DateTime?
   affiliateRejectedAt DateTime?
   referredByAffiliateId Int?
+  affiliateBalance Float @default(0)
   password String
   createdAt DateTime @default(now())
   
@@ -97,6 +98,7 @@ model Order {
   affiliateStatus String @default("PENDING")
   affiliateApprovedAt DateTime?
   affiliatePaidAt DateTime?
+  affiliateCreditApplied Float @default(0)
 
   deliveryName String
   deliveryPhone String

@@ -137,6 +137,22 @@
                 If you came from an affiliate link, this code may already be filled in.
               </div>
             </div>
+            <% if (affiliateBalance && affiliateBalance > 0) { %>
+            <div class="col-12">
+              <div class="form-check">
+                <input
+                  id="applyAffiliateCredit"
+                  name="applyAffiliateCredit"
+                  type="checkbox"
+                  class="form-check-input"
+                  <%= formData.applyAffiliateCredit ? "checked" : "" %>
+                />
+                <label for="applyAffiliateCredit" class="form-check-label">
+                  Apply affiliate balance (R<%= Number(affiliateBalance).toFixed(2) %> available)
+                </label>
+              </div>
+            </div>
+            <% } %>
             <div class="col-12">
               <div class="form-check">
                 <input
@@ -183,9 +199,15 @@
             <% }) %>
           </ul>
           <hr />
+          <% if (creditApplied && creditApplied > 0) { %>
+          <div class="d-flex justify-content-between">
+            <span>Affiliate credit</span>
+            <span>-R<%= Number(creditApplied).toFixed(2) %></span>
+          </div>
+          <% } %>
           <div class="d-flex justify-content-between fw-bold">
             <span>Total</span>
-            <span>R<%= Number(total).toFixed(2) %></span>
+            <span>R<%= Number(payableTotal || total).toFixed(2) %></span>
           </div>
         </div>
       </div>

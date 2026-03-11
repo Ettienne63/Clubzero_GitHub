@@ -43,7 +43,7 @@ const requestLogger = (req, res, next) => {
     logger.info("http_request", {
       requestId,
       method: req.method,
-      path: req.originalUrl,
+      path: req.path,
       statusCode: res.statusCode,
       durationMs: Number(durationMs.toFixed(2)),
       ip: req.ip,
