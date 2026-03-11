@@ -76,27 +76,6 @@
     </div>
   </section>
 
-  <section class="card shadow-sm">
-    <div class="card-body">
-      <h2 class="h5 mb-3">Earnings Summary</h2>
-      <div class="row g-3">
-        <div class="col-12 col-md-6">
-          <div class="p-3 border rounded-3 h-100">
-            <p class="small text-uppercase fw-semibold text-muted mb-2">Pending</p>
-            <p class="h5 mb-1"><%= summary.pendingCount %> orders</p>
-            <p class="mb-0 text-muted">R<%= Number(summary.pendingCommission).toFixed(2) %></p>
-          </div>
-        </div>
-        <div class="col-12 col-md-6">
-          <div class="p-3 border rounded-3 h-100">
-            <p class="small text-uppercase fw-semibold text-muted mb-2">Paid</p>
-            <p class="h5 mb-1"><%= summary.paidCount %> orders</p>
-            <p class="mb-0 text-muted">R<%= Number(summary.paidCommission).toFixed(2) %></p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
 </main>
 
 <%- include("partials/footer") %>
