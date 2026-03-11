@@ -133,6 +133,7 @@ router.post(
 );
 router.get("/checkout", requireAuth, asyncHandler(orderController.getCheckout));
 router.post("/checkout", requireAuth, asyncHandler(orderController.postCheckout));
+router.get("/checkout/paystack", asyncHandler(orderController.handlePaystackCallback));
 router.get(
   "/orders/thank-you/:id",
   requireAuth,
@@ -142,6 +143,13 @@ router.get(
   "/orders/:id/invoice",
   requireAuth,
   asyncHandler(orderController.getOrderInvoice),
+);
+router.post(
+  "/orders/:id/pay",
+  requireAuth,
+  idParamValidationRules,
+  validateBadRequest,
+  asyncHandler(orderController.retryPaystackPayment),
 );
 router.get("/orders", requireAuth, asyncHandler(orderController.getOrderHistory));
 router.get(

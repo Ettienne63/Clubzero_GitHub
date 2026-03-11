@@ -16,6 +16,9 @@ const redirectGoalTrackerDenied = (res) =>
 
 const getTotalBottlesSold = async () => {
   const totals = await prisma.orderItem.aggregate({
+    where: {
+      order: { status: "PAID" },
+    },
     _sum: { quantity: true },
   });
 

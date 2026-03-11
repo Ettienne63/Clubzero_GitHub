@@ -1,7 +1,9 @@
 <%- include("partials/header", { title: "Club Zero Goal Tracker" }) %>
 <%- include("partials/navbar") %>
 <main class="container py-5 goals-page">
-  <div class="d-flex flex-wrap justify-content-center align-items-center gap-3 mb-4 text-center goals-hero">
+  <div
+    class="d-flex flex-wrap justify-content-center align-items-center gap-3 mb-4 text-center goals-hero"
+  >
     <div>
       <span class="goals-kicker">Track. Celebrate. Repeat.</span>
       <h1 class="h3 mb-1">Club Zero Goal Tracker</h1>
@@ -47,7 +49,9 @@
           />
         </div>
         <div class="col-12">
-          <button type="submit" class="btn btn-primary goals-add-btn">Add Goal</button>
+          <button type="submit" class="btn btn-primary goals-add-btn">
+            Add Goal
+          </button>
         </div>
       </form>
     </div>
@@ -70,7 +74,9 @@
             aria-expanded="<%= groupIndex === 0 ? 'true' : 'false' %>"
             aria-controls="collapse-<%= groupIndex %>"
           >
-            @<%= group.creatorUsername %> (<%= group.goals.length %> goal<%= group.goals.length === 1 ? '' : 's' %>)
+            @<%= group.creatorUsername %>
+            (<%= group.goals.length %>
+            goal<%= group.goals.length === 1 ? '' : 's' %>)
           </button>
         </h3>
         <div
@@ -85,15 +91,19 @@
               <div class="col-12">
                 <article class="card shadow-sm goal-item-card">
                   <div class="card-body">
-                    <div class="d-flex flex-wrap justify-content-between gap-2 mb-2">
+                    <div
+                      class="d-flex flex-wrap justify-content-between gap-2 mb-2"
+                    >
                       <h4 class="h6 mb-0"><%= goal.title %></h4>
-                      <span class="badge <%= goal.isReached ? 'text-bg-success' : 'text-bg-secondary' %>">
+                      <span
+                        class="badge <%= goal.isReached ? 'text-bg-success' : 'text-bg-secondary' %>"
+                      >
                         <%= goal.isReached ? "Reached" : "In Progress" %>
                       </span>
                     </div>
                     <p class="small text-muted mb-2">
-                      Target: <strong><%= goal.targetBottles %></strong> bottles |
-                      Remaining: <strong><%= goal.remainingBottles %></strong>
+                      Target: <strong><%= goal.targetBottles %></strong> bottles
+                      | Remaining: <strong><%= goal.remainingBottles %></strong>
                     </p>
                     <div
                       class="progress goal-progress-track"
@@ -102,19 +112,30 @@
                       aria-valuemax="100"
                       aria-valuenow="<%= goal.progressPercent %>"
                     >
-                      <div class="progress-bar goal-progress-bar" style="width: <%= goal.progressPercent %>%">
+                      <div
+                        class="progress-bar goal-progress-bar"
+                        style="width: 0%"
+                        data-progress="<%= goal.progressPercent %>"
+                      >
                         <%= goal.progressPercent %>%
                       </div>
                     </div>
                     <p class="small text-muted mb-0 mt-2">
-                      Created by <strong>@<%= goal.creatorUsername %></strong> on
+                      Created by
+                      <strong>@<%= goal.creatorUsername %></strong> on
                       <%= new Date(goal.createdAt).toLocaleDateString() %>
                     </p>
                     <div class="d-flex gap-2 mt-3">
-                      <a href="/auth/goals/<%= goal.id %>/edit" class="btn btn-sm btn-outline-primary">
+                      <a
+                        href="/auth/goals/<%= goal.id %>/edit"
+                        class="btn btn-sm btn-outline-primary"
+                      >
                         Edit
                       </a>
-                      <form action="/auth/goals/<%= goal.id %>/delete" method="POST">
+                      <form
+                        action="/auth/goals/<%= goal.id %>/delete"
+                        method="POST"
+                      >
                         <button
                           type="submit"
                           class="btn btn-sm btn-outline-danger"
@@ -137,4 +158,12 @@
     <% } %>
   </section>
 </main>
+<script>
+  document.querySelectorAll(".goal-progress-bar").forEach((bar) => {
+    const progress = Number(bar.dataset.progress || 0);
+    if (!Number.isNaN(progress)) {
+      bar.style.width = `${Math.min(Math.max(progress, 0), 100)}%`;
+    }
+  });
+</script>
 <%- include("partials/footer") %>

@@ -58,8 +58,15 @@
           order.deliveryState %> <%= order.deliveryPostalCode %>, <%=
           order.deliveryCountry %>.
           </p>
-          <% if (order.invoice) { %>
-          <div class="d-flex gap-2">
+          <div class="d-flex gap-2 flex-wrap">
+            <% if (order.status === "PAYMENT_FAILED" || order.status === "PENDING_PAYMENT") { %>
+            <form action="/auth/orders/<%= order.id %>/pay" method="POST">
+              <button type="submit" class="btn btn-sm btn-primary">
+                Retry Payment
+              </button>
+            </form>
+            <% } %>
+            <% if (order.invoice) { %>
             <a
               href="/auth/orders/<%= order.id %>/invoice"
               class="btn btn-sm btn-outline-primary"
@@ -72,8 +79,8 @@
             >
               Download Invoice
             </a>
+            <% } %>
           </div>
-          <% } %>
         </div>
       </div>
     </article>

@@ -23,7 +23,6 @@ const {
   idParamValidationRules,
   contactValidationRules,
   validateRedirectToAdmin,
-  validateRedirectToAdminInvoices,
   validateRedirectToContact,
 } = require("./middleware/validation");
 const productController = require("./controllers/productController");
@@ -109,6 +108,11 @@ app.use(
   }),
 );
 app.use(express.urlencoded({ extended: true, limit: "100kb" }));
+app.post(
+  "/webhooks/paystack",
+  express.raw({ type: "application/json" }),
+  asyncHandler(orderController.handlePaystackWebhook),
+);
 app.use(express.json({ limit: "100kb" }));
 app.use(requestLogger);
 app.use("/uploads", express.static(uploadsDir));
@@ -131,6 +135,15 @@ app.use(
   }),
 );
 app.use(csrfProtection);
+
+const isPaystackTestMode = String(process.env.PAYSTACK_SECRET_KEY || "")
+  .trim()
+  .startsWith("sk_test_");
+
+app.use((req, res, next) => {
+  res.locals.isPaystackTestMode = isPaystackTestMode;
+  return next();
+});
 
 app.use(async (req, _res, next) => {
   const referralCode = (req.query.ref || "").toString().trim().toUpperCase();
@@ -275,6 +288,11 @@ app.get(
   requireAdmin,
   asyncHandler(orderController.getAdminInvoicesPage),
 );
+app.get(
+  "/admin/payments",
+  requireAdmin,
+  asyncHandler(orderController.getAdminPaymentsPage),
+);
 app.post(
   "/admin/products",
   requireAdmin,
@@ -305,20 +323,6 @@ app.post(
   productIdParamValidationRules,
   validateRedirectToAdmin,
   asyncHandler(productController.restoreProduct),
-);
-app.post(
-  "/admin/invoices/:id/send",
-  requireAdmin,
-  idParamValidationRules,
-  validateRedirectToAdminInvoices,
-  asyncHandler(orderController.sendInvoiceToCustomer),
-);
-app.post(
-  "/admin/invoices/:id/paid",
-  requireAdmin,
-  idParamValidationRules,
-  validateRedirectToAdminInvoices,
-  asyncHandler(orderController.markInvoicePaid),
 );
 app.use("/auth/login", authRateLimit);
 app.use("/auth/signup", authRateLimit);

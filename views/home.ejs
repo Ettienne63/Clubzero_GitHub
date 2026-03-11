@@ -182,20 +182,21 @@
           <h2 class="h3 fw-bold mb-0">What customers are saying</h2>
         </div>
         <span class="text-secondary small">
-          <%= typeof averageRating === "number" ? `${averageRating.toFixed(1)} average rating` : "Top rated by customers" %>
+          <%= typeof averageRating === "number" ? `${averageRating.toFixed(1)}
+          average rating` : "Top rated by customers" %>
         </span>
       </div>
 
       <% if (!testimonials || testimonials.length === 0) { %>
       <div class="alert alert-info mb-0">
-        Reviews are coming soon. Check back after your first order!
+        Keep a look out for what people are saying about our products!
       </div>
       <% } else { %>
       <div
         id="homeTestimonials"
         class="carousel slide"
         data-bs-ride="carousel"
-        data-bs-interval="6000"
+        data-bs-interval="3000"
         data-bs-pause="false"
         data-bs-wrap="true"
       >
@@ -213,7 +214,9 @@
                     Reviewed: <%= review.productName %>
                   </div>
                   <% } %>
-                  <div class="small text-muted">Rating: <%= review.rating %>/5</div>
+                  <div class="small text-muted">
+                    Rating: <%= review.rating %>/5
+                  </div>
                 </article>
               </div>
               <% }) %>
@@ -221,7 +224,6 @@
           </div>
           <% } %>
         </div>
-
       </div>
       <% } %>
     </div>
@@ -239,10 +241,10 @@
             Get your personal referral link instantly and earn commission on
             every order your community places.
           </p>
-          <div class="d-flex flex-wrap gap-2 mb-4">
-            <span class="home-chip">Instant access</span>
-            <span class="home-chip">Track earnings</span>
-            <span class="home-chip">Flexible payouts</span>
+          <div class="affiliate-chip-grid mb-4">
+            <span class="affiliate-chip">Instant access</span>
+            <span class="affiliate-chip">Track earnings</span>
+            <span class="affiliate-chip">Flexible payouts</span>
           </div>
           <a
             href="/auth/affiliate/join"

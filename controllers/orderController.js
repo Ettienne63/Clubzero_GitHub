@@ -1,5 +1,10 @@
 const { prisma } = require("../prisma/lib/prisma");
 const nodemailer = require("nodemailer");
+const crypto = require("crypto");
+const {
+  initializeTransaction,
+  verifyTransaction,
+} = require("../lib/paystack");
 const { logger } = require("../lib/logger");
 const { renderInvoicePdf } = require("../lib/invoicePdf");
 const AFFILIATE_RATE = 0.05;
@@ -13,6 +18,7 @@ const INVOICE_STATUS = {
   PAID: "PAID",
 };
 const INVOICE_PAYMENT_TERMS_DAYS = 7;
+const PAYSTACK_CURRENCY = "ZAR";
 
 const getUserId = (req) => Number.parseInt(req.session?.user?.id, 10);
 const hasAddressBookModel = () => Boolean(prisma.addressBookEntry);
@@ -89,6 +95,22 @@ const getSmtpConfig = () => {
   };
 };
 
+const getPaystackConfig = () => {
+  const secretKey = (process.env.PAYSTACK_SECRET_KEY || "").trim();
+  return {
+    secretKey,
+    isConfigured: Boolean(secretKey),
+  };
+};
+
+const buildPaystackCallbackUrl = (req) => {
+  const fromEnv = (process.env.PAYSTACK_CALLBACK_URL || "").trim();
+  if (fromEnv) {
+    return fromEnv;
+  }
+  return `${req.protocol}://${req.get("host")}/auth/checkout/paystack`;
+};
+
 const createInvoiceRecord = async (tx, order, recipientEmail) =>
   tx.invoice.create({
     data: {
@@ -162,6 +184,171 @@ const sendInvoiceEmail = async ({ invoice, order, req }) => {
     rejected: result.rejected || [],
     response: result.response || null,
   };
+};
+
+const sendInvoiceForOrder = async ({ invoice, order, req }) => {
+  try {
+    const sent = await sendInvoiceEmail({ invoice, order, req });
+
+    if (sent) {
+      await prisma.invoice.update({
+        where: { id: invoice.id },
+        data: {
+          status:
+            getInvoiceStatusBadge(invoice) === INVOICE_STATUS.PAID
+              ? INVOICE_STATUS.PAID
+              : INVOICE_STATUS.SENT,
+          sentAt: new Date(),
+        },
+      });
+      if (req?.session) {
+        req.session.lastOrderInvoiceNotice = {
+          orderId: order.id,
+          kind: "success",
+          message: `Invoice ${invoice.invoiceNumber} was emailed to ${invoice.recipientEmail}.`,
+        };
+      }
+      logger.info("invoice_email_sent", {
+        orderId: order.id,
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        accepted: sent.accepted,
+        rejected: sent.rejected,
+        response: sent.response,
+      });
+    }
+  } catch (error) {
+    logger.warn("invoice_email_failed", {
+      orderId: order.id,
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      error: error.message,
+      code: error.code || null,
+      command: error.command || null,
+      response: error.response || null,
+      responseCode: error.responseCode || null,
+    });
+    if (req?.session) {
+      req.session.lastOrderInvoiceNotice = {
+        orderId: order.id,
+        kind: "warning",
+        message:
+          "Your invoice was created, but it could not be emailed right now. You can still view or download it below.",
+      };
+    }
+  }
+};
+
+const buildOrderConfirmationText = (order) => {
+  const lines = [
+    `Hi ${order.deliveryName || order.user?.name || "there"},`,
+    "",
+    `Thanks for your order #${order.id}. We are getting it ready now.`,
+    "",
+    "Order summary:",
+  ];
+
+  order.orderItems.forEach((item) => {
+    lines.push(
+      `- ${item.productName} x ${item.quantity} case${
+        item.quantity === 1 ? "" : "s"
+      } (R${Number(item.subtotal).toFixed(2)})`,
+    );
+  });
+
+  lines.push(
+    "",
+    `Total: R${Number(order.total).toFixed(2)}`,
+    "",
+    "Delivery:",
+    `${order.deliveryName || ""}`,
+    `${order.deliveryAddressLine1 || ""}`,
+    `${order.deliveryAddressLine2 || ""}`.trim(),
+    `${order.deliveryCity || ""}, ${order.deliveryState || ""} ${
+      order.deliveryPostalCode || ""
+    }`,
+    `${order.deliveryCountry || ""}`,
+    "",
+    "You will receive a shipping update once dispatched.",
+  );
+
+  return lines.filter(Boolean).join("\n");
+};
+
+const buildOrderConfirmationHtml = (order) => {
+  const itemsHtml = order.orderItems
+    .map(
+      (item) => `
+        <tr>
+          <td style="padding:6px 0;">${item.productName}</td>
+          <td style="padding:6px 0; text-align:right;">${item.quantity}</td>
+          <td style="padding:6px 0; text-align:right;">R${Number(
+            item.subtotal,
+          ).toFixed(2)}</td>
+        </tr>`,
+    )
+    .join("");
+
+  return `
+    <div style="font-family:Arial, sans-serif; color:#1f2a44;">
+      <h2 style="margin:0 0 12px;">Thanks for your order</h2>
+      <p style="margin:0 0 12px;">Order #${order.id} has been received.</p>
+      <h3 style="margin:16px 0 8px;">Order summary</h3>
+      <table style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th style="text-align:left; padding:6px 0;">Item</th>
+            <th style="text-align:right; padding:6px 0;">Cases</th>
+            <th style="text-align:right; padding:6px 0;">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>${itemsHtml}</tbody>
+      </table>
+      <p style="margin:12px 0 0;"><strong>Total:</strong> R${Number(
+        order.total,
+      ).toFixed(2)}</p>
+      <h3 style="margin:16px 0 8px;">Delivery</h3>
+      <p style="margin:0;">
+        ${order.deliveryName || ""}<br />
+        ${order.deliveryAddressLine1 || ""}<br />
+        ${order.deliveryAddressLine2 || ""}<br />
+        ${order.deliveryCity || ""}, ${order.deliveryState || ""} ${
+          order.deliveryPostalCode || ""
+        }<br />
+        ${order.deliveryCountry || ""}
+      </p>
+    </div>
+  `;
+};
+
+const sendOrderConfirmationEmail = async ({ order, req }) => {
+  const smtp = getSmtpConfig();
+  if (!smtp.isConfigured) {
+    return false;
+  }
+
+  const recipient =
+    order.user?.email || req?.session?.user?.email || "customer@clubzero.local";
+
+  const transporter = nodemailer.createTransport({
+    host: smtp.host,
+    port: smtp.port,
+    secure: smtp.secure,
+    auth: {
+      user: smtp.user,
+      pass: smtp.pass,
+    },
+  });
+
+  await transporter.sendMail({
+    from: smtp.from,
+    to: recipient,
+    subject: `Order confirmation for Club Zero #${order.id}`,
+    text: buildOrderConfirmationText(order),
+    html: buildOrderConfirmationHtml(order),
+  });
+
+  return true;
 };
 
 const getInvoiceStatusBadge = (invoice) =>
@@ -249,6 +436,68 @@ const generateUniqueAffiliateCode = async (seed) => {
 
   return `${prefix}-${Date.now().toString(36).slice(-5).toUpperCase()}`;
 };
+
+const finalizePaidOrder = async ({ orderId, paidAt = new Date() }) =>
+  prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+          },
+        },
+        orderItems: {
+          orderBy: { id: "asc" },
+        },
+      },
+    });
+
+    if (!order) {
+      return null;
+    }
+
+    const alreadyPaid = order.status === "PAID";
+
+    if (!alreadyPaid) {
+      await tx.order.update({
+        where: { id: order.id },
+        data: { status: "PAID" },
+      });
+    }
+
+    let invoice = await tx.invoice.findUnique({
+      where: { orderId: order.id },
+    });
+
+    if (!invoice) {
+      invoice = await createInvoiceRecord(
+        tx,
+        order,
+        order.user?.email || "customer@clubzero.local",
+      );
+    }
+
+    if (invoice.status !== INVOICE_STATUS.PAID || !invoice.paidAt) {
+      invoice = await tx.invoice.update({
+        where: { id: invoice.id },
+        data: {
+          status: INVOICE_STATUS.PAID,
+          paidAt: invoice.paidAt || paidAt,
+        },
+      });
+    }
+
+    await tx.cartItem.deleteMany({ where: { userId: order.userId } });
+
+    return {
+      order: { ...order, status: "PAID" },
+      invoice,
+      alreadyPaid,
+    };
+  });
 
 const findApprovedAffiliateByCode = async (affiliateCode) => {
   const normalizedCode = (affiliateCode || "").toString().trim().toUpperCase();
@@ -430,6 +679,7 @@ exports.postCheckout = async (req, res) => {
         affiliateReferrerUserId: affiliateReferrerUserId || null,
         affiliateReferrerCode,
         total,
+        status: "PENDING_PAYMENT",
         deliveryName: formData.deliveryName,
         deliveryPhone: formData.deliveryPhone,
         deliveryAddressLine1: formData.deliveryAddressLine1,
@@ -452,12 +702,6 @@ exports.postCheckout = async (req, res) => {
         orderItems: true,
       },
     });
-
-    const invoice = await createInvoiceRecord(
-      tx,
-      order,
-      buyer?.email || req.session?.user?.email || "customer@clubzero.local",
-    );
 
     if (formData.saveAddress && hasAddressBookModel()) {
       const existingAddress = await tx.addressBookEntry.findFirst({
@@ -493,75 +737,232 @@ exports.postCheckout = async (req, res) => {
       }
     }
 
-    await tx.cartItem.deleteMany({ where: { userId } });
-
-    return {
-      ...order,
-      invoice,
-    };
+    return order;
   });
 
-  if (createdOrder.invoice) {
-    try {
-      const sent = await sendInvoiceEmail({
-        invoice: createdOrder.invoice,
-        order: createdOrder,
-        req,
-      });
-
-      if (sent) {
-        await prisma.invoice.update({
-          where: { id: createdOrder.invoice.id },
-          data: {
-            status:
-              getInvoiceStatusBadge(createdOrder.invoice) === INVOICE_STATUS.PAID
-                ? INVOICE_STATUS.PAID
-                : INVOICE_STATUS.SENT,
-            sentAt: new Date(),
-          },
-        });
-        createdOrder.invoice.status = INVOICE_STATUS.SENT;
-        if (req.session) {
-          req.session.lastOrderInvoiceNotice = {
-            orderId: createdOrder.id,
-            kind: "success",
-            message: `Invoice ${createdOrder.invoice.invoiceNumber} was emailed to ${
-              createdOrder.invoice.recipientEmail
-            }.`,
-          };
-        }
-        logger.info("checkout_invoice_email_sent", {
-          orderId: createdOrder.id,
-          invoiceId: createdOrder.invoice.id,
-          invoiceNumber: createdOrder.invoice.invoiceNumber,
-          accepted: sent.accepted,
-          rejected: sent.rejected,
-          response: sent.response,
-        });
-      }
-    } catch (error) {
-      logger.warn("checkout_invoice_email_failed", {
-        orderId: createdOrder.id,
-        invoiceId: createdOrder.invoice.id,
-        invoiceNumber: createdOrder.invoice.invoiceNumber,
-        error: error.message,
-        code: error.code || null,
-        command: error.command || null,
-        response: error.response || null,
-        responseCode: error.responseCode || null,
-      });
-      if (req.session) {
-        req.session.lastOrderInvoiceNotice = {
-          orderId: createdOrder.id,
-          kind: "warning",
-          message:
-            "Your invoice was created, but it could not be emailed right now. You can still view or download it below.",
-        };
-      }
-    }
+  const paystack = getPaystackConfig();
+  if (!paystack.isConfigured) {
+    return res.status(500).render("checkout", {
+      cartItems,
+      total,
+      savedAddresses,
+      error: "Payments are not configured yet. Please try again later.",
+      formData,
+    });
   }
 
-  return res.redirect(`/auth/orders/thank-you/${createdOrder.id}`);
+  const amount = Math.round(Number(total) * 100);
+  const callbackUrl = buildPaystackCallbackUrl(req);
+
+  try {
+    const initResponse = await initializeTransaction({
+      secretKey: paystack.secretKey,
+      email: buyer?.email || req.session?.user?.email || "customer@clubzero.local",
+      amount,
+      currency: PAYSTACK_CURRENCY,
+      callbackUrl,
+      metadata: {
+        orderId: createdOrder.id,
+        userId,
+      },
+    });
+
+    if (!initResponse?.status || !initResponse?.data?.authorization_url) {
+      throw new Error(initResponse?.message || "Unable to start payment.");
+    }
+
+    if (req.session) {
+      req.session.pendingOrderId = createdOrder.id;
+      req.session.paystackReference = initResponse.data.reference || null;
+    }
+
+    return res.redirect(initResponse.data.authorization_url);
+  } catch (error) {
+    logger.warn("paystack_initialize_failed", {
+      orderId: createdOrder.id,
+      error: error.message,
+    });
+    await prisma.order.update({
+      where: { id: createdOrder.id },
+      data: { status: "PAYMENT_FAILED" },
+    });
+    return res.status(500).render("checkout", {
+      cartItems,
+      total,
+      savedAddresses,
+      error: "Unable to start payment. Please try again.",
+      formData,
+    });
+  }
+};
+
+exports.handlePaystackCallback = async (req, res) => {
+  const reference = (req.query.reference || "").toString().trim();
+  if (!reference) {
+    return res.redirect("/auth/cart?error=Payment+reference+missing");
+  }
+
+  const paystack = getPaystackConfig();
+  if (!paystack.isConfigured) {
+    return res.redirect("/auth/cart?error=Payments+are+not+configured");
+  }
+
+  try {
+    const verification = await verifyTransaction({
+      secretKey: paystack.secretKey,
+      reference,
+    });
+
+    if (!verification?.status || verification?.data?.status !== "success") {
+      return res.redirect(
+        "/auth/cart?error=Payment+was+not+successful",
+      );
+    }
+
+    const metadata = verification?.data?.metadata || {};
+    const orderId =
+      Number.parseInt(metadata.orderId, 10) ||
+      Number.parseInt(req.session?.pendingOrderId, 10);
+
+    if (!Number.isInteger(orderId)) {
+      return res.redirect("/auth/cart?error=Payment+order+not+found");
+    }
+
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: { id: true, total: true },
+    });
+
+    if (!order) {
+      return res.redirect("/auth/cart?error=Order+not+found");
+    }
+
+    const expectedAmount = Math.round(Number(order.total) * 100);
+    if (
+      Number.isFinite(verification?.data?.amount) &&
+      Number(verification.data.amount) !== expectedAmount
+    ) {
+      logger.warn("paystack_amount_mismatch", {
+        orderId,
+        expectedAmount,
+        receivedAmount: verification.data.amount,
+        reference,
+      });
+      return res.redirect("/auth/cart?error=Payment+amount+mismatch");
+    }
+
+    const finalized = await finalizePaidOrder({
+      orderId,
+      paidAt: verification?.data?.paid_at
+        ? new Date(verification.data.paid_at)
+        : new Date(),
+    });
+
+    if (!finalized) {
+      return res.redirect("/auth/cart?error=Order+not+found");
+    }
+
+    if (finalized.invoice) {
+      await sendInvoiceForOrder({
+        invoice: finalized.invoice,
+        order: finalized.order,
+        req,
+      });
+    }
+
+    if (!finalized.alreadyPaid) {
+      try {
+        await sendOrderConfirmationEmail({
+          order: finalized.order,
+          req,
+        });
+      } catch (error) {
+        logger.warn("order_confirmation_email_failed", {
+          orderId: finalized.order.id,
+          error: error.message,
+        });
+      }
+    }
+
+    if (req.session) {
+      req.session.pendingOrderId = null;
+      req.session.paystackReference = null;
+    }
+
+    return res.redirect(`/auth/orders/thank-you/${finalized.order.id}`);
+  } catch (error) {
+    logger.warn("paystack_verify_failed", {
+      reference,
+      error: error.message,
+    });
+    return res.redirect("/auth/cart?error=Unable+to+verify+payment");
+  }
+};
+
+exports.handlePaystackWebhook = async (req, res) => {
+  const paystack = getPaystackConfig();
+  const signature = req.headers["x-paystack-signature"];
+
+  if (!paystack.isConfigured || !signature || !req.body) {
+    return res.status(400).send("Invalid webhook");
+  }
+
+  const computedSignature = crypto
+    .createHmac("sha512", paystack.secretKey)
+    .update(req.body)
+    .digest("hex");
+
+  if (computedSignature !== signature) {
+    return res.status(400).send("Invalid signature");
+  }
+
+  let payload = null;
+  try {
+    payload = JSON.parse(req.body.toString());
+  } catch (error) {
+    return res.status(400).send("Invalid payload");
+  }
+
+  if (payload?.event !== "charge.success") {
+    return res.status(200).send("Ignored");
+  }
+
+  const metadata = payload?.data?.metadata || {};
+  const orderId = Number.parseInt(metadata.orderId, 10);
+  if (!Number.isInteger(orderId)) {
+    return res.status(200).send("Missing order");
+  }
+
+  try {
+    const finalized = await finalizePaidOrder({
+      orderId,
+      paidAt: payload?.data?.paid_at
+        ? new Date(payload.data.paid_at)
+        : new Date(),
+    });
+
+    if (finalized?.invoice && !finalized.invoice.sentAt) {
+      await sendInvoiceForOrder({
+        invoice: finalized.invoice,
+        order: finalized.order,
+        req: null,
+      });
+    }
+
+    if (finalized && !finalized.alreadyPaid) {
+      await sendOrderConfirmationEmail({
+        order: finalized.order,
+        req: null,
+      });
+    }
+  } catch (error) {
+    logger.warn("paystack_webhook_failed", {
+      orderId,
+      error: error.message,
+    });
+  }
+
+  return res.status(200).send("OK");
 };
 
 exports.getOrderHistory = async (req, res) => {
@@ -588,6 +989,84 @@ exports.getOrderHistory = async (req, res) => {
       invoiceStatus: getInvoiceStatusBadge(order.invoice),
     })),
   });
+};
+
+exports.retryPaystackPayment = async (req, res) => {
+  const userId = getUserId(req);
+  const orderId = Number.parseInt(req.params.id, 10);
+
+  if (!Number.isInteger(userId)) {
+    return res.redirect("/auth/login");
+  }
+
+  if (!Number.isInteger(orderId)) {
+    return res.redirect("/auth/orders?error=Invalid+order+id");
+  }
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      id: true,
+      userId: true,
+      total: true,
+      status: true,
+    },
+  });
+
+  if (!order || order.userId !== userId) {
+    return res.redirect("/auth/orders?error=Order+not+found");
+  }
+
+  if (order.status !== "PAYMENT_FAILED" && order.status !== "PENDING_PAYMENT") {
+    return res.redirect("/auth/orders?error=Payment+cannot+be+retried");
+  }
+
+  const paystack = getPaystackConfig();
+  if (!paystack.isConfigured) {
+    return res.redirect("/auth/orders?error=Payments+are+not+configured");
+  }
+
+  const amount = Math.round(Number(order.total) * 100);
+  const callbackUrl = buildPaystackCallbackUrl(req);
+
+  try {
+    const initResponse = await initializeTransaction({
+      secretKey: paystack.secretKey,
+      email: req.session?.user?.email || "customer@clubzero.local",
+      amount,
+      currency: PAYSTACK_CURRENCY,
+      callbackUrl,
+      metadata: {
+        orderId: order.id,
+        userId,
+        retry: true,
+      },
+    });
+
+    if (!initResponse?.status || !initResponse?.data?.authorization_url) {
+      throw new Error(initResponse?.message || "Unable to start payment.");
+    }
+
+    if (order.status !== "PENDING_PAYMENT") {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { status: "PENDING_PAYMENT" },
+      });
+    }
+
+    if (req.session) {
+      req.session.pendingOrderId = order.id;
+      req.session.paystackReference = initResponse.data.reference || null;
+    }
+
+    return res.redirect(initResponse.data.authorization_url);
+  } catch (error) {
+    logger.warn("paystack_retry_failed", {
+      orderId: order.id,
+      error: error.message,
+    });
+    return res.redirect("/auth/orders?error=Unable+to+restart+payment");
+  }
 };
 
 exports.getOrderThankYou = async (req, res) => {
@@ -771,126 +1250,80 @@ exports.getAdminInvoicesPage = async (req, res) => {
   });
 };
 
-exports.sendInvoiceToCustomer = async (req, res) => {
-  const invoiceId = Number.parseInt(req.params.id, 10);
-
-  if (!Number.isInteger(invoiceId)) {
-    return res.redirect("/admin/invoices?error=Invalid+invoice+id");
-  }
-
-  const invoice = await prisma.invoice.findUnique({
-    where: { id: invoiceId },
-    include: {
-      order: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-          orderItems: {
-            orderBy: { id: "asc" },
-          },
-        },
-      },
-    },
-  });
-
-  if (!invoice || !invoice.order) {
-    return res.redirect("/admin/invoices?error=Invoice+not+found");
-  }
-
-  try {
-    const sent = await sendInvoiceEmail({
-      invoice,
-      order: invoice.order,
-      req,
-    });
-
-    if (!sent) {
-      return res.redirect(
-        "/admin/invoices?error=SMTP+is+not+configured+for+invoice+email",
-      );
-    }
-
-    await prisma.invoice.update({
-      where: { id: invoiceId },
-      data: {
-        status:
-          getInvoiceStatusBadge(invoice) === INVOICE_STATUS.PAID
-            ? INVOICE_STATUS.PAID
-            : INVOICE_STATUS.SENT,
-        sentAt: new Date(),
-      },
-    });
-
-    return res.redirect(
-      `/admin/invoices?success=${encodeURIComponent(
-        `Invoice ${invoice.invoiceNumber} sent to ${invoice.recipientEmail}`,
-      )}`,
-    );
-  } catch (error) {
-    logger.warn("invoice_email_failed", {
-      invoiceId,
-      invoiceNumber: invoice?.invoiceNumber || null,
-      error: error.message,
-      code: error.code || null,
-      command: error.command || null,
-      response: error.response || null,
-      responseCode: error.responseCode || null,
-    });
-    return res.redirect(
-      "/admin/invoices?error=Unable+to+send+invoice+right+now",
-    );
-  }
-};
-
-exports.markInvoicePaid = async (req, res) => {
-  const invoiceId = Number.parseInt(req.params.id, 10);
-
-  if (!Number.isInteger(invoiceId)) {
-    return res.redirect("/admin/invoices?error=Invalid+invoice+id");
-  }
-
-  const invoice = await prisma.invoice.findUnique({
-    where: { id: invoiceId },
-    select: {
-      id: true,
-      invoiceNumber: true,
-      orderId: true,
-      status: true,
-      paidAt: true,
-    },
-  });
-
-  if (!invoice) {
-    return res.redirect("/admin/invoices?error=Invoice+not+found");
-  }
-
-  await prisma.$transaction([
-    prisma.invoice.update({
-      where: { id: invoiceId },
-      data: {
-        status: INVOICE_STATUS.PAID,
-        paidAt: invoice.paidAt || new Date(),
-      },
-    }),
-    prisma.order.update({
-      where: { id: invoice.orderId },
-      data: {
-        status: "PAID",
-      },
-    }),
+exports.getAdminPaymentsPage = async (req, res) => {
+  const statusFilter = (req.query.status || "all").toString().toUpperCase();
+  const allowedStatuses = new Set([
+    "ALL",
+    "PENDING_PAYMENT",
+    "PAYMENT_FAILED",
+    "PAID",
   ]);
+  const activeStatusFilter = allowedStatuses.has(statusFilter)
+    ? statusFilter
+    : "ALL";
 
-  return res.redirect(
-    `/admin/invoices?success=${encodeURIComponent(
-      `Invoice ${invoice.invoiceNumber} marked as paid`,
-    )}`,
+  const orders = await prisma.order.findMany({
+    include: {
+      user: {
+        select: { id: true, name: true, email: true },
+      },
+      orderItems: {
+        select: { quantity: true },
+      },
+      invoice: true,
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+  });
+
+  const normalizedOrders = orders.map((order) => {
+    const itemCount = order.orderItems.reduce(
+      (sum, item) => sum + Number(item.quantity || 0),
+      0,
+    );
+    return {
+      ...order,
+      itemCount,
+      bottlesCount: itemCount * 12,
+      invoiceStatus: order.invoice ? getInvoiceStatusBadge(order.invoice) : null,
+    };
+  });
+
+  const filteredOrders =
+    activeStatusFilter === "ALL"
+      ? normalizedOrders
+      : normalizedOrders.filter((order) => order.status === activeStatusFilter);
+
+  const summary = normalizedOrders.reduce(
+    (acc, order) => {
+      acc.totalOrders += 1;
+      acc.totalValue += Number(order.total || 0);
+      if (order.status === "PAID") {
+        acc.paidCount += 1;
+      } else if (order.status === "PAYMENT_FAILED") {
+        acc.failedCount += 1;
+      } else if (order.status === "PENDING_PAYMENT") {
+        acc.pendingCount += 1;
+      }
+      return acc;
+    },
+    {
+      totalOrders: 0,
+      totalValue: 0,
+      pendingCount: 0,
+      failedCount: 0,
+      paidCount: 0,
+    },
   );
+
+  return res.render("admin-payments", {
+    orders: filteredOrders,
+    summary,
+    activeStatusFilter,
+    success: req.query.success || null,
+    error: req.query.error || null,
+  });
 };
+
 
 exports.getAffiliateDashboard = async (req, res) => {
   const userId = getUserId(req);
@@ -928,20 +1361,7 @@ exports.getAffiliateDashboard = async (req, res) => {
     orderBy: { id: "desc" },
   });
 
-  const totalOrders = orders.length;
-  const totalSpent = orders.reduce(
-    (sum, order) => sum + Number(order.total),
-    0,
-  );
-  const totalProductsOrdered = orders.reduce(
-    (sum, order) =>
-      sum +
-      order.orderItems.reduce((qtySum, item) => qtySum + Number(item.quantity), 0),
-    0,
-  );
-
   const affiliateRate = AFFILIATE_RATE;
-  const estimatedEarnings = totalSpent * affiliateRate;
   const normalizedOrders = orders.map((order) => {
     const affiliateStatus = getAffiliateStatus(order);
     const commission = Number(order.total) * affiliateRate;
@@ -952,6 +1372,22 @@ exports.getAffiliateDashboard = async (req, res) => {
       commission,
     };
   });
+
+  const paidOrders = normalizedOrders.filter(
+    (order) => order.affiliateStatus === "paid",
+  );
+  const totalOrders = paidOrders.length;
+  const totalSpent = paidOrders.reduce(
+    (sum, order) => sum + Number(order.total),
+    0,
+  );
+  const totalProductsOrdered = paidOrders.reduce(
+    (sum, order) =>
+      sum +
+      order.orderItems.reduce((qtySum, item) => qtySum + Number(item.quantity), 0),
+    0,
+  );
+  const estimatedEarnings = totalSpent * affiliateRate;
 
   const affiliateSummary = normalizedOrders.reduce(
     (acc, order) => {
