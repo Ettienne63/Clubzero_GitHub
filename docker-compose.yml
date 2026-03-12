@@ -17,7 +17,6 @@ services:
     environment:
       PORT: 3000
       SESSION_SECRET: dev-secret-change-me
-      ADMIN_EMAIL: admin@example.com
       DATABASE_URL: postgresql://postgres:postgres@db:5432/clubzero?schema=public
     ports:
       - "3000:3000"

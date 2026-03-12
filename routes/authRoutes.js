@@ -48,6 +48,8 @@ router.post(
   validateRedirectToLogin,
   asyncHandler(authController.postLogin),
 );
+router.get("/invite/:token", asyncHandler(authController.getInvite));
+router.post("/invite/:token", asyncHandler(authController.postInviteAccept));
 router.get("/forgot-password", authController.getForgotPassword);
 router.post(
   "/forgot-password",

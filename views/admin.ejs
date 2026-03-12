@@ -8,6 +8,11 @@
       <a href="/admin/affiliate/stats" class="btn btn-outline-primary">
         Affiliate Admin
       </a>
+      <% if (user && user.isOwner) { %>
+      <a href="/admin/team" class="btn btn-outline-primary">
+        Team Access
+      </a>
+      <% } %>
       <a href="/admin/payments" class="btn btn-outline-primary">
         Payments
       </a>

@@ -167,7 +167,9 @@ exports.listProducts = async (req, res) => {
 
 exports.getProductDetails = async (req, res) => {
   const productId = Number.parseInt(req.params.id, 10);
-  const isAdmin = req.session?.user?.role === "ADMIN";
+  const isAdmin = ["ADMIN", "OWNER"].includes(
+    String(req.session?.user?.role || "").toUpperCase(),
+  );
 
   const product = await prisma.product.findFirst({
     where: {

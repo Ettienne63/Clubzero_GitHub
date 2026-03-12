@@ -83,6 +83,11 @@
               <li>
                 <a class="dropdown-item" href="/admin/invoices">Invoices</a>
               </li>
+              <% if (Boolean(user.isOwner)) { %>
+              <li>
+                <a class="dropdown-item" href="/admin/team">Team Access</a>
+              </li>
+              <% } %>
             </ul>
         </li>
         <% } %>

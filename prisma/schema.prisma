@@ -37,6 +37,9 @@ model User {
   goalsCreated Goal[]
   referralClicks AffiliateReferralClick[] @relation("AffiliateOwner")
   passwordResetTokens PasswordResetToken[]
+  adminInvitesSent AdminInvite[] @relation("AdminInvitesSent")
+  auditLogs AuthAuditLog[] @relation("AuthAuditActor")
+  auditTargets AuthAuditLog[] @relation("AuthAuditTarget")
 
   @@index([affiliateProgramStatus])
   @@index([referredByAffiliateId])
@@ -236,6 +239,40 @@ model Invoice {
 
   @@index([status])
   @@index([issuedAt])
+}
+
+model AdminInvite {
+  id Int @id @default(autoincrement())
+  email String
+  role String
+  tokenHash String @unique
+  tokenPreview String
+  invitedByUserId Int?
+  expiresAt DateTime
+  acceptedAt DateTime?
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invitedByUser User? @relation("AdminInvitesSent", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@index([expiresAt])
+}
+
+model AuthAuditLog {
+  id Int @id @default(autoincrement())
+  action String
+  actorUserId Int?
+  targetUserId Int?
+  metadata Json?
+  createdAt DateTime @default(now())
+
+  actorUser User? @relation("AuthAuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  targetUser User? @relation("AuthAuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  @@index([action])
+  @@index([createdAt])
 }
 
 model AppSetting {

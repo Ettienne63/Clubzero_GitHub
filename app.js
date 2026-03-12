@@ -10,7 +10,7 @@ const { loadConfig } = require("./config/env");
 const { notifyCritical } = require("./lib/alerting");
 const { logger } = require("./lib/logger");
 const { PostgresSessionStore } = require("./lib/pgSessionStore");
-const { requireAdmin } = require("./middleware/adminMiddleware");
+const { requireAdmin, requireOwner } = require("./middleware/adminMiddleware");
 const { asyncHandler } = require("./middleware/asyncHandler");
 const {
   createRateLimit,
@@ -28,6 +28,7 @@ const {
 const productController = require("./controllers/productController");
 const orderController = require("./controllers/orderController");
 const contactController = require("./controllers/contactController");
+const adminController = require("./controllers/adminController");
 const { prisma } = require("./prisma/lib/prisma");
 const APPROVED_AFFILIATE_STATUS = "APPROVED";
 
@@ -302,6 +303,31 @@ app.get(
   "/admin/payments",
   requireAdmin,
   asyncHandler(orderController.getAdminPaymentsPage),
+);
+app.get(
+  "/admin/team",
+  requireOwner,
+  asyncHandler(adminController.getAdminTeamPage),
+);
+app.post(
+  "/admin/team/invite",
+  requireOwner,
+  asyncHandler(adminController.postAdminInvite),
+);
+app.post(
+  "/admin/team/invite/:id/revoke",
+  requireOwner,
+  asyncHandler(adminController.revokeAdminInvite),
+);
+app.post(
+  "/admin/team/user/:id/role",
+  requireOwner,
+  asyncHandler(adminController.updateUserRole),
+);
+app.post(
+  "/admin/team/user/:id/revoke",
+  requireOwner,
+  asyncHandler(adminController.revokeUserAccess),
 );
 app.post(
   "/admin/products",

@@ -143,7 +143,7 @@ const getInternalOrderEmail = () => {
   if (contactTo) {
     return contactTo;
   }
-  return (process.env.ADMIN_EMAIL || "").trim();
+  return "";
 };
 
 const getPaystackConfig = () => {
