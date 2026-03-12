@@ -104,6 +104,29 @@ main {
   color: var(--brand-light);
 }
 
+.home-page > section {
+  border-top: 1px solid #e6eef7;
+}
+
+.home-page > section:first-of-type {
+  border-top: 0;
+}
+
+@media (max-width: 768px) {
+  .home-page > section {
+    background: #ffffff;
+  }
+
+  .home-page > section:nth-of-type(even) {
+    background: #f7fbff;
+  }
+
+  .home-page > section {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+  }
+}
+
 .home-chip {
   display: inline-flex;
   align-items: center;

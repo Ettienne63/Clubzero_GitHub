@@ -49,7 +49,7 @@ const validateRedirectToAdmin = handleValidationError((_req, res, message) =>
 
 const validateRedirectToAdminAffiliate = handleValidationError(
   (_req, res, message) =>
-    res.redirect(`/admin/affiliate?error=${encodeURIComponent(message)}`),
+    res.redirect(`/admin/affiliate/stats?error=${encodeURIComponent(message)}`),
 );
 
 const validateRedirectToAdminInvoices = handleValidationError(

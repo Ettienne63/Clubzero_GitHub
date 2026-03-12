@@ -93,6 +93,7 @@ model Order {
   userId Int
   affiliateReferrerUserId Int?
   affiliateReferrerCode String?
+  affiliateRate Float?
   total Float
   status String @default("PLACED")
   affiliateStatus String @default("PENDING")
@@ -235,4 +236,11 @@ model Invoice {
 
   @@index([status])
   @@index([issuedAt])
+}
+
+model AppSetting {
+  key String @id
+  value String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

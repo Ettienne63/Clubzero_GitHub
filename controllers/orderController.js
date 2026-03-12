@@ -7,7 +7,8 @@ const {
 } = require("../lib/paystack");
 const { logger } = require("../lib/logger");
 const { renderInvoicePdf } = require("../lib/invoicePdf");
-const AFFILIATE_RATE = 0.05;
+const DEFAULT_AFFILIATE_RATE = 0.05;
+const AFFILIATE_RATE_SETTING_KEY = "affiliate_rate";
 const AFFILIATE_STATUS = {
   NONE: "NONE",
   APPROVED: "APPROVED",
@@ -19,6 +20,43 @@ const INVOICE_STATUS = {
 };
 const INVOICE_PAYMENT_TERMS_DAYS = 7;
 const PAYSTACK_CURRENCY = "ZAR";
+
+const coerceAffiliateRate = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+  if (parsed < 0 || parsed > 0.5) {
+    return null;
+  }
+  return parsed;
+};
+
+const getAffiliateRate = async () => {
+  try {
+    const setting = await prisma.appSetting.findUnique({
+      where: { key: AFFILIATE_RATE_SETTING_KEY },
+      select: { value: true },
+    });
+    const rate = coerceAffiliateRate(setting?.value);
+    return rate ?? DEFAULT_AFFILIATE_RATE;
+  } catch (error) {
+    logger.warn("affiliate_rate_load_failed", { error: error.message });
+    return DEFAULT_AFFILIATE_RATE;
+  }
+};
+
+const setAffiliateRate = async (rate) => {
+  const normalized = coerceAffiliateRate(rate);
+  if (normalized === null) {
+    throw new Error("Affiliate rate must be between 0% and 50%.");
+  }
+  return prisma.appSetting.upsert({
+    where: { key: AFFILIATE_RATE_SETTING_KEY },
+    create: { key: AFFILIATE_RATE_SETTING_KEY, value: String(normalized) },
+    update: { value: String(normalized) },
+  });
+};
 
 const getUserId = (req) => Number.parseInt(req.session?.user?.id, 10);
 const hasAddressBookModel = () => Boolean(prisma.addressBookEntry);
@@ -572,7 +610,11 @@ const generateUniqueAffiliateCode = async (seed) => {
   return `${prefix}-${Date.now().toString(36).slice(-5).toUpperCase()}`;
 };
 
-const finalizePaidOrder = async ({ orderId, paidAt = new Date() }) =>
+const finalizePaidOrder = async ({
+  orderId,
+  paidAt = new Date(),
+  affiliateRate,
+}) =>
   prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
       where: { id: orderId },
@@ -627,11 +669,16 @@ const finalizePaidOrder = async ({ orderId, paidAt = new Date() }) =>
 
     await tx.cartItem.deleteMany({ where: { userId: order.userId } });
 
+    const appliedAffiliateRate =
+      coerceAffiliateRate(order.affiliateRate) ??
+      coerceAffiliateRate(affiliateRate) ??
+      DEFAULT_AFFILIATE_RATE;
+
     if (
       Number.isInteger(order.affiliateReferrerUserId) &&
       String(order.affiliateStatus || "").toUpperCase() !== "PAID"
     ) {
-      const commission = Number(order.total) * AFFILIATE_RATE;
+      const commission = Number(order.total) * appliedAffiliateRate;
       if (Number.isFinite(commission) && commission > 0) {
         await tx.order.update({
           where: { id: order.id },
@@ -857,6 +904,7 @@ exports.postCheckout = async (req, res) => {
     }
   }
 
+  const affiliateRate = await getAffiliateRate();
   const createdOrder = await prisma.$transaction(async (tx) => {
     if (creditApplied > 0) {
       await tx.user.update({
@@ -874,6 +922,7 @@ exports.postCheckout = async (req, res) => {
         userId,
         affiliateReferrerUserId: affiliateReferrerUserId || null,
         affiliateReferrerCode,
+        affiliateRate,
         total: payableTotal,
         status: "PENDING_PAYMENT",
         affiliateCreditApplied: creditApplied,
@@ -977,9 +1026,11 @@ exports.postCheckout = async (req, res) => {
   }
 
   if (payableTotal <= 0) {
+    const affiliateRate = await getAffiliateRate();
     const finalized = await finalizePaidOrder({
       orderId: createdOrder.id,
       paidAt: new Date(),
+      affiliateRate,
     });
 
     if (finalized?.invoice) {
@@ -1145,11 +1196,13 @@ exports.handlePaystackCallback = async (req, res) => {
       return res.redirect("/auth/cart?error=Payment+amount+mismatch");
     }
 
+    const affiliateRate = await getAffiliateRate();
     const finalized = await finalizePaidOrder({
       orderId,
       paidAt: verification?.data?.paid_at
         ? new Date(verification.data.paid_at)
         : new Date(),
+      affiliateRate,
     });
 
     if (!finalized) {
@@ -1239,11 +1292,13 @@ exports.handlePaystackWebhook = async (req, res) => {
   }
 
   try {
+    const affiliateRate = await getAffiliateRate();
     const finalized = await finalizePaidOrder({
       orderId,
       paidAt: payload?.data?.paid_at
         ? new Date(payload.data.paid_at)
         : new Date(),
+      affiliateRate,
     });
 
     if (finalized?.invoice && !finalized.invoice.sentAt) {
@@ -1676,10 +1731,12 @@ exports.getAffiliateDashboard = async (req, res) => {
     orderBy: { id: "desc" },
   });
 
-  const affiliateRate = AFFILIATE_RATE;
+  const affiliateRate = await getAffiliateRate();
   const normalizedOrders = orders.map((order) => {
     const affiliateStatus = getAffiliateStatus(order);
-    const commission = Number(order.total) * affiliateRate;
+    const orderRate =
+      coerceAffiliateRate(order.affiliateRate) ?? affiliateRate;
+    const commission = Number(order.total) * orderRate;
 
     return {
       ...order,
@@ -1702,7 +1759,10 @@ exports.getAffiliateDashboard = async (req, res) => {
       order.orderItems.reduce((qtySum, item) => qtySum + Number(item.quantity), 0),
     0,
   );
-  const estimatedEarnings = totalSpent * affiliateRate;
+  const estimatedEarnings = paidOrders.reduce(
+    (sum, order) => sum + Number(order.commission || 0),
+    0,
+  );
 
   const affiliateSummary = normalizedOrders.reduce(
     (acc, order) => {
@@ -1834,9 +1894,56 @@ const getAffiliateStatus = (order) => {
 };
 
 exports.getAdminAffiliatePage = async (req, res) => {
+  return res.redirect("/admin/affiliate/stats");
+};
+
+exports.updateAffiliateRate = async (req, res) => {
+  const rawPercent = (req.body.affiliateRatePercent || "").toString().trim();
+  const percent = Number.parseFloat(rawPercent);
+
+  if (!Number.isFinite(percent)) {
+    return res.redirect(
+      `/admin/affiliate/stats?error=${encodeURIComponent(
+        "Please enter a valid commission percentage.",
+      )}`,
+    );
+  }
+
+  const rate = percent / 100;
+
+  try {
+    await setAffiliateRate(rate);
+    return res.redirect(
+      `/admin/affiliate/stats?success=${encodeURIComponent(
+        "Affiliate commission rate updated.",
+      )}`,
+    );
+  } catch (error) {
+    return res.redirect(
+      `/admin/affiliate/stats?error=${encodeURIComponent(
+        error.message || "Unable to update affiliate rate.",
+      )}`,
+    );
+  }
+};
+
+exports.getAdminAffiliateStatsPage = async (req, res) => {
+  const affiliateRate = await getAffiliateRate();
+  const allowedRanges = new Set(["7", "30", "90", "all"]);
+  const rangeParam = String(req.query.days || "30").toLowerCase();
+  const rangeKey = allowedRanges.has(rangeParam) ? rangeParam : "30";
+  const now = new Date();
+  let rangeStart = null;
+  if (rangeKey !== "all") {
+    const days = Number.parseInt(rangeKey, 10);
+    rangeStart = new Date(now);
+    rangeStart.setDate(now.getDate() - days);
+  }
+
   const orders = await prisma.order.findMany({
     where: {
       affiliateReferrerUserId: { not: null },
+      ...(rangeStart ? { createdAt: { gte: rangeStart } } : {}),
     },
     include: {
       user: {
@@ -1869,7 +1976,9 @@ exports.getAdminAffiliatePage = async (req, res) => {
       (sum, item) => sum + Number(item.quantity),
       0,
     );
-    const commission = Number(order.total) * AFFILIATE_RATE;
+    const orderRate =
+      coerceAffiliateRate(order.affiliateRate) ?? affiliateRate;
+    const commission = Number(order.total) * orderRate;
 
     return {
       ...order,
@@ -1904,9 +2013,149 @@ exports.getAdminAffiliatePage = async (req, res) => {
     },
   );
 
-  return res.render("admin-affiliate", {
+  const [
+    totalClicks,
+    uniqueSessionsRaw,
+    uniqueAffiliatesRaw,
+    topLandingPathsRaw,
+    topReferrersRaw,
+    topAffiliatesRaw,
+    affiliateSignups,
+  ] = await Promise.all([
+    prisma.affiliateReferralClick.count({
+      ...(rangeStart ? { where: { createdAt: { gte: rangeStart } } } : {}),
+    }),
+    prisma.affiliateReferralClick.findMany({
+      distinct: ["sessionId"],
+      where: {
+        sessionId: { not: null },
+        ...(rangeStart ? { createdAt: { gte: rangeStart } } : {}),
+      },
+      select: { sessionId: true },
+    }),
+    prisma.affiliateReferralClick.findMany({
+      distinct: ["affiliateUserId"],
+      where: rangeStart ? { createdAt: { gte: rangeStart } } : undefined,
+      select: { affiliateUserId: true },
+    }),
+    prisma.affiliateReferralClick.groupBy({
+      by: ["landingPath"],
+      _count: { _all: true },
+      where: {
+        landingPath: { not: null },
+        ...(rangeStart ? { createdAt: { gte: rangeStart } } : {}),
+      },
+      orderBy: { _count: { landingPath: "desc" } },
+      take: 6,
+    }),
+    prisma.affiliateReferralClick.groupBy({
+      by: ["referrerUrl"],
+      _count: { _all: true },
+      where: {
+        referrerUrl: { not: null },
+        ...(rangeStart ? { createdAt: { gte: rangeStart } } : {}),
+      },
+      orderBy: { _count: { referrerUrl: "desc" } },
+      take: 6,
+    }),
+    prisma.affiliateReferralClick.groupBy({
+      by: ["affiliateUserId"],
+      _count: { _all: true },
+      where: rangeStart ? { createdAt: { gte: rangeStart } } : undefined,
+      orderBy: { _count: { affiliateUserId: "desc" } },
+      take: 6,
+    }),
+    prisma.user.count({
+      where: {
+        referredByAffiliateId: { not: null },
+        ...(rangeStart ? { createdAt: { gte: rangeStart } } : {}),
+      },
+    }),
+  ]);
+
+  const uniqueSessions = uniqueSessionsRaw.length;
+  const uniqueAffiliates = uniqueAffiliatesRaw.length;
+
+  const revenueByAffiliate = new Map();
+  orders.forEach((order) => {
+    if (String(order.status || "").toUpperCase() !== "PAID") {
+      return;
+    }
+    if (!Number.isInteger(order.affiliateReferrerUserId)) {
+      return;
+    }
+    const current = revenueByAffiliate.get(order.affiliateReferrerUserId) || 0;
+    revenueByAffiliate.set(
+      order.affiliateReferrerUserId,
+      current + Number(order.total || 0),
+    );
+  });
+
+  const topAffiliatesByRevenue = Array.from(revenueByAffiliate.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([affiliateUserId, totalRevenue]) => ({
+      affiliateId: affiliateUserId,
+      totalRevenue,
+    }));
+  const affiliateIds = new Set(
+    topAffiliatesRaw.map((entry) => entry.affiliateUserId),
+  );
+  topAffiliatesByRevenue.forEach((entry) => affiliateIds.add(entry.affiliateId));
+
+  const affiliateIdList = Array.from(affiliateIds);
+  const affiliates = affiliateIdList.length
+    ? await prisma.user.findMany({
+        where: { id: { in: affiliateIdList } },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          affiliateCode: true,
+        },
+      })
+    : [];
+  const affiliateById = new Map(affiliates.map((user) => [user.id, user]));
+
+  const normalizedTopAffiliatesByRevenue = topAffiliatesByRevenue.map((entry) => ({
+    affiliate:
+      affiliateById.get(entry.affiliateId) || {
+        id: entry.affiliateId,
+        name: "Unknown",
+        email: null,
+        affiliateCode: null,
+      },
+    totalRevenue: entry.totalRevenue,
+  }));
+
+  return res.render("admin-affiliate-stats", {
     summary,
-    affiliateRate: AFFILIATE_RATE,
+    affiliateRate,
+    rangeKey,
+    clickSummary: {
+      totalClicks,
+      uniqueSessions,
+      uniqueAffiliates,
+    },
+    affiliateSignups,
+    topLandingPaths: topLandingPathsRaw.map((entry) => ({
+      path: entry.landingPath,
+      count: entry._count._all,
+    })),
+    topReferrers: topReferrersRaw.map((entry) => ({
+      referrer: entry.referrerUrl,
+      count: entry._count._all,
+    })),
+    topAffiliates: topAffiliatesRaw.map((entry) => ({
+      affiliate: affiliateById.get(entry.affiliateUserId) || {
+        id: entry.affiliateUserId,
+        name: "Unknown",
+        email: null,
+        affiliateCode: null,
+      },
+      count: entry._count._all,
+    })),
+    topAffiliatesByRevenue: normalizedTopAffiliatesByRevenue,
     success: req.query.success || null,
     error: req.query.error || null,
   });

@@ -130,7 +130,7 @@ app.use(
       maxAge: 1000 * 60 * 60 * 24,
       httpOnly: true,
       sameSite: "lax",
-      secure: config.isProduction,
+      secure: config.isProduction ? "auto" : false,
     },
   }),
 );
@@ -282,6 +282,16 @@ app.get(
   "/admin/affiliate",
   requireAdmin,
   asyncHandler(orderController.getAdminAffiliatePage),
+);
+app.post(
+  "/admin/affiliate/rate",
+  requireAdmin,
+  asyncHandler(orderController.updateAffiliateRate),
+);
+app.get(
+  "/admin/affiliate/stats",
+  requireAdmin,
+  asyncHandler(orderController.getAdminAffiliateStatsPage),
 );
 app.get(
   "/admin/invoices",
