@@ -114,11 +114,11 @@ main {
 
 @media (max-width: 768px) {
   .home-page > section {
-    background: #ffffff;
+    background-color: #ffffff;
   }
 
   .home-page > section:nth-of-type(even) {
-    background: #f7fbff;
+    background-color: #f7fbff;
   }
 
   .home-page > section {
