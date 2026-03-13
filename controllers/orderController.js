@@ -7,6 +7,8 @@ const {
 } = require("../lib/paystack");
 const { logger } = require("../lib/logger");
 const { renderInvoicePdf } = require("../lib/invoicePdf");
+const { getDiscountedPrice } = require("../lib/pricing");
+const { getPromoSettings } = require("../lib/promoSettings");
 const DEFAULT_AFFILIATE_RATE = 0.05;
 const AFFILIATE_RATE_SETTING_KEY = "affiliate_rate";
 const AFFILIATE_STATUS = {
@@ -60,6 +62,10 @@ const setAffiliateRate = async (rate) => {
 
 const getUserId = (req) => Number.parseInt(req.session?.user?.id, 10);
 const hasAddressBookModel = () => Boolean(prisma.addressBookEntry);
+const getEffectiveDiscountPercent = (product, discountsEnabled) =>
+  discountsEnabled && product?.discountEnabled !== false
+    ? product?.discountPercent
+    : 0;
 
 const buildCheckoutFormData = (body = {}) => ({
   selectedAddressId: (body.selectedAddressId || "").toString().trim(),
@@ -87,17 +93,20 @@ const hasAllRequiredDeliveryFields = (formData) =>
       formData.deliveryCountry,
   );
 
-const getCartWithTotal = async (userId) => {
+const getCartWithTotal = async (userId, discountsEnabled = false) => {
   const cartItems = await prisma.cartItem.findMany({
     where: { userId },
     include: { product: true },
     orderBy: { id: "desc" },
   });
 
-  const total = cartItems.reduce(
-    (sum, item) => sum + Number(item.product.price) * item.quantity,
-    0,
-  );
+  const total = cartItems.reduce((sum, item) => {
+    const unitPrice = getDiscountedPrice(
+      item.product.price,
+      getEffectiveDiscountPercent(item.product, discountsEnabled),
+    );
+    return sum + unitPrice * item.quantity;
+  }, 0);
 
   return { cartItems, total };
 };
@@ -733,7 +742,14 @@ exports.getCheckout = async (req, res) => {
     return res.redirect("/auth/login");
   }
 
-  const { cartItems, total } = await getCartWithTotal(userId);
+  const promoSettings = await getPromoSettings();
+  const discountsEnabled = Boolean(
+    promoSettings?.enabled && promoSettings?.discountsEnabled,
+  );
+  const { cartItems, total } = await getCartWithTotal(
+    userId,
+    discountsEnabled,
+  );
   const savedAddresses = await getAddressBookEntries(userId);
 
   if (!cartItems.length) {
@@ -765,6 +781,7 @@ exports.getCheckout = async (req, res) => {
     affiliateBalance,
     creditApplied: 0,
     payableTotal: total,
+    discountsEnabled,
   });
 };
 
@@ -775,8 +792,15 @@ exports.postCheckout = async (req, res) => {
     return res.redirect("/auth/login");
   }
 
+  const promoSettings = await getPromoSettings();
+  const discountsEnabled = Boolean(
+    promoSettings?.enabled && promoSettings?.discountsEnabled,
+  );
   const formData = buildCheckoutFormData(req.body);
-  const { cartItems, total } = await getCartWithTotal(userId);
+  const { cartItems, total } = await getCartWithTotal(
+    userId,
+    discountsEnabled,
+  );
   const savedAddresses = await getAddressBookEntries(userId);
   const selectedAddressId = Number.parseInt(formData.selectedAddressId, 10);
 
@@ -819,6 +843,7 @@ exports.postCheckout = async (req, res) => {
       affiliateBalance: availableAffiliateBalance,
       creditApplied,
       payableTotal,
+      discountsEnabled,
     });
   }
 
@@ -853,17 +878,18 @@ exports.postCheckout = async (req, res) => {
     );
 
     if (!affiliateFromCode) {
-      return res.status(400).render("checkout", {
-        cartItems,
-        total,
-        savedAddresses,
-        error: "Affiliate code is invalid or not approved yet.",
-        formData,
-        affiliateBalance: availableAffiliateBalance,
-        creditApplied,
-        payableTotal,
-      });
-    }
+    return res.status(400).render("checkout", {
+      cartItems,
+      total,
+      savedAddresses,
+      error: "Affiliate code is invalid or not approved yet.",
+      formData,
+      affiliateBalance: availableAffiliateBalance,
+      creditApplied,
+      payableTotal,
+      discountsEnabled,
+    });
+  }
 
     affiliateReferrerUserId = affiliateFromCode.id;
     formData.affiliateCode = affiliateFromCode.affiliateCode;
@@ -938,9 +964,16 @@ exports.postCheckout = async (req, res) => {
           create: cartItems.map((item) => ({
             productId: item.productId,
             productName: item.product.name,
-            productPrice: Number(item.product.price),
+            productPrice: getDiscountedPrice(
+              item.product.price,
+              getEffectiveDiscountPercent(item.product, discountsEnabled),
+            ),
             quantity: item.quantity,
-            subtotal: Number(item.product.price) * item.quantity,
+            subtotal:
+              getDiscountedPrice(
+                item.product.price,
+                getEffectiveDiscountPercent(item.product, discountsEnabled),
+              ) * item.quantity,
           })),
         },
       },
@@ -1022,6 +1055,7 @@ exports.postCheckout = async (req, res) => {
       affiliateBalance: availableAffiliateBalance,
       creditApplied,
       payableTotal,
+      discountsEnabled,
     });
   }
 

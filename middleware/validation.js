@@ -131,6 +131,10 @@ const productValidationRules = [
   body("price")
     .isFloat({ min: 0 })
     .withMessage("Price must be a valid non-negative number."),
+  body("discountPercent")
+    .optional({ values: "falsy" })
+    .isFloat({ min: 0, max: 90 })
+    .withMessage("Discount must be between 0% and 90%."),
   body("imageUrl").optional({ values: "falsy" }).trim(),
   body("nutritionInfo").optional({ values: "falsy" }).trim(),
   body("ingredients").optional({ values: "falsy" }).trim(),

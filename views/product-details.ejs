@@ -32,7 +32,23 @@
           </div>
           <h1 class="h3 mb-2"><%= product.name %></h1>
           <p class="text-muted mb-3"><%= product.description || "No description." %></p>
-          <p class="fw-bold fs-5 mb-3">R<%= Number(product.price).toFixed(2) %> / case (12 bottles)</p>
+          <% const discountPercent = Number(product.discountPercent || 0); %>
+          <% const hasDiscount = Boolean(discountsEnabled) && product.discountEnabled !== false && discountPercent > 0; %>
+          <% const discountedPrice = hasDiscount ? Number(product.price) * (1 - discountPercent / 100) : Number(product.price); %>
+          <p class="fw-bold fs-5 mb-3">
+            <% if (hasDiscount) { %>
+            <span class="price-discounted">
+              R<%= Number(discountedPrice).toFixed(2) %>
+            </span>
+            <span class="price-original ms-1">
+              R<%= Number(product.price).toFixed(2) %>
+            </span>
+            <span class="discount-badge ms-2"><%= discountPercent.toFixed(0) %>% Off</span>
+            <% } else { %>
+            R<%= Number(product.price).toFixed(2) %>
+            <% } %>
+            / case (12 bottles)
+          </p>
 
           <%- include("partials/product-rating", { product, wrapperClass: "mb-3" }) %>
 

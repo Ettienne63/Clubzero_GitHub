@@ -1,8 +1,14 @@
 const { prisma } = require("../prisma/lib/prisma");
+const { getDiscountedPrice } = require("../lib/pricing");
+const { getPromoSettings } = require("../lib/promoSettings");
 
 const getUserId = (req) => Number.parseInt(req.session?.user?.id, 10);
 const isAjaxRequest = (req) =>
   req.xhr || req.get("X-Requested-With") === "XMLHttpRequest";
+const getEffectiveDiscountPercent = (product, discountsEnabled) =>
+  discountsEnabled && product?.discountEnabled !== false
+    ? product?.discountPercent
+    : 0;
 
 exports.getCart = async (req, res) => {
   const userId = getUserId(req);
@@ -11,16 +17,25 @@ exports.getCart = async (req, res) => {
     return res.redirect("/auth/login");
   }
 
-  const cartItems = await prisma.cartItem.findMany({
-    where: { userId },
-    include: { product: true },
-    orderBy: { id: "desc" },
-  });
-
-  const total = cartItems.reduce(
-    (sum, item) => sum + Number(item.product.price) * item.quantity,
-    0,
+  const [cartItems, promoSettings] = await Promise.all([
+    prisma.cartItem.findMany({
+      where: { userId },
+      include: { product: true },
+      orderBy: { id: "desc" },
+    }),
+    getPromoSettings(),
+  ]);
+  const discountsEnabled = Boolean(
+    promoSettings?.enabled && promoSettings?.discountsEnabled,
   );
+
+  const total = cartItems.reduce((sum, item) => {
+    const unitPrice = getDiscountedPrice(
+      item.product.price,
+      getEffectiveDiscountPercent(item.product, discountsEnabled),
+    );
+    return sum + unitPrice * item.quantity;
+  }, 0);
   const hasUnavailableItems = cartItems.some((item) => !item.product?.isActive);
 
   return res.render("cart", {
@@ -28,6 +43,7 @@ exports.getCart = async (req, res) => {
     total,
     error: req.query.error || null,
     hasUnavailableItems,
+    discountsEnabled,
   });
 };
 
@@ -103,18 +119,27 @@ exports.updateCartItem = async (req, res) => {
     await prisma.cartItem.delete({ where: { id: itemId } });
 
     if (isAjaxRequest(req)) {
-      const cartItems = await prisma.cartItem.findMany({
-        where: { userId },
-        include: {
-          product: {
-            select: { price: true },
+      const [cartItems, promoSettings] = await Promise.all([
+        prisma.cartItem.findMany({
+          where: { userId },
+          include: {
+            product: {
+              select: { price: true, discountPercent: true, discountEnabled: true },
+            },
           },
-        },
-      });
-      const total = cartItems.reduce(
-        (sum, item) => sum + Number(item.product.price) * item.quantity,
-        0,
+        }),
+        getPromoSettings(),
+      ]);
+      const discountsEnabled = Boolean(
+        promoSettings?.enabled && promoSettings?.discountsEnabled,
       );
+      const total = cartItems.reduce((sum, item) => {
+        const unitPrice = getDiscountedPrice(
+          item.product.price,
+          getEffectiveDiscountPercent(item.product, discountsEnabled),
+        );
+        return sum + unitPrice * item.quantity;
+      }, 0);
       const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
       return res.json({
@@ -134,33 +159,46 @@ exports.updateCartItem = async (req, res) => {
     data: { quantity },
     include: {
       product: {
-        select: { price: true },
+        select: { price: true, discountPercent: true, discountEnabled: true },
       },
     },
   });
 
   if (isAjaxRequest(req)) {
-    const cartItems = await prisma.cartItem.findMany({
-      where: { userId },
-      include: {
-        product: {
-          select: { price: true },
+    const [cartItems, promoSettings] = await Promise.all([
+      prisma.cartItem.findMany({
+        where: { userId },
+        include: {
+          product: {
+            select: { price: true, discountPercent: true, discountEnabled: true },
+          },
         },
-      },
-    });
-    const total = cartItems.reduce(
-      (sum, item) => sum + Number(item.product.price) * item.quantity,
-      0,
+      }),
+      getPromoSettings(),
+    ]);
+    const discountsEnabled = Boolean(
+      promoSettings?.enabled && promoSettings?.discountsEnabled,
     );
+    const total = cartItems.reduce((sum, item) => {
+      const unitPrice = getDiscountedPrice(
+        item.product.price,
+        getEffectiveDiscountPercent(item.product, discountsEnabled),
+      );
+      return sum + unitPrice * item.quantity;
+    }, 0);
     const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
+    const unitPrice = getDiscountedPrice(
+      updatedItem.product.price,
+      getEffectiveDiscountPercent(updatedItem.product, discountsEnabled),
+    );
     return res.json({
       success: true,
       removed: false,
       itemId,
       quantity: updatedItem.quantity,
       bottles: updatedItem.quantity * 12,
-      subtotal: Number(updatedItem.product.price) * updatedItem.quantity,
+      subtotal: unitPrice * updatedItem.quantity,
       total,
       cartCount,
     });

@@ -29,6 +29,7 @@ const productController = require("./controllers/productController");
 const orderController = require("./controllers/orderController");
 const contactController = require("./controllers/contactController");
 const adminController = require("./controllers/adminController");
+const { getPromoSettings } = require("./lib/promoSettings");
 const { prisma } = require("./prisma/lib/prisma");
 const APPROVED_AFFILIATE_STATUS = "APPROVED";
 
@@ -235,7 +236,8 @@ app.use(async (req, res, next) => {
 });
 
 app.get("/", async (_req, res) => {
-  const rawReviews = await prisma.review.findMany({
+  const [rawReviews, promoSettings] = await Promise.all([
+    prisma.review.findMany({
     where: {
       rating: { gte: 4 },
       product: { isActive: true },
@@ -246,7 +248,9 @@ app.get("/", async (_req, res) => {
     },
     orderBy: { id: "desc" },
     take: 12,
-  });
+    }),
+    getPromoSettings(),
+  ]);
 
   const testimonials = rawReviews.map((review) => ({
     id: review.id,
@@ -267,6 +271,7 @@ app.get("/", async (_req, res) => {
   return res.render("home", {
     testimonials,
     averageRating,
+    promoSettings,
   });
 });
 app.get("/about", (_req, res) => res.render("about"));
@@ -279,6 +284,11 @@ app.post(
   asyncHandler(contactController.postContact),
 );
 app.get("/admin", requireAdmin, asyncHandler(productController.getAdminPage));
+app.get(
+  "/admin/promo",
+  requireAdmin,
+  asyncHandler(productController.getAdminPromoPage),
+);
 app.get(
   "/admin/affiliate",
   requireAdmin,
@@ -359,6 +369,17 @@ app.post(
   productIdParamValidationRules,
   validateRedirectToAdmin,
   asyncHandler(productController.restoreProduct),
+);
+app.post(
+  "/admin/promo",
+  requireAdmin,
+  upload.single("promoImage"),
+  asyncHandler(productController.updatePromoSettings),
+);
+app.post(
+  "/admin/promo/discounts",
+  requireAdmin,
+  asyncHandler(productController.updateProductDiscounts),
 );
 app.use("/auth/login", authRateLimit);
 app.use("/auth/signup", authRateLimit);

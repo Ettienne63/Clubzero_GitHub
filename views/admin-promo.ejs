@@ -1,0 +1,575 @@
+<%- include("partials/header", { title: "Promotion Settings" }) %>
+<%- include("partials/navbar") %>
+
+<main class="container py-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">Promotion Settings</h1>
+      <p class="text-muted mb-0">
+        Manage the promotion section that appears on the home page.
+      </p>
+    </div>
+    <a href="/admin" class="btn btn-outline-secondary">Back to Admin</a>
+  </div>
+
+  <% if (success) { %>
+  <div class="alert alert-success" role="alert"><%= success %></div>
+  <% } %>
+
+  <% if (error) { %>
+  <div class="alert alert-danger" role="alert"><%= error %></div>
+  <% } %>
+
+  <% if (!promoSettings?.enabled) { %>
+  <div class="alert alert-warning" role="alert">
+    All promotions have been switched off.
+  </div>
+  <% } %>
+
+  <section class="card mb-4">
+    <div class="card-body">
+      <h2 class="h5 mb-3">Promotion Content</h2>
+      <form
+        action="/admin/promo"
+        method="POST"
+        enctype="multipart/form-data"
+        class="row g-3"
+        id="promoSettingsForm"
+      >
+        <div class="col-12 form-check form-switch">
+          <input
+            id="promoEnabled"
+            name="promoEnabled"
+            class="form-check-input"
+            type="checkbox"
+            <%= promoSettings && promoSettings.enabled ? "checked" : "" %>
+          />
+          <label class="form-check-label" for="promoEnabled">
+            Show promotion on homepage
+          </label>
+        </div>
+        <div class="col-md-4">
+          <label for="promoBadge" class="form-label">Badge</label>
+          <input
+            id="promoBadge"
+            name="promoBadge"
+            class="form-control"
+            value="<%= promoSettings?.badge || '' %>"
+            placeholder="Limited Offer"
+          />
+        </div>
+        <div class="col-md-8">
+          <label for="promoTitle" class="form-label">Title</label>
+          <input
+            id="promoTitle"
+            name="promoTitle"
+            class="form-control"
+            value="<%= promoSettings?.title || '' %>"
+            placeholder="Seasonal Promo Drop"
+          />
+        </div>
+        <div class="col-12">
+          <label for="promoSubtitle" class="form-label">Subtitle</label>
+          <input
+            id="promoSubtitle"
+            name="promoSubtitle"
+            class="form-control"
+            value="<%= promoSettings?.subtitle || '' %>"
+            placeholder="Bright flavor, limited pricing."
+          />
+        </div>
+        <div class="col-12">
+          <label for="promoBody" class="form-label">Body</label>
+          <textarea
+            id="promoBody"
+            name="promoBody"
+            class="form-control"
+            rows="3"
+          ><%= promoSettings?.body || '' %></textarea>
+        </div>
+        <div class="col-md-6">
+          <label for="promoCtaLabel" class="form-label">Primary CTA Label</label>
+          <input
+            id="promoCtaLabel"
+            name="promoCtaLabel"
+            class="form-control"
+            value="<%= promoSettings?.ctaLabel || '' %>"
+            placeholder="Shop the promo"
+          />
+          <div class="form-text">
+            This is the main button text shown on the promotion.
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label for="promoCtaUrlPreset" class="form-label">
+            Primary CTA Page
+          </label>
+          <input
+            id="promoCtaUrl"
+            name="promoCtaUrl"
+            type="hidden"
+            value="<%= promoSettings?.ctaUrl || '' %>"
+          />
+          <div class="form-text">
+            Current URL:
+            <strong id="promoCtaUrlPreview"
+              ><%= promoSettings?.ctaUrl || "Not set" %></strong
+            >
+          </div>
+          <select
+            id="promoCtaUrlPreset"
+            class="form-select mt-2"
+            aria-label="Primary CTA preset"
+          >
+            <option value="">Select a page...</option>
+            <option value="/auth/products">Products</option>
+            <option value="/about">About</option>
+            <option value="/contact">Contact</option>
+            <option value="/auth/affiliate/join">Become Affiliate</option>
+            <option value="/auth/affiliate">Affiliate Dashboard</option>
+            <option value="/auth/login">Login</option>
+            <option value="/auth/signup">Sign Up</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label for="promoSecondaryLabel" class="form-label">
+            Secondary CTA Label
+          </label>
+          <input
+            id="promoSecondaryLabel"
+            name="promoSecondaryLabel"
+            class="form-control"
+            value="<%= promoSettings?.secondaryLabel || '' %>"
+            placeholder="Learn more"
+          />
+          <div class="form-text">
+            Optional secondary button text shown next to the main CTA.
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label for="promoSecondaryUrlPreset" class="form-label">
+            Secondary CTA Page
+          </label>
+          <input
+            id="promoSecondaryUrl"
+            name="promoSecondaryUrl"
+            type="hidden"
+            value="<%= promoSettings?.secondaryUrl || '' %>"
+          />
+          <div class="form-text">
+            Current URL:
+            <strong id="promoSecondaryUrlPreview"
+              ><%= promoSettings?.secondaryUrl || "Not set" %></strong
+            >
+          </div>
+          <select
+            id="promoSecondaryUrlPreset"
+            class="form-select mt-2"
+            aria-label="Secondary CTA preset"
+          >
+            <option value="">Select a page...</option>
+            <option value="/auth/products">Products</option>
+            <option value="/about">About</option>
+            <option value="/contact">Contact</option>
+            <option value="/auth/affiliate/join">Become Affiliate</option>
+            <option value="/auth/affiliate">Affiliate Dashboard</option>
+            <option value="/auth/login">Login</option>
+            <option value="/auth/signup">Sign Up</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label for="promoImage" class="form-label">Upload Image</label>
+          <input
+            id="promoImage"
+            name="promoImage"
+            type="file"
+            class="form-control"
+            accept="image/*"
+          />
+        </div>
+        <div class="col-md-6">
+          <label for="promoImageUrl" class="form-label">Or Image URL</label>
+          <input
+            id="promoImageUrl"
+            name="promoImageUrl"
+            class="form-control"
+            value="<%= promoSettings?.imageUrl || '' %>"
+          />
+        </div>
+        <div class="col-12 form-check">
+          <input
+            id="promoImageRemove"
+            name="promoImageRemove"
+            class="form-check-input"
+            type="checkbox"
+          />
+          <label class="form-check-label" for="promoImageRemove">
+            Remove promo image
+          </label>
+        </div>
+        <% if (promoSettings?.imageUrl) { %>
+        <div class="col-12">
+          <img
+            src="<%= promoSettings.imageUrl %>"
+            alt="Promotion preview"
+            class="rounded border admin-image-frame"
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+        <% } %>
+        <div class="col-12">
+          <label for="promoFinePrint" class="form-label">Fine Print</label>
+          <input
+            id="promoFinePrint"
+            name="promoFinePrint"
+            class="form-control"
+            value="<%= promoSettings?.finePrint || '' %>"
+            placeholder="Available while supplies last."
+          />
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary">
+            Save Promotion
+          </button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h5 mb-0">Product Discounts</h2>
+        <span class="text-muted small">Percentage off each product</span>
+      </div>
+      <div
+        id="discountsSaveStatus"
+        class="fw-semibold small text-muted mb-2"
+      ></div>
+      <div class="alert alert-info py-2">
+        <div class="form-check form-switch mb-0">
+          <input
+            id="discountsEnabled"
+            name="discountsEnabled"
+            class="form-check-input"
+            type="checkbox"
+            form="discountsForm"
+            <%= promoSettings?.discountsEnabled && promoSettings?.enabled ? "checked" : "" %>
+            <%= promoSettings?.enabled ? "" : "disabled" %>
+          />
+          <label class="form-check-label" for="discountsEnabled">
+            Enable product discounts
+          </label>
+        </div>
+        <% if (!promoSettings?.enabled) { %>
+        <div class="small text-muted mt-1">
+          Discounts are disabled because the main promotion toggle is off.
+        </div>
+        <% } %>
+        <% if (promoSettings?.enabled && !promoSettings?.discountsEnabled) { %>
+        <div class="small text-muted mt-1">
+          All product discounts have been switched off.
+        </div>
+        <% } %>
+      </div>
+      <% if (!products || products.length === 0) { %>
+      <p class="text-muted mb-0">No products found yet.</p>
+      <% } else { %>
+      <form action="/admin/promo/discounts" method="POST" id="discountsForm">
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th scope="col">Product</th>
+                <th scope="col">Current Price</th>
+                <th scope="col">Discounted Price</th>
+                <th scope="col">Discount %</th>
+                <th scope="col">Enabled</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% products.forEach((product) => { %>
+              <% const discountPercent = Number(product.discountPercent || 0); %>
+              <% const discountsActive = promoSettings?.enabled && promoSettings?.discountsEnabled && product.discountEnabled !== false; %>
+              <% const discountedPrice = discountsActive && discountPercent > 0 ? Number(product.price) * (1 - discountPercent / 100) : Number(product.price); %>
+              <tr data-product-row data-price="<%= Number(product.price) %>">
+                <td>
+                  <div class="d-flex align-items-center gap-3">
+                    <img
+                      src="<%= product.imageUrl %>"
+                      alt="<%= product.name %>"
+                      class="rounded border admin-image-frame"
+                      style="width: 56px; height: 56px"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                    <div>
+                      <div class="fw-semibold"><%= product.name %></div>
+                      <div class="small text-muted">
+                        <%= product.isActive ? "Visible" : "Hidden" %>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td>R<%= Number(product.price).toFixed(2) %></td>
+                <td>
+                  <span
+                    class="<%= discountsActive && discountPercent > 0 ? 'price-discounted' : '' %>"
+                    data-discounted-price
+                  >
+                    R<%= Number(discountedPrice).toFixed(2) %>
+                  </span>
+                  <div class="small text-muted" data-discount-status>
+                    <%= discountsActive ? "" : "Disabled" %>
+                  </div>
+                </td>
+                <td style="max-width: 140px">
+                  <input
+                    name="discountPercent_<%= product.id %>"
+                    type="number"
+                    min="0"
+                    max="90"
+                    step="0.1"
+                    class="form-control"
+                    value="<%= product.discountPercent || 0 %>"
+                    data-discount-input
+                  />
+                </td>
+                <td>
+                  <div class="form-check form-switch">
+                    <input
+                      type="hidden"
+                      name="discountEnabled_<%= product.id %>"
+                      value="off"
+                    />
+                    <input
+                      id="discountEnabled_<%= product.id %>"
+                      name="discountEnabled_<%= product.id %>"
+                      class="form-check-input"
+                      type="checkbox"
+                      value="on"
+                      <%= product.discountEnabled !== false ? "checked" : "" %>
+                      <%= promoSettings?.enabled && promoSettings?.discountsEnabled ? "" : "disabled" %>
+                    />
+                  </div>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </form>
+      <% } %>
+    </div>
+  </section>
+</main>
+
+<script>
+  const bindPreset = (selectId, inputId, previewId) => {
+    const select = document.getElementById(selectId);
+    const input = document.getElementById(inputId);
+    const preview = document.getElementById(previewId);
+    if (!select || !input) return;
+    select.addEventListener("change", () => {
+      if (select.value) {
+        input.value = select.value;
+        if (preview) {
+          preview.textContent = select.value;
+        }
+      }
+    });
+  };
+
+  bindPreset("promoCtaUrlPreset", "promoCtaUrl", "promoCtaUrlPreview");
+  bindPreset(
+    "promoSecondaryUrlPreset",
+    "promoSecondaryUrl",
+    "promoSecondaryUrlPreview",
+  );
+</script>
+
+<script>
+  (() => {
+    const toggle = document.getElementById("promoEnabled");
+    const form = document.getElementById("promoSettingsForm");
+    if (!toggle || !form) return;
+
+    toggle.addEventListener("change", () => {
+      form.submit();
+    });
+  })();
+</script>
+
+<script>
+  (() => {
+    const form = document.getElementById("discountsForm");
+    if (!form) return;
+
+    const token = document
+      .querySelector('meta[name="csrf-token"]')
+      ?.getAttribute("content");
+    let saveTimer = null;
+    const debounceMs = 600;
+
+    const statusEl = document.getElementById("discountsSaveStatus");
+    const setStatus = (message, kind = "info") => {
+      if (!statusEl) return;
+      statusEl.textContent = message || "";
+      const baseClass = "fw-semibold small mb-2";
+      if (kind === "error") {
+        statusEl.className = `${baseClass} text-danger`;
+        return;
+      }
+      if (message?.toLowerCase().includes("discounts on")) {
+        statusEl.className = `${baseClass} text-success`;
+        return;
+      }
+      if (message?.toLowerCase().includes("discounts off")) {
+        statusEl.className = `${baseClass} text-warning`;
+        return;
+      }
+      statusEl.className = `${baseClass} text-muted`;
+    };
+
+    const submitDiscounts = async () => {
+      if (saveTimer) {
+        clearTimeout(saveTimer);
+      }
+
+      const rawData = new FormData(form);
+      const globalToggle = document.getElementById("discountsEnabled");
+      if (globalToggle) {
+        rawData.set("discountsEnabled", globalToggle.checked ? "on" : "off");
+      }
+      if (token) {
+        rawData.set("_csrf", token);
+      }
+      const formData = new URLSearchParams();
+      rawData.forEach((value, key) => {
+        formData.append(key, value);
+      });
+
+      try {
+        setStatus("Saving...");
+        const response = await fetch(form.action, {
+          method: "POST",
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            "X-CSRF-Token": token || "",
+            Accept: "application/json",
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+          },
+          credentials: "same-origin",
+          body: formData.toString(),
+        });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) {
+          setStatus(payload?.message || "Save failed.", "error");
+          return;
+        }
+        const extra =
+          typeof payload?.discountsEnabled === "boolean"
+            ? ` (discounts ${payload.discountsEnabled ? "on" : "off"})`
+            : "";
+        setStatus(
+          extra
+            ? `Discounts ${payload.discountsEnabled ? "on" : "off"}.`
+            : payload?.message || "Saved.",
+        );
+      } catch {
+        setStatus("Save failed.", "error");
+      }
+    };
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      submitDiscounts();
+    });
+
+    const autoSaveInputs = form.querySelectorAll(
+      'input[type="checkbox"], input[type="number"]',
+    );
+    autoSaveInputs.forEach((input) => {
+      const handler = () => {
+        if (input.type === "number") {
+          if (saveTimer) {
+            clearTimeout(saveTimer);
+          }
+          saveTimer = setTimeout(() => {
+            submitDiscounts();
+          }, debounceMs);
+          updateDiscountTable();
+          return;
+        }
+
+        submitDiscounts();
+        updateDiscountTable();
+      };
+
+      input.addEventListener(
+        input.type === "number" ? "input" : "change",
+        handler,
+      );
+    });
+
+    const globalToggle = document.getElementById("discountsEnabled");
+    if (globalToggle) {
+      globalToggle.addEventListener("change", () => {
+        const productToggles = form.querySelectorAll(
+          'input[type="checkbox"][id^="discountEnabled_"]',
+        );
+        if (!globalToggle.checked) {
+          productToggles.forEach((toggle) => {
+            toggle.checked = false;
+            toggle.disabled = true;
+          });
+        } else {
+          productToggles.forEach((toggle) => {
+            toggle.disabled = false;
+          });
+        }
+        submitDiscounts();
+        updateDiscountTable();
+      });
+    }
+
+    const updateDiscountTable = () => {
+      const globalToggle = document.getElementById("discountsEnabled");
+      const globalOn = Boolean(globalToggle?.checked);
+      const rows = form.querySelectorAll("[data-product-row]");
+
+      rows.forEach((row) => {
+        const price = Number(row.getAttribute("data-price") || 0);
+        const percentInput = row.querySelector("[data-discount-input]");
+        const enabledToggle = row.querySelector(
+          'input[type="checkbox"][id^="discountEnabled_"]',
+        );
+        const discountedEl = row.querySelector("[data-discounted-price]");
+        const statusEl = row.querySelector("[data-discount-status]");
+
+        const percent = Math.max(
+          0,
+          Math.min(90, Number(percentInput?.value || 0)),
+        );
+        const enabled = globalOn && Boolean(enabledToggle?.checked);
+        const discounted = enabled && percent > 0 ? price * (1 - percent / 100) : price;
+
+        if (discountedEl) {
+          discountedEl.textContent = `R${discounted.toFixed(2)}`;
+          discountedEl.classList.toggle(
+            "price-discounted",
+            enabled && percent > 0,
+          );
+        }
+        if (statusEl) {
+          statusEl.textContent = enabled ? "" : "Disabled";
+        }
+      });
+    };
+
+    updateDiscountTable();
+  })();
+</script>
+
+<%- include("partials/footer") %>

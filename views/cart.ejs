@@ -39,6 +39,9 @@
       </thead>
       <tbody>
         <% cartItems.forEach((item) => { %>
+        <% const discountPercent = Number(item.product.discountPercent || 0); %>
+        <% const hasDiscount = Boolean(discountsEnabled) && item.product.discountEnabled !== false && discountPercent > 0; %>
+        <% const discountedPrice = hasDiscount ? Number(item.product.price) * (1 - discountPercent / 100) : Number(item.product.price); %>
         <tr data-cart-item-row="<%= item.id %>">
           <td>
             <div class="d-flex align-items-center gap-3">
@@ -61,7 +64,14 @@
               </div>
             </div>
           </td>
-          <td>R<%= Number(item.product.price).toFixed(2) %></td>
+          <td>
+            <% if (hasDiscount) { %>
+            <span class="price-discounted">R<%= Number(discountedPrice).toFixed(2) %></span>
+            <span class="price-original ms-1">R<%= Number(item.product.price).toFixed(2) %></span>
+            <% } else { %>
+            R<%= Number(item.product.price).toFixed(2) %>
+            <% } %>
+          </td>
           <td>
             <form
               action="/auth/cart/<%= item.id %>/update"
@@ -80,7 +90,9 @@
             </form>
             <div class="small text-muted mt-1" data-bottles-count><%= item.quantity * 12 %> bottles</div>
           </td>
-          <td data-subtotal-cell>R<%= (Number(item.product.price) * item.quantity).toFixed(2) %></td>
+          <td data-subtotal-cell>
+            R<%= (Number(discountedPrice) * item.quantity).toFixed(2) %>
+          </td>
           <td>
             <form action="/auth/cart/<%= item.id %>/delete" method="POST">
               <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>

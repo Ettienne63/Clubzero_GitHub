@@ -24,6 +24,65 @@
     </div>
   </section>
 
+  <% if (promoSettings && promoSettings.enabled && (promoSettings.title || promoSettings.body || promoSettings.imageUrl)) { %>
+  <section class="home-promo-section py-5">
+    <div class="container">
+      <div class="home-promo-card">
+        <div class="row g-4 align-items-center">
+          <div class="col-lg-6">
+            <% if (promoSettings.badge) { %>
+            <span class="home-promo-badge"><%= promoSettings.badge %></span>
+            <% } %>
+            <% if (promoSettings.title) { %>
+            <h2 class="h2 fw-bold mb-3"><%= promoSettings.title %></h2>
+            <% } %>
+            <% if (promoSettings.subtitle) { %>
+            <p class="lead text-secondary mb-3"><%= promoSettings.subtitle %></p>
+            <% } %>
+            <% if (promoSettings.body) { %>
+            <p class="text-secondary mb-4"><%= promoSettings.body %></p>
+            <% } %>
+            <div class="d-flex flex-wrap gap-2">
+              <% if (promoSettings.ctaLabel && promoSettings.ctaUrl) { %>
+              <a
+                href="<%= promoSettings.ctaUrl %>"
+                class="btn btn-primary btn-lg px-4 fw-semibold"
+              >
+                <%= promoSettings.ctaLabel %>
+              </a>
+              <% } %>
+              <% if (promoSettings.secondaryLabel && promoSettings.secondaryUrl) { %>
+              <a
+                href="<%= promoSettings.secondaryUrl %>"
+                class="btn btn-outline-primary btn-lg px-4"
+              >
+                <%= promoSettings.secondaryLabel %>
+              </a>
+              <% } %>
+            </div>
+            <% if (promoSettings.finePrint) { %>
+            <p class="small text-muted mt-3 mb-0"><%= promoSettings.finePrint %></p>
+            <% } %>
+          </div>
+          <div class="col-lg-6">
+            <% if (promoSettings.imageUrl) { %>
+            <img
+              src="<%= promoSettings.imageUrl %>"
+              alt="<%= promoSettings.title || 'Club Zero promotion' %>"
+              class="home-promo-image"
+              loading="lazy"
+              decoding="async"
+            />
+            <% } else { %>
+            <div class="home-promo-image-placeholder"></div>
+            <% } %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <% } %>
+
   <section class="home-highlight-section py-5 border-bottom">
     <div class="container">
       <div class="row g-4 align-items-center">

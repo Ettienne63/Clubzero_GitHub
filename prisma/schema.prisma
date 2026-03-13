@@ -64,6 +64,8 @@ model Product{
   name String @unique
   description String?
   price Float
+  discountPercent Float @default(0)
+  discountEnabled Boolean @default(true)
   imageUrl String
   isActive Boolean @default(true)
   nutritionInfo String?

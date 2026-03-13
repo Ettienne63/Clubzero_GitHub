@@ -1,4 +1,19 @@
 const { prisma } = require("../prisma/lib/prisma");
+const { getPromoSettings, savePromoSettings } = require("../lib/promoSettings");
+const { clampDiscountPercent } = require("../lib/pricing");
+
+const PROMO_LIMITS = {
+  badge: 40,
+  title: 120,
+  subtitle: 180,
+  body: 400,
+  ctaLabel: 40,
+  ctaUrl: 220,
+  secondaryLabel: 40,
+  secondaryUrl: 220,
+  imageUrl: 300,
+  finePrint: 140,
+};
 
 const toOptionalText = (value) => {
   const trimmed = (value || "").trim();
@@ -57,6 +72,11 @@ const parseProductInput = (body, file, options = {}) => {
   const bestFor = toOptionalText(body.bestFor);
   const storageInfo = toOptionalText(body.storageInfo);
   const price = Number.parseFloat(body.price);
+  const discountPercentRaw = (body.discountPercent || "").toString().trim();
+  const parsedDiscount = Number.parseFloat(discountPercentRaw);
+  const discountPercent = discountPercentRaw
+    ? clampDiscountPercent(parsedDiscount)
+    : 0;
   const imageUrl = file
     ? `/uploads/${file.filename}`
     : imageUrlFromInput || currentImageUrl;
@@ -69,16 +89,148 @@ const parseProductInput = (body, file, options = {}) => {
     return { error: "Price must be a valid non-negative number." };
   }
 
+  if (discountPercentRaw && !Number.isFinite(parsedDiscount)) {
+    return { error: "Discount must be a valid percentage." };
+  }
+
+  if (Number.isFinite(parsedDiscount) && (parsedDiscount < 0 || parsedDiscount > 90)) {
+    return { error: "Discount must be between 0% and 90%." };
+  }
+
   return {
     data: {
       name,
       imageUrl,
       description,
       price,
+      discountPercent,
       nutritionInfo,
       ingredients,
       bestFor,
       storageInfo,
+    },
+  };
+};
+
+const normalizePromoUrl = (value, label) => {
+  const trimmed = (value || "").trim();
+  if (!trimmed) {
+    return { value: "" };
+  }
+  const lower = trimmed.toLowerCase();
+  if (lower.startsWith("javascript:")) {
+    return { error: `${label} cannot start with javascript:` };
+  }
+  if (!trimmed.startsWith("/") && !/^https?:\/\//i.test(trimmed)) {
+    return { error: `${label} must start with http(s):// or /` };
+  }
+  return { value: trimmed };
+};
+
+const enforceMaxLength = (value, max, label) => {
+  if (value.length > max) {
+    return `${label} must be ${max} characters or fewer.`;
+  }
+  return null;
+};
+
+const parsePromoInput = (body, file, current = {}) => {
+  const enabled = body.promoEnabled === "on";
+  const badge = (body.promoBadge || "").trim();
+  const title = (body.promoTitle || "").trim();
+  const subtitle = (body.promoSubtitle || "").trim();
+  const bodyText = (body.promoBody || "").trim();
+  const ctaLabel = (body.promoCtaLabel || "").trim();
+  const ctaUrlRaw = (body.promoCtaUrl || "").trim();
+  const secondaryLabel = (body.promoSecondaryLabel || "").trim();
+  const secondaryUrlRaw = (body.promoSecondaryUrl || "").trim();
+  const finePrint = (body.promoFinePrint || "").trim();
+  const imageUrlInput = (body.promoImageUrl || "").trim();
+  const removeImage = body.promoImageRemove === "on";
+  const imageUrl = file
+    ? `/uploads/${file.filename}`
+    : removeImage
+      ? ""
+      : imageUrlInput || current.imageUrl || "";
+
+  const urlValidation = normalizePromoUrl(ctaUrlRaw, "Primary CTA URL");
+  if (urlValidation.error) {
+    return { error: urlValidation.error };
+  }
+  const secondaryUrlValidation = normalizePromoUrl(
+    secondaryUrlRaw,
+    "Secondary CTA URL",
+  );
+  if (secondaryUrlValidation.error) {
+    return { error: secondaryUrlValidation.error };
+  }
+
+  const lengthChecks = [
+    enforceMaxLength(badge, PROMO_LIMITS.badge, "Badge"),
+    enforceMaxLength(title, PROMO_LIMITS.title, "Title"),
+    enforceMaxLength(subtitle, PROMO_LIMITS.subtitle, "Subtitle"),
+    enforceMaxLength(bodyText, PROMO_LIMITS.body, "Body text"),
+    enforceMaxLength(ctaLabel, PROMO_LIMITS.ctaLabel, "Primary CTA label"),
+    enforceMaxLength(ctaUrlRaw, PROMO_LIMITS.ctaUrl, "Primary CTA URL"),
+    enforceMaxLength(
+      secondaryLabel,
+      PROMO_LIMITS.secondaryLabel,
+      "Secondary CTA label",
+    ),
+    enforceMaxLength(
+      secondaryUrlRaw,
+      PROMO_LIMITS.secondaryUrl,
+      "Secondary CTA URL",
+    ),
+    enforceMaxLength(imageUrl, PROMO_LIMITS.imageUrl, "Image URL"),
+    enforceMaxLength(finePrint, PROMO_LIMITS.finePrint, "Fine print"),
+  ];
+
+  const lengthError = lengthChecks.find(Boolean);
+  if (lengthError) {
+    return { error: lengthError };
+  }
+
+  if (enabled) {
+    if (!title) {
+      return { error: "Title is required when the promotion is enabled." };
+    }
+    if (!bodyText) {
+      return { error: "Body text is required when the promotion is enabled." };
+    }
+    if (!ctaLabel || !urlValidation.value) {
+      return {
+        error: "Primary CTA label and URL are required when enabled.",
+      };
+    }
+  }
+
+  if ((ctaLabel && !urlValidation.value) || (!ctaLabel && urlValidation.value)) {
+    return { error: "Primary CTA label and URL must be provided together." };
+  }
+
+  if (
+    (secondaryLabel && !secondaryUrlValidation.value) ||
+    (!secondaryLabel && secondaryUrlValidation.value)
+  ) {
+    return {
+      error: "Secondary CTA label and URL must be provided together.",
+    };
+  }
+
+  return {
+    data: {
+      enabled,
+      badge,
+      title,
+      subtitle,
+      body: bodyText,
+      ctaLabel,
+      ctaUrl: urlValidation.value,
+      secondaryLabel,
+      secondaryUrl: secondaryUrlValidation.value,
+      imageUrl,
+      finePrint,
     },
   };
 };
@@ -108,12 +260,13 @@ const getProducts = (search = "", options = {}) => {
 exports.listProducts = async (req, res) => {
   const searchQuery = (req.query.search || "").toString();
   const userId = Number.parseInt(req.session?.user?.id, 10);
-  const [products, recentlyViewedProductsRaw] = await Promise.all([
+  const [products, recentlyViewedProductsRaw, promoSettings] = await Promise.all([
     getProducts(searchQuery),
     prisma.product.findMany({
       where: { id: { in: getRecentlyViewedProductIds(req) }, isActive: true },
       include: productWithReviewsInclude,
     }),
+    getPromoSettings(),
   ]);
   let purchasedProductIds = [];
   let myReviewsByProduct = {};
@@ -162,6 +315,9 @@ exports.listProducts = async (req, res) => {
     error: req.query.error || null,
     purchasedProductIds,
     myReviewsByProduct,
+    discountsEnabled: Boolean(
+      promoSettings?.enabled && promoSettings?.discountsEnabled,
+    ),
   });
 };
 
@@ -171,13 +327,16 @@ exports.getProductDetails = async (req, res) => {
     String(req.session?.user?.role || "").toUpperCase(),
   );
 
-  const product = await prisma.product.findFirst({
-    where: {
-      id: productId,
-      ...(isAdmin ? {} : { isActive: true }),
-    },
-    include: productWithReviewsInclude,
-  });
+  const [product, promoSettings] = await Promise.all([
+    prisma.product.findFirst({
+      where: {
+        id: productId,
+        ...(isAdmin ? {} : { isActive: true }),
+      },
+      include: productWithReviewsInclude,
+    }),
+    getPromoSettings(),
+  ]);
 
   if (!product) {
     return res.status(404).send("Product not found");
@@ -192,6 +351,9 @@ exports.getProductDetails = async (req, res) => {
     product: mapProductWithReviewStats(product),
     success: req.query.success || null,
     error: req.query.error || null,
+    discountsEnabled: Boolean(
+      promoSettings?.enabled && promoSettings?.discountsEnabled,
+    ),
   });
 };
 
@@ -274,6 +436,243 @@ exports.getAdminPage = async (req, res) => {
       storageInfo: "",
     },
   });
+};
+
+exports.getAdminPromoPage = async (req, res) => {
+  const [promoSettings, products] = await Promise.all([
+    getPromoSettings(),
+    getProducts("", { includeInactive: true }),
+  ]);
+
+  return res.render("admin-promo", {
+    promoSettings,
+    products,
+    success: req.query.success || null,
+    error: req.query.error || null,
+  });
+};
+
+exports.updateProductDiscounts = async (req, res) => {
+  const wantsJson =
+    req.xhr || (req.get("Accept") || "").includes("application/json");
+  const promoSettings = await getPromoSettings();
+  const payload = req.body?.discountPercent;
+  let entries = [];
+
+  if (payload && typeof payload === "object") {
+    entries = Object.entries(payload);
+  }
+
+  if (!entries.length && req.body && typeof req.body === "object") {
+    entries = Object.entries(req.body)
+      .filter(([key]) => key.startsWith("discountPercent[") && key.endsWith("]"))
+      .map(([key, value]) => {
+        const idValue = key.slice("discountPercent[".length, -1);
+        return [idValue, value];
+      });
+  }
+
+  if (!entries.length && req.body && typeof req.body === "object") {
+    entries = Object.entries(req.body)
+      .filter(([key]) => key.startsWith("discountPercent_"))
+      .map(([key, value]) => {
+        const idValue = key.slice("discountPercent_".length);
+        return [idValue, value];
+      });
+  }
+
+  const discountEnabledEntries =
+    req.body && typeof req.body === "object"
+      ? Object.entries(req.body)
+          .filter(([key]) => key.startsWith("discountEnabled_"))
+          .map(([key, value]) => {
+            const idValue = key.slice("discountEnabled_".length);
+            return [idValue, value];
+          })
+      : [];
+
+  const updates = [];
+  const hasGlobalToggle =
+    typeof req.body?.discountsEnabled !== "undefined" ||
+    typeof req.body?.discountsEnabled === "string";
+  const requestedDiscountsEnabled =
+    String(req.body?.discountsEnabled || "").toLowerCase() === "on";
+  const perProductEnabledAny = discountEnabledEntries.some(([_, value]) => {
+    if (Array.isArray(value)) {
+      return value.map((entry) => String(entry).toLowerCase()).includes("on");
+    }
+    return String(value || "").toLowerCase() === "on";
+  });
+  const discountsEnabled = promoSettings?.enabled
+    ? hasGlobalToggle
+      ? requestedDiscountsEnabled || perProductEnabledAny
+      : perProductEnabledAny || Boolean(promoSettings?.discountsEnabled)
+    : false;
+
+  if (!entries.length && !discountEnabledEntries.length) {
+    const upsertSetting = prisma.appSetting.upsert({
+      where: { key: "promo_discounts_enabled" },
+      create: {
+        key: "promo_discounts_enabled",
+        value: discountsEnabled ? "true" : "false",
+      },
+      update: { value: discountsEnabled ? "true" : "false" },
+    });
+
+    await prisma.$transaction([upsertSetting]);
+
+    if (wantsJson) {
+      return res.json({ success: true, message: "Discounts updated." });
+    }
+    return res.redirect("/admin/promo?success=Discounts+updated");
+  }
+
+  const percentMap = new Map(entries);
+  const enabledMap = new Map(discountEnabledEntries);
+  const productIds = new Set([
+    ...Array.from(percentMap.keys()),
+    ...Array.from(enabledMap.keys()),
+  ]);
+
+  for (const idValue of productIds) {
+    const productId = Number.parseInt(idValue, 10);
+    if (!Number.isInteger(productId)) {
+      continue;
+    }
+
+    const raw = percentMap.has(idValue)
+      ? (percentMap.get(idValue) ?? "").toString().trim()
+      : null;
+    const parsed = raw !== null && raw !== "" ? Number.parseFloat(raw) : null;
+
+    if (raw && !Number.isFinite(parsed)) {
+      if (wantsJson) {
+        return res.status(400).json({
+          success: false,
+          message: "Discount must be a number.",
+        });
+      }
+      return res.redirect(
+        `/admin/promo?error=${encodeURIComponent("Discount must be a number.")}`,
+      );
+    }
+
+    if (Number.isFinite(parsed) && (parsed < 0 || parsed > 90)) {
+      if (wantsJson) {
+        return res.status(400).json({
+          success: false,
+          message: "Discount must be between 0% and 90%.",
+        });
+      }
+      return res.redirect(
+        `/admin/promo?error=${encodeURIComponent(
+          "Discount must be between 0% and 90%.",
+        )}`,
+      );
+    }
+
+    const discountEnabledRaw = enabledMap.get(idValue);
+    const perProductEnabled = Array.isArray(discountEnabledRaw)
+      ? discountEnabledRaw
+          .map((value) => String(value).toLowerCase())
+          .includes("on")
+      : String(discountEnabledRaw || "").toLowerCase() === "on";
+    const discountEnabled = discountsEnabled ? perProductEnabled : false;
+
+    const data = { discountEnabled };
+    if (Number.isFinite(parsed)) {
+      data.discountPercent = clampDiscountPercent(parsed);
+    }
+
+    updates.push(
+      prisma.product.updateMany({
+        where: { id: productId },
+        data,
+      }),
+    );
+  }
+
+  if (updates.length) {
+    const results = await prisma.$transaction([
+      prisma.appSetting.upsert({
+        where: { key: "promo_discounts_enabled" },
+        create: {
+          key: "promo_discounts_enabled",
+          value: discountsEnabled ? "true" : "false",
+        },
+        update: { value: discountsEnabled ? "true" : "false" },
+      }),
+      ...(!discountsEnabled
+        ? [
+            prisma.product.updateMany({
+              data: { discountEnabled: false },
+            }),
+          ]
+        : []),
+      ...updates,
+    ]);
+    const updateResults = results.slice(1);
+    const updatedCount = updateResults.reduce(
+      (sum, result) => sum + Number(result?.count || 0),
+      0,
+    );
+
+    if (updatedCount === 0) {
+      if (wantsJson) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "No matching products were updated. Please refresh the page and try again.",
+        });
+      }
+      return res.redirect(
+        `/admin/promo?error=${encodeURIComponent(
+          "No matching products were updated. Please refresh the page and try again.",
+        )}`,
+      );
+    }
+
+    if (wantsJson) {
+      return res.json({
+        success: true,
+        message: `Discounts updated for ${updatedCount} product(s).`,
+        discountsEnabled,
+      });
+    }
+    return res.redirect(
+      `/admin/promo?success=${encodeURIComponent(
+        `Discounts updated for ${updatedCount} product(s).`,
+      )}`,
+    );
+  }
+
+  if (wantsJson) {
+    return res.json({
+      success: true,
+      message: "Discounts updated.",
+      discountsEnabled,
+    });
+  }
+  return res.redirect("/admin/promo?success=Discounts+updated");
+};
+
+exports.updatePromoSettings = async (req, res) => {
+  const current = await getPromoSettings();
+  const parsed = parsePromoInput(req.body, req.file, current);
+
+  if (parsed.error) {
+    return res.redirect(`/admin?error=${encodeURIComponent(parsed.error)}`);
+  }
+
+  const nextSettings = {
+    ...parsed.data,
+    discountsEnabled: parsed.data.enabled
+      ? current.discountsEnabled !== false
+      : false,
+  };
+
+  await savePromoSettings(nextSettings);
+  return res.redirect("/admin/promo?success=Promotion+updated");
 };
 
 exports.createProduct = async (req, res) => {

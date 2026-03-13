@@ -184,6 +184,9 @@
           <h2 class="h5 mb-3">Order Summary</h2>
           <ul class="list-group list-group-flush">
             <% cartItems.forEach((item) => { %>
+            <% const discountPercent = Number(item.product.discountPercent || 0); %>
+            <% const hasDiscount = Boolean(discountsEnabled) && item.product.discountEnabled !== false && discountPercent > 0; %>
+            <% const discountedPrice = hasDiscount ? Number(item.product.price) * (1 - discountPercent / 100) : Number(item.product.price); %>
             <li
               class="list-group-item d-flex justify-content-between align-items-center px-0"
             >
@@ -192,9 +195,7 @@
                 x
                 <%= item.quantity %> case<%= item.quantity === 1 ? "" : "s" %> (<%= item.quantity * 12 %> bottles)</span
               >
-              <span
-                >R<%= (Number(item.product.price) * item.quantity).toFixed(2) %></span
-              >
+              <span>R<%= (Number(discountedPrice) * item.quantity).toFixed(2) %></span>
             </li>
             <% }) %>
           </ul>
