@@ -1576,84 +1576,8 @@ exports.getOrderInvoice = async (req, res) => {
   });
 };
 
-exports.getAdminInvoicesPage = async (req, res) => {
-  const statusFilter = (req.query.status || "all").toString().trim().toUpperCase();
-  const allowedStatuses = new Set([
-    "ALL",
-    INVOICE_STATUS.DRAFT,
-    INVOICE_STATUS.SENT,
-    INVOICE_STATUS.PAID,
-  ]);
-  const activeStatusFilter = allowedStatuses.has(statusFilter)
-    ? statusFilter
-    : "ALL";
-
-  const invoices = await prisma.invoice.findMany({
-    where:
-      activeStatusFilter === "ALL"
-        ? undefined
-        : {
-            status: activeStatusFilter,
-          },
-    include: {
-      order: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              name: true,
-            },
-          },
-          orderItems: {
-            select: {
-              quantity: true,
-            },
-          },
-        },
-      },
-    },
-    orderBy: [{ issuedAt: "desc" }, { id: "desc" }],
-  });
-
-  const summary = invoices.reduce(
-    (acc, invoice) => {
-      const status = getInvoiceStatusBadge(invoice);
-      acc.totalCount += 1;
-      acc.totalValue += Number(invoice.total);
-      if (status === INVOICE_STATUS.DRAFT) {
-        acc.draftCount += 1;
-      } else if (status === INVOICE_STATUS.SENT) {
-        acc.sentCount += 1;
-      } else if (status === INVOICE_STATUS.PAID) {
-        acc.paidCount += 1;
-      }
-      return acc;
-    },
-    {
-      totalCount: 0,
-      totalValue: 0,
-      draftCount: 0,
-      sentCount: 0,
-      paidCount: 0,
-    },
-  );
-
-  return res.render("admin-invoices", {
-    invoices: invoices.map((invoice) => ({
-      ...invoice,
-      status: getInvoiceStatusBadge(invoice),
-      itemCount: invoice.order.orderItems.reduce(
-        (sum, item) => sum + Number(item.quantity),
-        0,
-      ),
-    })),
-    summary,
-    activeStatusFilter,
-    success: req.query.success || null,
-    error: req.query.error || null,
-  });
-};
+exports.redirectAdminInvoicesToPayments = async (_req, res) =>
+  res.redirect("/admin/payments");
 
 exports.getAdminPaymentsPage = async (req, res) => {
   const statusFilter = (req.query.status || "paid").toString().toUpperCase();

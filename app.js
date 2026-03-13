@@ -307,7 +307,7 @@ app.get(
 app.get(
   "/admin/invoices",
   requireAdmin,
-  asyncHandler(orderController.getAdminInvoicesPage),
+  asyncHandler(orderController.redirectAdminInvoicesToPayments),
 );
 app.get(
   "/admin/payments",
