@@ -22,14 +22,22 @@ const {
   productIdParamValidationRules,
   idParamValidationRules,
   contactValidationRules,
+  storeLocationValidationRules,
+  storeLocationIdParamValidationRules,
   validateRedirectToAdmin,
+  validateRedirectToAdminLocations,
   validateRedirectToContact,
 } = require("./middleware/validation");
 const productController = require("./controllers/productController");
 const orderController = require("./controllers/orderController");
 const contactController = require("./controllers/contactController");
 const adminController = require("./controllers/adminController");
+const storeLocationController = require("./controllers/storeLocationController");
+const homeController = require("./controllers/homeController");
 const { getPromoSettings } = require("./lib/promoSettings");
+const { getHomeHeroSettings } = require("./lib/homeHeroSettings");
+const { startAbandonedCartScheduler } = require("./lib/abandonedCart");
+const { readStoreLocations } = require("./lib/storeLocations");
 const { prisma } = require("./prisma/lib/prisma");
 const APPROVED_AFFILIATE_STATUS = "APPROVED";
 
@@ -189,6 +197,7 @@ app.use(async (req, _res, next) => {
 });
 
 app.use(async (req, res, next) => {
+  res.locals.currentPath = req.path;
   res.locals.user = req.session.user || null;
   res.locals.cartCount = 0;
 
@@ -236,7 +245,7 @@ app.use(async (req, res, next) => {
 });
 
 app.get("/", async (_req, res) => {
-  const [rawReviews, promoSettings] = await Promise.all([
+  const [rawReviews, promoSettings, homeHero] = await Promise.all([
     prisma.review.findMany({
     where: {
       rating: { gte: 4 },
@@ -250,6 +259,7 @@ app.get("/", async (_req, res) => {
     take: 12,
     }),
     getPromoSettings(),
+    getHomeHeroSettings(),
   ]);
 
   const testimonials = rawReviews.map((review) => ({
@@ -272,10 +282,36 @@ app.get("/", async (_req, res) => {
     testimonials,
     averageRating,
     promoSettings,
+    homeHero,
   });
 });
 app.get("/about", (_req, res) => res.render("about"));
 app.get("/contact", contactController.getContact);
+app.get("/store-locator", (_req, res) => {
+  const query = (_req.query.city || "").toString().trim();
+  const storeLocations = readStoreLocations();
+  const filteredLocations = query
+    ? storeLocations.filter((location) => {
+        const haystack = [
+          location.name,
+          location.city,
+          location.state,
+          location.addressLine1,
+          location.addressLine2,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(query.toLowerCase());
+      })
+    : storeLocations;
+
+  return res.render("store-locator", {
+    storeLocations: filteredLocations,
+    searchQuery: query,
+    hasSearch: Boolean(query),
+  });
+});
 app.post(
   "/contact",
   contactRateLimit,
@@ -318,6 +354,44 @@ app.get(
   "/admin/team",
   requireOwner,
   asyncHandler(adminController.getAdminTeamPage),
+);
+app.get(
+  "/admin/home-hero",
+  requireAdmin,
+  asyncHandler(homeController.getAdminHomeHero),
+);
+app.post(
+  "/admin/home-hero",
+  requireAdmin,
+  upload.single("heroImage"),
+  asyncHandler(homeController.updateAdminHomeHero),
+);
+app.get(
+  "/admin/locations",
+  requireAdmin,
+  asyncHandler(storeLocationController.getAdminLocationsPage),
+);
+app.post(
+  "/admin/locations",
+  requireAdmin,
+  storeLocationValidationRules,
+  validateRedirectToAdminLocations,
+  asyncHandler(storeLocationController.createLocation),
+);
+app.post(
+  "/admin/locations/:id/edit",
+  requireAdmin,
+  storeLocationIdParamValidationRules,
+  storeLocationValidationRules,
+  validateRedirectToAdminLocations,
+  asyncHandler(storeLocationController.updateLocation),
+);
+app.post(
+  "/admin/locations/:id/delete",
+  requireAdmin,
+  storeLocationIdParamValidationRules,
+  validateRedirectToAdminLocations,
+  asyncHandler(storeLocationController.deleteLocation),
 );
 app.post(
   "/admin/team/invite",
@@ -439,6 +513,7 @@ sessionStore.ready
         nodeEnv: config.nodeEnv,
       });
     });
+    startAbandonedCartScheduler();
   })
   .catch((error) => {
     logger.error("session_store_boot_failed", {

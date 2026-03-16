@@ -52,6 +52,11 @@ const validateRedirectToAdminAffiliate = handleValidationError(
     res.redirect(`/admin/affiliate/stats?error=${encodeURIComponent(message)}`),
 );
 
+const validateRedirectToAdminLocations = handleValidationError(
+  (_req, res, message) =>
+    res.redirect(`/admin/locations?error=${encodeURIComponent(message)}`),
+);
+
 const validateRedirectToProfile = handleValidationError((_req, res, message) =>
   res.redirect(`/auth/profile?error=${encodeURIComponent(message)}`),
 );
@@ -213,6 +218,63 @@ const contactValidationRules = [
     .withMessage("Message must be 2000 characters or fewer."),
 ];
 
+const storeLocationValidationRules = [
+  body("name")
+    .trim()
+    .notEmpty()
+    .withMessage("Location name is required.")
+    .isLength({ max: 120 })
+    .withMessage("Location name must be 120 characters or fewer."),
+  body("addressLine1")
+    .trim()
+    .notEmpty()
+    .withMessage("Address line 1 is required.")
+    .isLength({ max: 160 })
+    .withMessage("Address line 1 must be 160 characters or fewer."),
+  body("addressLine2")
+    .optional({ values: "falsy" })
+    .trim()
+    .isLength({ max: 160 })
+    .withMessage("Address line 2 must be 160 characters or fewer."),
+  body("city")
+    .trim()
+    .notEmpty()
+    .withMessage("City is required.")
+    .isLength({ max: 120 })
+    .withMessage("City must be 120 characters or fewer."),
+  body("state")
+    .optional({ values: "falsy" })
+    .trim()
+    .isLength({ max: 120 })
+    .withMessage("State must be 120 characters or fewer."),
+  body("hours")
+    .optional({ values: "falsy" })
+    .trim()
+    .isLength({ max: 120 })
+    .withMessage("Hours must be 120 characters or fewer."),
+  body("phone")
+    .optional({ values: "falsy" })
+    .trim()
+    .isLength({ max: 40 })
+    .withMessage("Phone must be 40 characters or fewer."),
+  body("mapUrl")
+    .optional({ values: "falsy" })
+    .trim()
+    .isLength({ max: 300 })
+    .withMessage("Map URL must be 300 characters or fewer.")
+    .isURL({ require_protocol: true })
+    .withMessage("Map URL must start with http(s)://"),
+];
+
+const storeLocationIdParamValidationRules = [
+  param("id")
+    .trim()
+    .notEmpty()
+    .withMessage("Invalid location id.")
+    .isLength({ max: 80 })
+    .withMessage("Invalid location id."),
+];
+
 module.exports = {
   signupValidationRules,
   loginValidationRules,
@@ -230,6 +292,8 @@ module.exports = {
   addressIdParamValidationRules,
   goalCreateValidationRules,
   contactValidationRules,
+  storeLocationValidationRules,
+  storeLocationIdParamValidationRules,
   validateBadRequest,
   validateRedirectToSignup,
   validateRedirectToForgotPassword,
@@ -238,6 +302,7 @@ module.exports = {
   validateRedirectToProducts,
   validateRedirectToAdmin,
   validateRedirectToAdminAffiliate,
+  validateRedirectToAdminLocations,
   validateRedirectToProfile,
   validateRedirectToGoals,
   validateRedirectToContact,

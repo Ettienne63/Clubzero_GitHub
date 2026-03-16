@@ -677,6 +677,14 @@ const finalizePaidOrder = async ({
     }
 
     await tx.cartItem.deleteMany({ where: { userId: order.userId } });
+    await tx.user.update({
+      where: { id: order.userId },
+      data: {
+        lastCartActivityAt: null,
+        lastAbandonedCartEmailAt: null,
+        abandonedCartEmailCount: 0,
+      },
+    });
 
     const appliedAffiliateRate =
       coerceAffiliateRate(order.affiliateRate) ??

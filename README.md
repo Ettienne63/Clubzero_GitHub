@@ -57,6 +57,15 @@ npm run dev
 
 If SMTP is not configured, contact messages are still saved to the database but notification emails are skipped.
 
+### Abandoned Cart Reminders (Optional)
+
+- `ABANDONED_CART_ENABLED`: Set `true` to enable the scheduler.
+- `ABANDONED_CART_DELAY_HOURS`: How long after cart activity to send the first reminder. Default `24`.
+- `ABANDONED_CART_RESEND_HOURS`: Minimum hours between reminders. Default `72`.
+- `ABANDONED_CART_MAX_SENDS`: Maximum reminders per cart. Default `2`.
+- `ABANDONED_CART_INTERVAL_MINUTES`: Scheduler interval. Default `30`.
+- `ABANDONED_CART_BATCH`: Max users processed per run. Default `50`.
+
 ### Alerts
 
 - `ALERT_WEBHOOK_URL`: Optional webhook endpoint for critical error alerts.

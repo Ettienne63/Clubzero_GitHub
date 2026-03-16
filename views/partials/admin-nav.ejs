@@ -1,0 +1,52 @@
+<% if (user && user.isAdmin) { %>
+<div class="admin-nav-wrap">
+  <div class="container">
+    <nav class="admin-nav">
+      <a
+        href="/admin"
+        class="admin-nav-link <%= currentPath === '/admin' ? 'is-active' : '' %>"
+      >
+        Products
+      </a>
+      <a
+        href="/admin/home-hero"
+        class="admin-nav-link <%= currentPath === '/admin/home-hero' ? 'is-active' : '' %>"
+      >
+        Homepage Hero
+      </a>
+      <a
+        href="/admin/promo"
+        class="admin-nav-link <%= currentPath === '/admin/promo' ? 'is-active' : '' %>"
+      >
+        Promotions
+      </a>
+      <a
+        href="/admin/locations"
+        class="admin-nav-link <%= currentPath === '/admin/locations' ? 'is-active' : '' %>"
+      >
+        Store Locations
+      </a>
+      <a
+        href="/admin/affiliate/stats"
+        class="admin-nav-link <%= currentPath === '/admin/affiliate/stats' ? 'is-active' : '' %>"
+      >
+        Affiliates
+      </a>
+      <a
+        href="/admin/payments"
+        class="admin-nav-link <%= currentPath === '/admin/payments' ? 'is-active' : '' %>"
+      >
+        Payments
+      </a>
+      <% if (user.isOwner) { %>
+      <a
+        href="/admin/team"
+        class="admin-nav-link <%= currentPath === '/admin/team' ? 'is-active' : '' %>"
+      >
+        Team
+      </a>
+      <% } %>
+    </nav>
+  </div>
+</div>
+<% } %>

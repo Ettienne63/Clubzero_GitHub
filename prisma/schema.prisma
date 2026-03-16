@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,116 +5,110 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
-model User { 
-  id    Int     @id @default(autoincrement()) 
-  email String  @unique
-  name  String?
-  phone String?
-  role String @default("USER")
-  affiliateProgramStatus String @default("NONE")
-  affiliateCode String? @unique
-  affiliateAppliedAt DateTime?
-  affiliateApprovedAt DateTime?
-  affiliateRejectedAt DateTime?
-  referredByAffiliateId Int?
-  affiliateBalance Float @default(0)
-  password String
-  createdAt DateTime @default(now())
-  
-  referredByAffiliate User? @relation("AffiliateReferrals", fields: [referredByAffiliateId], references: [id], onDelete: SetNull)
-  referredUsers User[] @relation("AffiliateReferrals")
-  cartItems CartItem[]
-  orders Order[]
-  referredOrders Order[] @relation("OrderAffiliateReferrer")
-  reviews Review[]
-  addressBookEntries AddressBookEntry[]
-  goalsCreated Goal[]
-  referralClicks AffiliateReferralClick[] @relation("AffiliateOwner")
-  passwordResetTokens PasswordResetToken[]
-  adminInvitesSent AdminInvite[] @relation("AdminInvitesSent")
-  auditLogs AuthAuditLog[] @relation("AuthAuditActor")
-  auditTargets AuthAuditLog[] @relation("AuthAuditTarget")
+
+model User {
+  id                     Int                      @id @default(autoincrement())
+  email                  String                   @unique
+  name                   String?
+  password               String
+  createdAt              DateTime                 @default(now())
+  role                   String                   @default("USER")
+  phone                  String?
+  affiliateProgramStatus String                   @default("NONE")
+  affiliateCode          String?                  @unique
+  affiliateAppliedAt     DateTime?
+  affiliateApprovedAt    DateTime?
+  affiliateRejectedAt    DateTime?
+  referredByAffiliateId  Int?
+  affiliateBalance       Float                    @default(0)
+  addressBookEntries     AddressBookEntry[]
+  adminInvitesSent       AdminInvite[]            @relation("AdminInvitesSent")
+  referralClicks         AffiliateReferralClick[] @relation("AffiliateOwner")
+  auditLogs              AuthAuditLog[]           @relation("AuthAuditActor")
+  auditTargets           AuthAuditLog[]           @relation("AuthAuditTarget")
+  cartItems              CartItem[]
+  goalsCreated           Goal[]
+  referredOrders         Order[]                  @relation("OrderAffiliateReferrer")
+  orders                 Order[]
+  passwordResetTokens    PasswordResetToken[]
+  reviews                Review[]
+  referredByAffiliate    User?                    @relation("AffiliateReferrals", fields: [referredByAffiliateId], references: [id])
+  referredUsers          User[]                   @relation("AffiliateReferrals")
 
   @@index([affiliateProgramStatus])
   @@index([referredByAffiliateId])
 }
 
 model PasswordResetToken {
-  id Int @id @default(autoincrement())
-  userId Int
-  tokenHash String @unique
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  tokenHash String    @unique
   expiresAt DateTime
-  usedAt DateTime?
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
 }
 
-model Product{
-  id Int @id @default(autoincrement())
-  name String @unique
-  description String?
-  price Float
-  discountPercent Float @default(0)
-  discountEnabled Boolean @default(true)
-  imageUrl String
-  isActive Boolean @default(true)
-  nutritionInfo String?
-  ingredients String?
-  bestFor String?
-  storageInfo String?
-  createdAt DateTime @default(now())
-
-  cartItems CartItem[]
-  orderItems OrderItem[]
-  reviews Review[]
+model Product {
+  id              Int         @id @default(autoincrement())
+  name            String      @unique
+  description     String?
+  price           Float
+  imageUrl        String
+  createdAt       DateTime    @default(now())
+  nutritionInfo   String?
+  ingredients     String?
+  bestFor         String?
+  storageInfo     String?
+  isActive        Boolean     @default(true)
+  discountPercent Float       @default(0)
+  discountEnabled Boolean     @default(true)
+  cartItems       CartItem[]
+  orderItems      OrderItem[]
+  reviews         Review[]
 }
 
-model CartItem{
-  id Int @id @default(autoincrement())
-  userId Int
+model CartItem {
+  id        Int      @id @default(autoincrement())
+  userId    Int
   productId Int
-  quantity Int @default(1)
+  quantity  Int      @default(1)
   createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  user User @relation(fields: [userId],references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId],references: [id], onDelete: Cascade)
-
-  @@unique([userId,productId])
+  @@unique([userId, productId])
   @@index([userId])
 }
 
 model Order {
-  id Int @id @default(autoincrement())
-  userId Int
+  id                      Int         @id @default(autoincrement())
+  userId                  Int
+  total                   Float
+  status                  String      @default("PLACED")
+  deliveryName            String
+  deliveryPhone           String
+  deliveryAddressLine1    String
+  deliveryAddressLine2    String?
+  deliveryCity            String
+  deliveryState           String
+  deliveryPostalCode      String
+  deliveryCountry         String
+  createdAt               DateTime    @default(now())
+  affiliateStatus         String      @default("PENDING")
+  affiliateApprovedAt     DateTime?
+  affiliatePaidAt         DateTime?
   affiliateReferrerUserId Int?
-  affiliateReferrerCode String?
-  affiliateRate Float?
-  total Float
-  status String @default("PLACED")
-  affiliateStatus String @default("PENDING")
-  affiliateApprovedAt DateTime?
-  affiliatePaidAt DateTime?
-  affiliateCreditApplied Float @default(0)
-
-  deliveryName String
-  deliveryPhone String
-  deliveryAddressLine1 String
-  deliveryAddressLine2 String?
-  deliveryCity String
-  deliveryState String
-  deliveryPostalCode String
-  deliveryCountry String
-
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  affiliateReferrer User? @relation("OrderAffiliateReferrer", fields: [affiliateReferrerUserId], references: [id], onDelete: SetNull)
-  orderItems OrderItem[]
-  invoice Invoice?
+  affiliateReferrerCode   String?
+  affiliateCreditApplied  Float       @default(0)
+  affiliateRate           Float?
+  invoice                 Invoice?
+  affiliateReferrer       User?       @relation("OrderAffiliateReferrer", fields: [affiliateReferrerUserId], references: [id])
+  user                    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderItems              OrderItem[]
 
   @@index([userId])
   @@index([affiliateStatus])
@@ -129,34 +117,31 @@ model Order {
 }
 
 model OrderItem {
-  id Int @id @default(autoincrement())
-  orderId Int
-  productId Int
-
-  productName String
+  id           Int      @id @default(autoincrement())
+  orderId      Int
+  productId    Int
+  productName  String
   productPrice Float
-  quantity Int
-  subtotal Float
-  createdAt DateTime @default(now())
-
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity     Int
+  subtotal     Float
+  createdAt    DateTime @default(now())
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product      Product  @relation(fields: [productId], references: [id])
 
   @@index([orderId])
   @@index([productId])
 }
 
 model Review {
-  id Int @id @default(autoincrement())
-  userId Int
+  id        Int      @id @default(autoincrement())
+  userId    Int
   productId Int
-  rating Int
-  comment String?
+  rating    Int
+  comment   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, productId])
   @@index([productId])
@@ -164,122 +149,124 @@ model Review {
 }
 
 model AddressBookEntry {
-  id Int @id @default(autoincrement())
-  userId Int
-  label String?
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  label         String?
   recipientName String
-  phone String
-  addressLine1 String
-  addressLine2 String?
-  city String
-  state String
-  postalCode String
-  country String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone         String
+  addressLine1  String
+  addressLine2  String?
+  city          String
+  state         String
+  postalCode    String
+  country       String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
 model Goal {
-  id Int @id @default(autoincrement())
-  title String
-  targetBottles Int
+  id              Int      @id @default(autoincrement())
+  title           String
+  targetBottles   Int
   createdByUserId Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  createdBy User @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdBy       User     @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
 
   @@index([createdByUserId])
 }
 
 model ContactMessage {
-  id Int @id @default(autoincrement())
-  name String
-  email String
-  message String
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  message   String
   createdAt DateTime @default(now())
 }
 
 model AffiliateReferralClick {
-  id Int @id @default(autoincrement())
+  id              Int      @id @default(autoincrement())
   affiliateUserId Int
-  referralCode String
-  sessionId String?
-  landingPath String?
-  referrerUrl String?
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime @default(now())
-
-  affiliateUser User @relation("AffiliateOwner", fields: [affiliateUserId], references: [id], onDelete: Cascade)
+  referralCode    String
+  sessionId       String?
+  landingPath     String?
+  referrerUrl     String?
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+  affiliateUser   User     @relation("AffiliateOwner", fields: [affiliateUserId], references: [id], onDelete: Cascade)
 
   @@index([affiliateUserId, createdAt])
   @@index([referralCode])
 }
 
 model Invoice {
-  id Int @id @default(autoincrement())
-  orderId Int @unique
-  invoiceNumber String @unique
-  status String @default("DRAFT")
-  currency String @default("ZAR")
-  recipientName String
+  id             Int       @id @default(autoincrement())
+  orderId        Int       @unique
+  invoiceNumber  String    @unique
+  status         String    @default("DRAFT")
+  currency       String    @default("ZAR")
+  recipientName  String
   recipientEmail String
-  subtotal Float
-  total Float
-  notes String?
-  issuedAt DateTime @default(now())
-  dueAt DateTime?
-  sentAt DateTime?
-  paidAt DateTime?
-
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  subtotal       Float
+  total          Float
+  notes          String?
+  issuedAt       DateTime  @default(now())
+  dueAt          DateTime?
+  sentAt         DateTime?
+  paidAt         DateTime?
+  order          Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([status])
   @@index([issuedAt])
 }
 
 model AdminInvite {
-  id Int @id @default(autoincrement())
-  email String
-  role String
-  tokenHash String @unique
-  tokenPreview String
+  id              Int       @id @default(autoincrement())
+  email           String
+  role            String
+  tokenHash       String    @unique
+  tokenPreview    String
   invitedByUserId Int?
-  expiresAt DateTime
-  acceptedAt DateTime?
-  revokedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  invitedByUser User? @relation("AdminInvitesSent", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  revokedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  invitedByUser   User?     @relation("AdminInvitesSent", fields: [invitedByUserId], references: [id])
 
   @@index([email])
   @@index([expiresAt])
 }
 
 model AuthAuditLog {
-  id Int @id @default(autoincrement())
-  action String
-  actorUserId Int?
+  id           Int      @id @default(autoincrement())
+  action       String
+  actorUserId  Int?
   targetUserId Int?
-  metadata Json?
-  createdAt DateTime @default(now())
-
-  actorUser User? @relation("AuthAuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
-  targetUser User? @relation("AuthAuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  actorUser    User?    @relation("AuthAuditActor", fields: [actorUserId], references: [id])
+  targetUser   User?    @relation("AuthAuditTarget", fields: [targetUserId], references: [id])
 
   @@index([action])
   @@index([createdAt])
 }
 
 model AppSetting {
-  key String @id
-  value String
+  key       String   @id
+  value     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model user_sessions {
+  sid    String   @id
+  sess   Json
+  expire DateTime @db.Timestamptz(6)
+
+  @@index([expire])
 }

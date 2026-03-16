@@ -9,6 +9,19 @@ const getEffectiveDiscountPercent = (product, discountsEnabled) =>
   discountsEnabled && product?.discountEnabled !== false
     ? product?.discountPercent
     : 0;
+const touchCartActivity = async (userId) => {
+  if (!Number.isInteger(userId)) {
+    return;
+  }
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      lastCartActivityAt: new Date(),
+      lastAbandonedCartEmailAt: null,
+      abandonedCartEmailCount: 0,
+    },
+  });
+};
 
 exports.getCart = async (req, res) => {
   const userId = getUserId(req);
@@ -89,6 +102,7 @@ exports.addToCart = async (req, res) => {
       quantity: { increment: quantity },
     },
   });
+  await touchCartActivity(userId);
 
   return res.redirect("/auth/cart");
 };
@@ -117,6 +131,7 @@ exports.updateCartItem = async (req, res) => {
 
   if (!Number.isInteger(quantity) || quantity < 1) {
     await prisma.cartItem.delete({ where: { id: itemId } });
+    await touchCartActivity(userId);
 
     if (isAjaxRequest(req)) {
       const [cartItems, promoSettings] = await Promise.all([
@@ -163,6 +178,7 @@ exports.updateCartItem = async (req, res) => {
       },
     },
   });
+  await touchCartActivity(userId);
 
   if (isAjaxRequest(req)) {
     const [cartItems, promoSettings] = await Promise.all([
@@ -229,6 +245,7 @@ exports.removeCartItem = async (req, res) => {
   }
 
   await prisma.cartItem.delete({ where: { id: itemId } });
+  await touchCartActivity(userId);
 
   return res.redirect("/auth/cart");
 };

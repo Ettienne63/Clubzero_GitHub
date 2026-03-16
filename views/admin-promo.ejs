@@ -1,5 +1,6 @@
 <%- include("partials/header", { title: "Promotion Settings" }) %>
 <%- include("partials/navbar") %>
+<%- include("partials/admin-nav") %>
 
 <main class="container py-5">
   <div class="d-flex justify-content-between align-items-center mb-4">
@@ -9,7 +10,6 @@
         Manage the promotion section that appears on the home page.
       </p>
     </div>
-    <a href="/admin" class="btn btn-outline-secondary">Back to Admin</a>
   </div>
 
   <% if (success) { %>
@@ -33,10 +33,10 @@
         action="/admin/promo"
         method="POST"
         enctype="multipart/form-data"
-        class="row g-3"
+        class="admin-compact-form"
         id="promoSettingsForm"
       >
-        <div class="col-12 form-check form-switch">
+        <div class="form-check form-switch">
           <input
             id="promoEnabled"
             name="promoEnabled"
@@ -48,7 +48,8 @@
             Show promotion on homepage
           </label>
         </div>
-        <div class="col-md-4">
+        <div class="admin-compact-row">
+          <div class="admin-compact-field">
           <label for="promoBadge" class="form-label">Badge</label>
           <input
             id="promoBadge"
@@ -58,7 +59,7 @@
             placeholder="Limited Offer"
           />
         </div>
-        <div class="col-md-8">
+          <div class="admin-compact-field admin-compact-field-wide">
           <label for="promoTitle" class="form-label">Title</label>
           <input
             id="promoTitle"
@@ -68,7 +69,9 @@
             placeholder="Seasonal Promo Drop"
           />
         </div>
-        <div class="col-12">
+        </div>
+        <div class="admin-compact-row">
+          <div class="admin-compact-field admin-compact-field-wide">
           <label for="promoSubtitle" class="form-label">Subtitle</label>
           <input
             id="promoSubtitle"
@@ -78,16 +81,21 @@
             placeholder="Bright flavor, limited pricing."
           />
         </div>
-        <div class="col-12">
+          <div class="admin-compact-field admin-compact-field-wide">
           <label for="promoBody" class="form-label">Body</label>
           <textarea
             id="promoBody"
             name="promoBody"
             class="form-control"
-            rows="3"
+            rows="2"
           ><%= promoSettings?.body || '' %></textarea>
         </div>
-        <div class="col-md-6">
+        </div>
+
+        <details class="admin-compact-details">
+          <summary>CTA Buttons</summary>
+          <div class="admin-compact-row">
+            <div class="admin-compact-field">
           <label for="promoCtaLabel" class="form-label">Primary CTA Label</label>
           <input
             id="promoCtaLabel"
@@ -100,7 +108,7 @@
             This is the main button text shown on the promotion.
           </div>
         </div>
-        <div class="col-md-6">
+            <div class="admin-compact-field">
           <label for="promoCtaUrlPreset" class="form-label">
             Primary CTA Page
           </label>
@@ -131,7 +139,7 @@
             <option value="/auth/signup">Sign Up</option>
           </select>
         </div>
-        <div class="col-md-6">
+            <div class="admin-compact-field">
           <label for="promoSecondaryLabel" class="form-label">
             Secondary CTA Label
           </label>
@@ -146,7 +154,7 @@
             Optional secondary button text shown next to the main CTA.
           </div>
         </div>
-        <div class="col-md-6">
+            <div class="admin-compact-field">
           <label for="promoSecondaryUrlPreset" class="form-label">
             Secondary CTA Page
           </label>
@@ -177,7 +185,13 @@
             <option value="/auth/signup">Sign Up</option>
           </select>
         </div>
-        <div class="col-md-6">
+          </div>
+        </details>
+
+        <details class="admin-compact-details">
+          <summary>Promotion Image</summary>
+          <div class="admin-compact-row">
+            <div class="admin-compact-field">
           <label for="promoImage" class="form-label">Upload Image</label>
           <input
             id="promoImage"
@@ -187,7 +201,7 @@
             accept="image/*"
           />
         </div>
-        <div class="col-md-6">
+            <div class="admin-compact-field">
           <label for="promoImageUrl" class="form-label">Or Image URL</label>
           <input
             id="promoImageUrl"
@@ -196,7 +210,8 @@
             value="<%= promoSettings?.imageUrl || '' %>"
           />
         </div>
-        <div class="col-12 form-check">
+          </div>
+          <div class="form-check">
           <input
             id="promoImageRemove"
             name="promoImageRemove"
@@ -207,8 +222,8 @@
             Remove promo image
           </label>
         </div>
-        <% if (promoSettings?.imageUrl) { %>
-        <div class="col-12">
+          <% if (promoSettings?.imageUrl) { %>
+          <div class="mt-3">
           <img
             src="<%= promoSettings.imageUrl %>"
             alt="Promotion preview"
@@ -217,8 +232,11 @@
             decoding="async"
           />
         </div>
-        <% } %>
-        <div class="col-12">
+          <% } %>
+        </details>
+
+        <div class="admin-compact-row">
+          <div class="admin-compact-field admin-compact-field-wide">
           <label for="promoFinePrint" class="form-label">Fine Print</label>
           <input
             id="promoFinePrint"
@@ -228,7 +246,9 @@
             placeholder="Available while supplies last."
           />
         </div>
-        <div class="col-12">
+        </div>
+
+        <div class="admin-compact-actions">
           <button type="submit" class="btn btn-primary">
             Save Promotion
           </button>

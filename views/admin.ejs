@@ -1,28 +1,10 @@
 <%- include("partials/header", { title: "Admin Panel" }) %>
 <%- include("partials/navbar") %>
+<%- include("partials/admin-nav") %>
 
 <main class="container py-5">
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0">Products Dashboard</h1>
-    <div class="d-flex gap-2">
-      <a href="/admin/promo" class="btn btn-outline-primary">
-        Promotion Settings
-      </a>
-      <a href="/admin/affiliate/stats" class="btn btn-outline-primary">
-        Affiliate Admin
-      </a>
-      <% if (user && user.isOwner) { %>
-      <a href="/admin/team" class="btn btn-outline-primary">
-        Team Access
-      </a>
-      <% } %>
-      <a href="/admin/payments" class="btn btn-outline-primary">
-        Payments &amp; Invoices
-      </a>
-      <a href="/auth/products" class="btn btn-outline-secondary">
-        View Products Page
-      </a>
-    </div>
+    <h1 class="h3 mb-0">Dashboard</h1>
   </div>
 
   <% if (success) { %>
@@ -40,112 +22,114 @@
         action="/admin/products"
         method="POST"
         enctype="multipart/form-data"
-        class="row g-3"
+        class="admin-compact-form"
       >
-        <div class="col-md-6">
-          <label for="createName" class="form-label">Name</label>
-          <input
-            id="createName"
-            name="name"
-            class="form-control"
-            value="<%= formData.name || '' %>"
-            required
-          />
+        <div class="admin-compact-row">
+          <div class="admin-compact-field">
+            <label for="createName" class="form-label">Name</label>
+            <input
+              id="createName"
+              name="name"
+              class="form-control"
+              value="<%= formData.name || '' %>"
+              required
+            />
+          </div>
+          <div class="admin-compact-field">
+            <label for="createPrice" class="form-label">Price</label>
+            <input
+              id="createPrice"
+              name="price"
+              type="number"
+              min="0"
+              step="0.01"
+              class="form-control"
+              value="<%= formData.price || '' %>"
+              required
+            />
+          </div>
+          <div class="admin-compact-field">
+            <label for="createImage" class="form-label">Image Upload</label>
+            <input
+              id="createImage"
+              name="image"
+              type="file"
+              class="form-control"
+              accept="image/*"
+            />
+          </div>
+          <div class="admin-compact-field">
+            <label for="createImageUrl" class="form-label">Image URL</label>
+            <input
+              id="createImageUrl"
+              name="imageUrl"
+              class="form-control"
+              value="<%= formData.imageUrl || '' %>"
+              placeholder="https://example.com/image.jpg"
+            />
+          </div>
         </div>
-        <div class="col-md-6">
-          <label for="createPrice" class="form-label">Price (Per Case)</label>
-          <input
-            id="createPrice"
-            name="price"
-            type="number"
-            min="0"
-            step="0.01"
-            class="form-control"
-            value="<%= formData.price || '' %>"
-            required
-          />
+
+        <div class="admin-compact-row">
+          <div class="admin-compact-field admin-compact-field-wide">
+            <label for="createDescription" class="form-label">Description</label>
+            <textarea
+              id="createDescription"
+              name="description"
+              class="form-control"
+              rows="2"
+              required
+            ><%= formData.description || '' %></textarea>
+          </div>
         </div>
-        <div class="col-md-6">
-          <label for="createImage" class="form-label">Upload Image</label>
-          <input
-            id="createImage"
-            name="image"
-            type="file"
-            class="form-control"
-            accept="image/*"
-          />
-        </div>
-        <div class="col-md-6">
-          <label for="createImageUrl" class="form-label">Or Image URL</label>
-          <input
-            id="createImageUrl"
-            name="imageUrl"
-            class="form-control"
-            value="<%= formData.imageUrl || '' %>"
-            placeholder="https://example.com/image.jpg"
-          />
-        </div>
-        <div class="col-12">
-          <label for="createDescription" class="form-label">Description</label>
-          <textarea
-            id="createDescription"
-            name="description"
-            class="form-control"
-            rows="3"
-            required
-          >
-<%= formData.description || '' %></textarea
-          >
-        </div>
-        <div class="col-md-6">
-          <label for="createNutritionInfo" class="form-label">Nutrition Info</label>
-          <textarea
-            id="createNutritionInfo"
-            name="nutritionInfo"
-            class="form-control"
-            rows="3"
-            placeholder="Example: 0g added sugar, 15 calories per serving"
-          >
-<%= formData.nutritionInfo || '' %></textarea
-          >
-        </div>
-        <div class="col-md-6">
-          <label for="createIngredients" class="form-label">Ingredients</label>
-          <textarea
-            id="createIngredients"
-            name="ingredients"
-            class="form-control"
-            rows="3"
-            placeholder="Example: Carbonated water, natural flavors"
-          >
-<%= formData.ingredients || '' %></textarea
-          >
-        </div>
-        <div class="col-md-6">
-          <label for="createBestFor" class="form-label">Best For</label>
-          <textarea
-            id="createBestFor"
-            name="bestFor"
-            class="form-control"
-            rows="2"
-            placeholder="Example: Post-workout hydration"
-          >
-<%= formData.bestFor || '' %></textarea
-          >
-        </div>
-        <div class="col-md-6">
-          <label for="createStorageInfo" class="form-label">Storage and Delivery</label>
-          <textarea
-            id="createStorageInfo"
-            name="storageInfo"
-            class="form-control"
-            rows="2"
-            placeholder="Example: Keep chilled, delivery in 2-4 business days"
-          >
-<%= formData.storageInfo || '' %></textarea
-          >
-        </div>
-        <div class="col-12">
+
+        <details class="admin-compact-details">
+          <summary>Advanced details</summary>
+          <div class="admin-compact-row">
+            <div class="admin-compact-field">
+              <label for="createNutritionInfo" class="form-label">Nutrition Info</label>
+              <textarea
+                id="createNutritionInfo"
+                name="nutritionInfo"
+                class="form-control"
+                rows="2"
+                placeholder="Example: 0g added sugar, 15 calories per serving"
+              ><%= formData.nutritionInfo || '' %></textarea>
+            </div>
+            <div class="admin-compact-field">
+              <label for="createIngredients" class="form-label">Ingredients</label>
+              <textarea
+                id="createIngredients"
+                name="ingredients"
+                class="form-control"
+                rows="2"
+                placeholder="Example: Carbonated water, natural flavors"
+              ><%= formData.ingredients || '' %></textarea>
+            </div>
+            <div class="admin-compact-field">
+              <label for="createBestFor" class="form-label">Best For</label>
+              <textarea
+                id="createBestFor"
+                name="bestFor"
+                class="form-control"
+                rows="2"
+                placeholder="Example: Post-workout hydration"
+              ><%= formData.bestFor || '' %></textarea>
+            </div>
+            <div class="admin-compact-field">
+              <label for="createStorageInfo" class="form-label">Storage & Delivery</label>
+              <textarea
+                id="createStorageInfo"
+                name="storageInfo"
+                class="form-control"
+                rows="2"
+                placeholder="Example: Keep chilled, delivery in 2-4 business days"
+              ><%= formData.storageInfo || '' %></textarea>
+            </div>
+          </div>
+        </details>
+
+        <div class="admin-compact-actions">
           <button type="submit" class="btn btn-primary">Add Product</button>
         </div>
       </form>
@@ -156,7 +140,8 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h2 class="h5 mb-0">Edit Existing Products</h2>
       <span class="badge text-bg-secondary"
-        ><%= products ? products.length : 0 %> total</span
+        ><%= products ? products.length : 0 %>
+        total</span
       >
     </div>
 
@@ -184,7 +169,8 @@
               ><%= product.isActive ? "Visible" : "Hidden" %></span
             >
             <span class="ms-auto me-3 fw-bold"
-              >R<%= Number(product.price).toFixed(2) %> / case</span
+              >R<%= Number(product.price).toFixed(2) %>
+              / case</span
             >
           </button>
         </h3>
@@ -273,31 +259,19 @@
                   </div>
                   <div class="col-md-6">
                     <label class="form-label">Ingredients</label>
-                    <textarea
-                      name="ingredients"
-                      class="form-control"
-                      rows="3"
-                    >
+                    <textarea name="ingredients" class="form-control" rows="3">
 <%= product.ingredients || '' %></textarea
                     >
                   </div>
                   <div class="col-md-6">
                     <label class="form-label">Best For</label>
-                    <textarea
-                      name="bestFor"
-                      class="form-control"
-                      rows="2"
-                    >
+                    <textarea name="bestFor" class="form-control" rows="2">
 <%= product.bestFor || '' %></textarea
                     >
                   </div>
                   <div class="col-md-6">
                     <label class="form-label">Storage and Delivery</label>
-                    <textarea
-                      name="storageInfo"
-                      class="form-control"
-                      rows="2"
-                    >
+                    <textarea name="storageInfo" class="form-control" rows="2">
 <%= product.storageInfo || '' %></textarea
                     >
                   </div>

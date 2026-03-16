@@ -32,6 +32,9 @@
         <li class="nav-item">
           <a class="nav-link cz-nav-link" href="/auth/products">Products</a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link cz-nav-link" href="/store-locator">Store Locator</a>
+        </li>
       </ul>
       <form
         class="d-flex my-2 my-lg-0 cz-search"
@@ -60,39 +63,8 @@
         <% if
         (isLoggedIn) { %>
         <% if (showAdmin) { %>
-        <li class="nav-item dropdown">
-          <a
-            class="nav-link dropdown-toggle cz-nav-link"
-            href="#"
-            role="button"
-            data-bs-toggle="dropdown"
-            aria-expanded="false"
-          >
-            Admin
-          </a>
-            <ul class="dropdown-menu dropdown-menu-end">
-              <li>
-                <a class="dropdown-item" href="/admin">Products Dashboard</a>
-              </li>
-              <li>
-                <a class="dropdown-item" href="/admin/promo"
-                  >Promotion Settings</a
-                >
-              </li>
-              <li>
-                <a class="dropdown-item" href="/admin/affiliate/stats"
-                  >Affiliate Admin</a
-                >
-              </li>
-              <li>
-                <a class="dropdown-item" href="/admin/payments">Payments &amp; Invoices</a>
-              </li>
-              <% if (Boolean(user.isOwner)) { %>
-              <li>
-                <a class="dropdown-item" href="/admin/team">Team Access</a>
-              </li>
-              <% } %>
-            </ul>
+        <li class="nav-item">
+          <a class="nav-link cz-nav-link" href="/admin">Admin</a>
         </li>
         <% } %>
         <% if (showGoalTracker) { %>

@@ -1,25 +1,64 @@
 <%- include("partials/header", { title: "Home" }) %>
 <%- include("partials/navbar") %>
 <main class="home-page">
-  <section class="hero d-flex align-items-center text-white">
-    <div class="container text-center">
-      <h1 class="display-2 fw-bold mb-3">Refresh Your Day</h1>
-      <p class="lead my-4">Zero sugar. Low calories. Big flavor energy.</p>
-      <div class="d-flex justify-content-center flex-wrap gap-2 mb-4">
-        <span class="home-chip">0g Added Sugar</span>
-        <span class="home-chip">Low Calories</span>
-        <span class="home-chip">Bright Taste</span>
-      </div>
-      <div class="d-flex justify-content-center gap-3">
-        <a
-          href="/auth/products"
-          class="btn btn-primary btn-lg px-4 fw-semibold"
-        >
-          Shop Now
-        </a>
-        <a href="/about" class="btn btn-outline-light btn-lg px-4">
-          Learn More</a
-        >
+  <section class="hero hero-clean">
+    <div class="container">
+      <div class="row g-4 align-items-center">
+        <div class="col-lg-6">
+          <% if (homeHero && homeHero.badge) { %>
+          <span class="hero-badge"><%= homeHero.badge %></span>
+          <% } %>
+          <h1 class="display-4 fw-bold mb-3">
+            <%= homeHero?.title || "Refresh Your Day" %>
+          </h1>
+          <p class="lead text-secondary mb-4">
+            <%= homeHero?.subtitle || "Zero sugar. Low calories. Big flavor energy." %>
+          </p>
+          <div class="d-flex flex-wrap gap-2 mb-4">
+            <% if (homeHero?.chipOne) { %>
+            <span class="home-chip home-chip-light"><%= homeHero.chipOne %></span>
+            <% } %>
+            <% if (homeHero?.chipTwo) { %>
+            <span class="home-chip home-chip-light"><%= homeHero.chipTwo %></span>
+            <% } %>
+            <% if (homeHero?.chipThree) { %>
+            <span class="home-chip home-chip-light"><%= homeHero.chipThree %></span>
+            <% } %>
+          </div>
+          <div class="d-flex flex-wrap gap-3">
+            <% if (homeHero?.primaryLabel && homeHero?.primaryUrl) { %>
+            <a
+              href="<%= homeHero.primaryUrl %>"
+              class="btn btn-primary btn-lg px-4 fw-semibold"
+            >
+              <%= homeHero.primaryLabel %>
+            </a>
+            <% } %>
+            <% if (homeHero?.secondaryLabel && homeHero?.secondaryUrl) { %>
+            <a
+              href="<%= homeHero.secondaryUrl %>"
+              class="btn btn-outline-primary btn-lg px-4"
+            >
+              <%= homeHero.secondaryLabel %>
+            </a>
+            <% } %>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <% if (homeHero?.imageUrl) { %>
+          <div class="hero-image-wrap">
+            <img
+              src="<%= homeHero.imageUrl %>"
+              alt="<%= homeHero.title || 'Club Zero' %>"
+              class="hero-image"
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+          <% } else { %>
+          <div class="hero-image-placeholder"></div>
+          <% } %>
+        </div>
       </div>
     </div>
   </section>
@@ -82,37 +121,6 @@
     </div>
   </section>
   <% } %>
-
-  <section class="home-highlight-section py-5 border-bottom">
-    <div class="container">
-      <div class="row g-4 align-items-center">
-        <div class="col-lg-6">
-          <h2 class="h2 fw-bold mb-3">
-            Hydration that actually tastes exciting
-          </h2>
-          <p class="text-secondary mb-3">
-            Refreshing drinks that give you the flavor punch you want without
-            the extra sugar you do not.
-          </p>
-          <p class="text-secondary mb-0">
-            Whether you are at the gym, at work, or on the move, Club Zero keeps
-            it light, clean, and satisfying.
-          </p>
-        </div>
-        <div class="col-lg-6">
-          <div class="about-image-wrap">
-            <img
-              src="/images/Mango,passion,tropical flavours with people.jpeg"
-              alt="Club Zero drink lineup"
-              class="about-intro-image"
-              loading="lazy"
-              decoding="async"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
 
   <section class="py-5">
     <div class="container">
