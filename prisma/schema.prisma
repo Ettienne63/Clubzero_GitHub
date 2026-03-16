@@ -21,6 +21,9 @@ model User {
   affiliateRejectedAt    DateTime?
   referredByAffiliateId  Int?
   affiliateBalance       Float                    @default(0)
+  lastCartActivityAt     DateTime?
+  lastAbandonedCartEmailAt DateTime?
+  abandonedCartEmailCount Int                     @default(0)
   addressBookEntries     AddressBookEntry[]
   adminInvitesSent       AdminInvite[]            @relation("AdminInvitesSent")
   referralClicks         AffiliateReferralClick[] @relation("AffiliateOwner")
