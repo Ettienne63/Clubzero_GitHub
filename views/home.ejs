@@ -1,12 +1,12 @@
 <%- include("partials/header", { title: "Home" }) %>
 <%- include("partials/navbar") %>
 <main class="home-page">
-  <section class="hero hero-clean">
+  <section class="hero hero-clean about-intro-section">
     <div class="container">
       <div class="row g-4 align-items-center">
         <div class="col-lg-6">
-          <% if (homeHero && homeHero.badge) { %>
-          <span class="hero-badge"><%= homeHero.badge %></span>
+          <% if (homeHero && homeHero.badge && homeHero.badge.trim().toLowerCase() !== "club zero") { %>
+          <span class="about-kicker"><%= homeHero.badge %></span>
           <% } %>
           <h1 class="display-4 fw-bold mb-3">
             <%= homeHero?.title || "Refresh Your Day" %>
@@ -16,13 +16,13 @@
           </p>
           <div class="d-flex flex-wrap gap-2 mb-4">
             <% if (homeHero?.chipOne) { %>
-            <span class="home-chip home-chip-light"><%= homeHero.chipOne %></span>
+            <span class="about-stat-chip"><%= homeHero.chipOne %></span>
             <% } %>
             <% if (homeHero?.chipTwo) { %>
-            <span class="home-chip home-chip-light"><%= homeHero.chipTwo %></span>
+            <span class="about-stat-chip"><%= homeHero.chipTwo %></span>
             <% } %>
             <% if (homeHero?.chipThree) { %>
-            <span class="home-chip home-chip-light"><%= homeHero.chipThree %></span>
+            <span class="about-stat-chip"><%= homeHero.chipThree %></span>
             <% } %>
           </div>
           <div class="d-flex flex-wrap gap-3">
@@ -46,11 +46,11 @@
         </div>
         <div class="col-lg-6">
           <% if (homeHero?.imageUrl) { %>
-          <div class="hero-image-wrap">
+          <div class="about-image-wrap">
             <img
               src="<%= homeHero.imageUrl %>"
               alt="<%= homeHero.title || 'Club Zero' %>"
-              class="hero-image"
+              class="about-intro-image"
               loading="lazy"
               decoding="async"
             />
