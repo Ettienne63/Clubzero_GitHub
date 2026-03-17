@@ -409,13 +409,13 @@ main {
 .footer {
   background: #f4f8ff;
   border-top: 1px solid #dbe6f7;
-  padding: 2.5rem 0 1.5rem;
+  padding: 1.6rem 0 1rem;
   color: #1f2a44;
 }
 
 .footer-shell {
   display: grid;
-  gap: 2rem;
+  gap: 1.2rem;
 }
 
 .footer-brand {
@@ -426,13 +426,13 @@ main {
   font-size: 1.4rem;
   font-weight: 700;
   letter-spacing: 0.02em;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.25rem;
 }
 
 .footer-tagline {
   color: #4a5568;
-  margin-bottom: 1rem;
-  font-size: 0.95rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.88rem;
 }
 
 .footer-social-chip {
@@ -457,21 +457,22 @@ main {
 .footer-col {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
 .footer-title {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: #748099;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.25rem;
 }
 
 .footer-link {
   text-decoration: none;
   color: #1f2a44;
   font-weight: 500;
+  font-size: 0.9rem;
   transition: color 0.2s ease, transform 0.2s ease;
 }
 
@@ -481,14 +482,14 @@ main {
 }
 
 .footer-bottom {
-  margin-top: 2rem;
-  padding-top: 1rem;
+  margin-top: 1.2rem;
+  padding-top: 0.75rem;
   border-top: 1px solid #dbe6f7;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.25rem;
   color: #6b7280;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 .footer-note {
