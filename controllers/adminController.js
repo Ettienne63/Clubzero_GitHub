@@ -6,6 +6,7 @@ const { logger } = require("../lib/logger");
 const INVITE_EXPIRY_HOURS = 48;
 const ADMIN_ROLES = new Set(["ADMIN", "OWNER", "STAFF"]);
 const MANAGEABLE_ROLES = new Set(["ADMIN", "STAFF", "USER"]);
+const STOCKIST_STATUSES = new Set(["NEW", "CONTACTED", "CLOSED"]);
 
 const getSmtpConfig = () => {
   const host = (process.env.SMTP_HOST || "").trim();
@@ -282,4 +283,36 @@ exports.revokeUserAccess = async (req, res) => {
       `Removed admin access for ${targetUser.email}.`,
     )}`,
   );
+};
+
+exports.getAdminStockistsPage = async (req, res) => {
+  const stockistRequests = await prisma.stockistRequest.findMany({
+    orderBy: { createdAt: "desc" },
+  });
+
+  return res.render("admin-stockists", {
+    stockistRequests,
+    success: req.query.success || null,
+    error: req.query.error || null,
+  });
+};
+
+exports.updateStockistStatus = async (req, res) => {
+  const requestId = Number.parseInt(req.params.id, 10);
+  const status = (req.body.status || "").toString().trim().toUpperCase();
+
+  if (!Number.isInteger(requestId)) {
+    return res.redirect(`/admin?error=Invalid+stockist+request+id`);
+  }
+
+  if (!STOCKIST_STATUSES.has(status)) {
+    return res.redirect(`/admin?error=Invalid+status`);
+  }
+
+  await prisma.stockistRequest.update({
+    where: { id: requestId },
+    data: { status },
+  });
+
+  return res.redirect(`/admin/stockists?success=Stockist+request+updated`);
 };

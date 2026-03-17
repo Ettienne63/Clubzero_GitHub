@@ -33,6 +33,10 @@ main {
   border-top: 1px solid #e6eef7;
 }
 
+.cz-section {
+  padding: 3.5rem 0;
+}
+
 .cz-band:first-of-type {
   border-top: 0;
 }
@@ -73,6 +77,12 @@ main {
 
 .cz-panel-tight {
   padding: 1.1rem;
+}
+
+.cz-flash {
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
 }
 
 .cz-navbar {

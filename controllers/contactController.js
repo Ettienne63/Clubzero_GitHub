@@ -24,13 +24,19 @@ const getSmtpConfig = () => {
   };
 };
 
-const sendContactNotification = async ({ name, email, message }) => {
+const buildContactEmail = ({ name, email, message, subject }) => ({
+  subject: subject || `New contact message from ${name}`,
+  text: `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
+});
+
+const sendContactNotification = async ({ name, email, message, subject }) => {
   const smtp = getSmtpConfig();
 
   if (!smtp.isConfigured) {
     return false;
   }
 
+  const payload = buildContactEmail({ name, email, message, subject });
   const transporter = nodemailer.createTransport({
     host: smtp.host,
     port: smtp.port,
@@ -44,9 +50,9 @@ const sendContactNotification = async ({ name, email, message }) => {
   await transporter.sendMail({
     from: smtp.from,
     to: smtp.to,
-    subject: `New contact message from ${name}`,
+    subject: payload.subject,
     replyTo: email,
-    text: `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
+    text: payload.text,
   });
 
   return true;
@@ -88,6 +94,66 @@ exports.postContact = async (req, res) => {
   } catch (_error) {
     return res.redirect(
       `/contact?error=${encodeURIComponent("Unable to send your message right now. Please try again.")}`,
+    );
+  }
+};
+
+exports.postStockist = async (req, res) => {
+  const name = (req.body.name || "").trim();
+  const email = (req.body.email || "").trim().toLowerCase();
+  const businessName = (req.body.businessName || "").trim();
+  const phone = (req.body.phone || "").trim();
+  const city = (req.body.city || "").trim();
+  const message = (req.body.message || "").trim();
+  const composedMessage = [
+    "Stockist request details:",
+    `Business: ${businessName}`,
+    `Phone: ${phone}`,
+    `City: ${city}`,
+    "",
+    message || "No additional message provided.",
+  ].join("\n");
+
+  try {
+    await prisma.stockistRequest.create({
+      data: {
+        name,
+        email,
+        businessName,
+        phone,
+        city,
+        message: message || null,
+      },
+    });
+
+    await prisma.contactMessage.create({
+      data: {
+        name,
+        email,
+        message: composedMessage,
+      },
+    });
+
+    try {
+      await sendContactNotification({
+        name,
+        email,
+        message: composedMessage,
+        subject: `New stockist request from ${businessName || name}`,
+      });
+    } catch (error) {
+      logger.warn("stockist_notification_failed", {
+        email,
+        error: error.message,
+      });
+    }
+
+    return res.redirect(
+      `/store-locator?success=${encodeURIComponent("Thanks! Your stockist request has been received.")}`,
+    );
+  } catch (_error) {
+    return res.redirect(
+      `/store-locator?error=${encodeURIComponent("Unable to send your request right now. Please try again.")}`,
     );
   }
 };

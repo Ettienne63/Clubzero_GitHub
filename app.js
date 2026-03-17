@@ -22,11 +22,13 @@ const {
   productIdParamValidationRules,
   idParamValidationRules,
   contactValidationRules,
+  stockistValidationRules,
   storeLocationValidationRules,
   storeLocationIdParamValidationRules,
   validateRedirectToAdmin,
   validateRedirectToAdminLocations,
   validateRedirectToContact,
+  validateRedirectToStoreLocator,
 } = require("./middleware/validation");
 const productController = require("./controllers/productController");
 const orderController = require("./controllers/orderController");
@@ -287,8 +289,8 @@ app.get("/", async (_req, res) => {
 });
 app.get("/about", (_req, res) => res.render("about"));
 app.get("/contact", contactController.getContact);
-app.get("/store-locator", (_req, res) => {
-  const query = (_req.query.city || "").toString().trim();
+app.get("/store-locator", (req, res) => {
+  const query = (req.query.city || "").toString().trim();
   const storeLocations = readStoreLocations();
   const filteredLocations = query
     ? storeLocations.filter((location) => {
@@ -310,6 +312,8 @@ app.get("/store-locator", (_req, res) => {
     storeLocations: filteredLocations,
     searchQuery: query,
     hasSearch: Boolean(query),
+    success: req.query.success || null,
+    error: req.query.error || null,
   });
 });
 app.post(
@@ -318,6 +322,13 @@ app.post(
   contactValidationRules,
   validateRedirectToContact,
   asyncHandler(contactController.postContact),
+);
+app.post(
+  "/store-locator/stockist",
+  contactRateLimit,
+  stockistValidationRules,
+  validateRedirectToStoreLocator,
+  asyncHandler(contactController.postStockist),
 );
 app.get("/admin", requireAdmin, asyncHandler(productController.getAdminPage));
 app.get(
@@ -354,6 +365,11 @@ app.get(
   "/admin/team",
   requireOwner,
   asyncHandler(adminController.getAdminTeamPage),
+);
+app.get(
+  "/admin/stockists",
+  requireAdmin,
+  asyncHandler(adminController.getAdminStockistsPage),
 );
 app.get(
   "/admin/home-hero",
@@ -412,6 +428,11 @@ app.post(
   "/admin/team/user/:id/revoke",
   requireOwner,
   asyncHandler(adminController.revokeUserAccess),
+);
+app.post(
+  "/admin/stockists/:id/status",
+  requireAdmin,
+  asyncHandler(adminController.updateStockistStatus),
 );
 app.post(
   "/admin/products",

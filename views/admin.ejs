@@ -4,7 +4,7 @@
 
 <main class="container py-5">
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0">Dashboard</h1>
+    <h1 class="h3 mb-0">Products settings</h1>
   </div>
 
   <% if (success) { %>
@@ -72,14 +72,18 @@
 
         <div class="admin-compact-row">
           <div class="admin-compact-field admin-compact-field-wide">
-            <label for="createDescription" class="form-label">Description</label>
+            <label for="createDescription" class="form-label"
+              >Description</label
+            >
             <textarea
               id="createDescription"
               name="description"
               class="form-control"
               rows="2"
               required
-            ><%= formData.description || '' %></textarea>
+            >
+<%= formData.description || '' %></textarea
+            >
           </div>
         </div>
 
@@ -87,24 +91,32 @@
           <summary>Advanced details</summary>
           <div class="admin-compact-row">
             <div class="admin-compact-field">
-              <label for="createNutritionInfo" class="form-label">Nutrition Info</label>
+              <label for="createNutritionInfo" class="form-label"
+                >Nutrition Info</label
+              >
               <textarea
                 id="createNutritionInfo"
                 name="nutritionInfo"
                 class="form-control"
                 rows="2"
                 placeholder="Example: 0g added sugar, 15 calories per serving"
-              ><%= formData.nutritionInfo || '' %></textarea>
+              >
+<%= formData.nutritionInfo || '' %></textarea
+              >
             </div>
             <div class="admin-compact-field">
-              <label for="createIngredients" class="form-label">Ingredients</label>
+              <label for="createIngredients" class="form-label"
+                >Ingredients</label
+              >
               <textarea
                 id="createIngredients"
                 name="ingredients"
                 class="form-control"
                 rows="2"
                 placeholder="Example: Carbonated water, natural flavors"
-              ><%= formData.ingredients || '' %></textarea>
+              >
+<%= formData.ingredients || '' %></textarea
+              >
             </div>
             <div class="admin-compact-field">
               <label for="createBestFor" class="form-label">Best For</label>
@@ -114,17 +126,23 @@
                 class="form-control"
                 rows="2"
                 placeholder="Example: Post-workout hydration"
-              ><%= formData.bestFor || '' %></textarea>
+              >
+<%= formData.bestFor || '' %></textarea
+              >
             </div>
             <div class="admin-compact-field">
-              <label for="createStorageInfo" class="form-label">Storage & Delivery</label>
+              <label for="createStorageInfo" class="form-label"
+                >Storage & Delivery</label
+              >
               <textarea
                 id="createStorageInfo"
                 name="storageInfo"
                 class="form-control"
                 rows="2"
                 placeholder="Example: Keep chilled, delivery in 2-4 business days"
-              ><%= formData.storageInfo || '' %></textarea>
+              >
+<%= formData.storageInfo || '' %></textarea
+              >
             </div>
           </div>
         </details>

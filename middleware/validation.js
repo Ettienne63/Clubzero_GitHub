@@ -69,6 +69,10 @@ const validateRedirectToContact = handleValidationError((_req, res, message) =>
   res.redirect(`/contact?error=${encodeURIComponent(message)}`),
 );
 
+const validateRedirectToStoreLocator = handleValidationError((_req, res, message) =>
+  res.redirect(`/store-locator?error=${encodeURIComponent(message)}`),
+);
+
 const signupValidationRules = [
   body("name").trim().notEmpty().withMessage("Name is required."),
   body("email").trim().isEmail().withMessage("Valid email is required."),
@@ -218,6 +222,44 @@ const contactValidationRules = [
     .withMessage("Message must be 2000 characters or fewer."),
 ];
 
+const stockistValidationRules = [
+  body("name")
+    .trim()
+    .notEmpty()
+    .withMessage("Name is required.")
+    .isLength({ max: 120 })
+    .withMessage("Name must be 120 characters or fewer."),
+  body("businessName")
+    .trim()
+    .notEmpty()
+    .withMessage("Business name is required.")
+    .isLength({ max: 160 })
+    .withMessage("Business name must be 160 characters or fewer."),
+  body("email")
+    .trim()
+    .isEmail()
+    .withMessage("Valid email is required.")
+    .isLength({ max: 254 })
+    .withMessage("Email must be 254 characters or fewer."),
+  body("phone")
+    .trim()
+    .notEmpty()
+    .withMessage("Phone is required.")
+    .isLength({ max: 40 })
+    .withMessage("Phone must be 40 characters or fewer."),
+  body("city")
+    .trim()
+    .notEmpty()
+    .withMessage("City is required.")
+    .isLength({ max: 120 })
+    .withMessage("City must be 120 characters or fewer."),
+  body("message")
+    .optional({ values: "falsy" })
+    .trim()
+    .isLength({ max: 2000 })
+    .withMessage("Message must be 2000 characters or fewer."),
+];
+
 const storeLocationValidationRules = [
   body("name")
     .trim()
@@ -292,6 +334,7 @@ module.exports = {
   addressIdParamValidationRules,
   goalCreateValidationRules,
   contactValidationRules,
+  stockistValidationRules,
   storeLocationValidationRules,
   storeLocationIdParamValidationRules,
   validateBadRequest,
@@ -306,4 +349,5 @@ module.exports = {
   validateRedirectToProfile,
   validateRedirectToGoals,
   validateRedirectToContact,
+  validateRedirectToStoreLocator,
 };

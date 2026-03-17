@@ -1,7 +1,7 @@
 <%- include("partials/header", { title: "Home" }) %>
 <%- include("partials/navbar") %>
-<main class="home-page">
-  <section class="hero hero-clean about-intro-section">
+<main class="home-page cz-banded">
+  <section class="cz-band cz-band--custom hero hero-clean about-intro-section cz-section">
     <div class="container">
       <div class="row g-4 align-items-center">
         <div class="col-lg-6">
@@ -64,7 +64,7 @@
   </section>
 
   <% if (promoSettings && promoSettings.enabled && (promoSettings.title || promoSettings.body || promoSettings.imageUrl)) { %>
-  <section class="home-promo-section py-5">
+  <section class="cz-band cz-band--custom home-promo-section cz-section">
     <div class="container">
       <div class="home-promo-card">
         <div class="row g-4 align-items-center">
@@ -122,7 +122,7 @@
   </section>
   <% } %>
 
-  <section class="py-5">
+  <section class="cz-band cz-section">
     <div class="container">
       <div class="row g-4 align-items-center">
         <div class="col-lg-6">
@@ -199,7 +199,7 @@
     </div>
   </section>
 
-  <section class="py-5">
+  <section class="cz-band cz-section">
     <div class="container">
       <div class="text-center mb-4">
         <h2 class="h3 fw-bold mb-2">Why People Choose Club Zero</h2>
@@ -237,7 +237,7 @@
     </div>
   </section>
 
-  <section class="py-5 bg-light">
+  <section class="cz-band cz-band--custom cz-section bg-light">
     <div class="container">
       <div
         class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-4"
@@ -296,7 +296,7 @@
     </div>
   </section>
 
-  <section class="py-5 affiliate-cta-section">
+  <section class="cz-band cz-band--custom cz-section affiliate-cta-section">
     <div class="container">
       <div class="row g-4 align-items-center">
         <div class="col-lg-7">
@@ -342,7 +342,7 @@
     </div>
   </section>
 
-  <section class="home-cta-band py-5 text-white">
+  <section class="cz-band cz-band--custom cz-section home-cta-band text-white">
     <div class="container text-center">
       <h2 class="h3 fw-bold mb-3">Ready for your next favorite drink?</h2>
       <p class="mb-4 text-white-50">
