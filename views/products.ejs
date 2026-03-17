@@ -1,62 +1,64 @@
 <%- include("partials/header", { title: "Products" }) %>
 <%- include("partials/navbar") %>
-<main class="container py-5 products-page">
-  <section class="products-fun-hero mb-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-      <div>
-        <p class="products-fun-kicker mb-1">Club Zero Picks</p>
-        <h2 class="h4 mb-0 text-white">Find your next favorite flavor</h2>
+<main class="cz-banded">
+  <section class="cz-band">
+    <div class="container py-5 products-page">
+      <section class="products-fun-hero mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+          <div>
+            <p class="products-fun-kicker mb-1">Club Zero Picks</p>
+            <h2 class="h4 mb-0 text-white">Find your next favorite flavor</h2>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <span class="products-fun-chip">Low Sugar</span>
+            <span class="products-fun-chip">Big Flavor</span>
+            <span class="products-fun-chip">Fresh Drops</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">Products</h1>
+        <% if (user && user.isAdmin) { %>
+        <a href="/admin" class="btn btn-outline-primary">Manage Products</a>
+        <% } %>
       </div>
-      <div class="d-flex flex-wrap gap-2">
-        <span class="products-fun-chip">Low Sugar</span>
-        <span class="products-fun-chip">Big Flavor</span>
-        <span class="products-fun-chip">Fresh Drops</span>
+
+      <% if (success) { %>
+      <div class="alert alert-success"><%= success %></div>
+      <% } %>
+
+      <% if (error) { %>
+      <div class="alert alert-danger"><%= error %></div>
+      <% } %>
+
+      <% if (searchQuery) { %>
+      <p class="text-muted">Showing results for "<%= searchQuery %>"</p>
+      <% } %>
+
+        <% if (recentlyViewedProducts && recentlyViewedProducts.length > 0) { %>
+        <section class="mb-4">
+          <h2 class="h5 mb-3">Recently Viewed</h2>
+          <div class="row g-3">
+            <% recentlyViewedProducts.forEach((product) => { %>
+            <%- include("partials/recently-viewed-card", { product }) %>
+          <% }) %>
+        </div>
+      </section>
+      <% } %>
+
+      <% if (!products || products.length === 0) { %>
+      <div class="alert alert-info mb-0">
+        <% if (searchQuery) { %>
+        No products matched your search.
+        <% } else { %>
+        No products available yet. 
+        <% } %>
       </div>
-    </div>
-  </section>
-
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0">Products</h1>
-    <% if (user && user.isAdmin) { %>
-    <a href="/admin" class="btn btn-outline-primary">Manage Products</a>
-    <% } %>
-  </div>
-
-  <% if (success) { %>
-  <div class="alert alert-success"><%= success %></div>
-  <% } %>
-
-  <% if (error) { %>
-  <div class="alert alert-danger"><%= error %></div>
-  <% } %>
-
-  <% if (searchQuery) { %>
-  <p class="text-muted">Showing results for "<%= searchQuery %>"</p>
-  <% } %>
-
-    <% if (recentlyViewedProducts && recentlyViewedProducts.length > 0) { %>
-    <section class="mb-4">
-      <h2 class="h5 mb-3">Recently Viewed</h2>
-      <div class="row g-3">
-        <% recentlyViewedProducts.forEach((product) => { %>
-        <%- include("partials/recently-viewed-card", { product }) %>
-      <% }) %>
-    </div>
-  </section>
-  <% } %>
-
-  <% if (!products || products.length === 0) { %>
-  <div class="alert alert-info mb-0">
-    <% if (searchQuery) { %>
-    No products matched your search.
-    <% } else { %>
-    No products available yet. 
-    <% } %>
-  </div>
-  <% } else { %>
-  <section class="products-list-section">
-    <div class="row g-3">
-      <% products.forEach((product) => { %>
+      <% } else { %>
+      <section class="products-list-section">
+        <div class="row g-3">
+          <% products.forEach((product) => { %>
     <% const hasPurchased = Array.isArray(purchasedProductIds) &&
     purchasedProductIds.includes(product.id); %> <% const myReview =
     myReviewsByProduct ? myReviewsByProduct[product.id] : null; %>
@@ -201,9 +203,11 @@
       </article>
     </div>
     <% }) %>
+        </div>
+      </section>
+      <% } %>
     </div>
   </section>
-  <% } %>
 </main>
 <%- include("partials/footer") %>
 

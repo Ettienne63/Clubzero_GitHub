@@ -1,16 +1,18 @@
 <%- include("partials/header", { title: "Checkout" }) %>
 <%- include("partials/navbar") %>
 
-<main class="container py-5">
-  <h1 class="h3 mb-4">Checkout</h1>
+<main class="cz-banded">
+  <section class="cz-band">
+    <div class="container py-5">
+      <h1 class="h3 mb-4">Checkout</h1>
 
-  <% if (error) { %>
-  <div class="alert alert-danger"><%= error %></div>
-  <% } %>
+      <% if (error) { %>
+      <div class="alert alert-danger"><%= error %></div>
+      <% } %>
 
-  <div class="row g-4">
-    <div class="col-lg-7">
-      <div class="card shadow-sm">
+      <div class="row g-4">
+        <div class="col-lg-7">
+          <div class="card shadow-sm">
         <div class="card-body">
           <h2 class="h5 mb-3">Delivery Information</h2>
           <form action="/auth/checkout" method="POST" class="row g-3">
@@ -178,8 +180,8 @@
       </div>
     </div>
 
-    <div class="col-lg-5">
-      <div class="card shadow-sm">
+        <div class="col-lg-5">
+          <div class="card shadow-sm">
         <div class="card-body">
           <h2 class="h5 mb-3">Order Summary</h2>
           <ul class="list-group list-group-flush">
@@ -213,7 +215,9 @@
         </div>
       </div>
     </div>
-  </div>
+      </div>
+    </div>
+  </section>
 </main>
 
 <script>

@@ -1,31 +1,33 @@
 <%- include("partials/header", { title: product.name }) %>
 <%- include("partials/navbar") %>
-<main class="container py-5 product-details-page">
-  <div class="mb-3">
-    <a href="/auth/products" class="btn btn-outline-secondary btn-sm">&larr; Back to Products</a>
-  </div>
-
-  <% if (success) { %>
-  <div class="alert alert-success"><%= success %></div>
-  <% } %>
-
-  <% if (error) { %>
-  <div class="alert alert-danger"><%= error %></div>
-  <% } %>
-
-  <article class="card shadow-sm product-details-card product-hero-card">
-    <div class="row g-0">
-      <div class="col-md-5">
-          <img
-            src="<%= product.imageUrl %>"
-            class="img-fluid w-100 h-100 product-details-image rounded-start"
-            alt="<%= product.name %>"
-            loading="lazy"
-            decoding="async"
-          />
+<main class="cz-banded">
+  <section class="cz-band">
+    <div class="container py-5 product-details-page">
+      <div class="mb-3">
+        <a href="/auth/products" class="btn btn-outline-secondary btn-sm">&larr; Back to Products</a>
       </div>
-      <div class="col-md-7">
-        <div class="card-body">
+
+      <% if (success) { %>
+      <div class="alert alert-success"><%= success %></div>
+      <% } %>
+
+      <% if (error) { %>
+      <div class="alert alert-danger"><%= error %></div>
+      <% } %>
+
+      <article class="card shadow-sm product-details-card product-hero-card">
+        <div class="row g-0">
+          <div class="col-md-5">
+              <img
+                src="<%= product.imageUrl %>"
+                class="img-fluid w-100 h-100 product-details-image rounded-start"
+                alt="<%= product.name %>"
+                loading="lazy"
+                decoding="async"
+              />
+          </div>
+          <div class="col-md-7">
+            <div class="card-body">
           <div class="d-flex flex-wrap gap-2 mb-2">
             <span class="product-tag">Fan Favorite</span>
             <span class="product-tag">Zero Sugar</span>
@@ -70,82 +72,84 @@
           <a href="/auth/login" class="btn btn-outline-primary">Login to buy</a>
           <% } %>
         </div>
-      </div>
-    </div>
-  </article>
+          </div>
+        </div>
+      </article>
 
-  <section class="mt-4 product-details-card">
-    <div class="product-vibe-banner mb-3">
-      <div>
-        <p class="product-vibe-kicker mb-1">Flavor Vibe</p>
-        <h2 class="h5 mb-0">Crisp, bright, and made for repeat sips</h2>
-      </div>
-      <span class="product-vibe-pill">Top Pick</span>
-    </div>
+      <section class="mt-4 product-details-card">
+        <div class="product-vibe-banner mb-3">
+          <div>
+            <p class="product-vibe-kicker mb-1">Flavor Vibe</p>
+            <h2 class="h5 mb-0">Crisp, bright, and made for repeat sips</h2>
+          </div>
+          <span class="product-vibe-pill">Top Pick</span>
+        </div>
 
-    <div class="row g-3">
-      <div class="col-md-6">
-        <div class="card h-100 shadow-sm product-info-card">
-          <div class="card-body">
-            <h2 class="h6 mb-3">Nutrition Snapshot</h2>
-            <p class="small text-muted mb-0 product-info-text">
-              <%= product.nutritionInfo || "0g added sugar. Low calories. Hydration support." %>
-            </p>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="card h-100 shadow-sm product-info-card">
+              <div class="card-body">
+                <h2 class="h6 mb-3">Nutrition Snapshot</h2>
+                <p class="small text-muted mb-0 product-info-text">
+                  <%= product.nutritionInfo || "0g added sugar. Low calories. Hydration support." %>
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card h-100 shadow-sm product-info-card">
+              <div class="card-body">
+                <h2 class="h6 mb-3">Ingredients</h2>
+                <p class="small text-muted mb-0 product-info-text">
+                  <%= product.ingredients || "Carbonated water, natural flavor blend, citric acid, sweetener blend." %>
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card h-100 shadow-sm product-info-card">
+              <div class="card-body">
+                <h2 class="h6 mb-3">Best For</h2>
+                <p class="small text-muted mb-0 product-info-text">
+                  <%= product.bestFor || `${product.name} is great for pre-workout refresh, afternoon reset, or a lighter soda alternative.` %>
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card h-100 shadow-sm product-info-card">
+              <div class="card-body">
+                <h2 class="h6 mb-3">Storage and Delivery</h2>
+                <p class="small text-muted mb-0 product-info-text">
+                  <%= product.storageInfo || "Keep in a cool, dry place. Refrigerate after opening. Typical delivery: 2-4 business days." %>
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-      <div class="col-md-6">
-        <div class="card h-100 shadow-sm product-info-card">
-          <div class="card-body">
-            <h2 class="h6 mb-3">Ingredients</h2>
-            <p class="small text-muted mb-0 product-info-text">
-              <%= product.ingredients || "Carbonated water, natural flavor blend, citric acid, sweetener blend." %>
-            </p>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-6">
-        <div class="card h-100 shadow-sm product-info-card">
-          <div class="card-body">
-            <h2 class="h6 mb-3">Best For</h2>
-            <p class="small text-muted mb-0 product-info-text">
-              <%= product.bestFor || `${product.name} is great for pre-workout refresh, afternoon reset, or a lighter soda alternative.` %>
-            </p>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-6">
-        <div class="card h-100 shadow-sm product-info-card">
-          <div class="card-body">
-            <h2 class="h6 mb-3">Storage and Delivery</h2>
-            <p class="small text-muted mb-0 product-info-text">
-              <%= product.storageInfo || "Keep in a cool, dry place. Refrigerate after opening. Typical delivery: 2-4 business days." %>
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+      </section>
 
-  <section class="mt-4">
-    <h2 class="h5 mb-3">Customer Reviews</h2>
-    <% if (product.reviews && product.reviews.length) { %>
-    <div class="vstack gap-2">
-      <% product.reviews.forEach((review) => { %>
-      <div class="border rounded p-3 bg-white">
-        <div class="d-flex justify-content-between align-items-center">
-          <strong><%= review.user.name || review.user.email || "User" %></strong>
-          <span class="small text-muted"><%= review.rating %>/5</span>
+      <section class="mt-4">
+        <h2 class="h5 mb-3">Customer Reviews</h2>
+        <% if (product.reviews && product.reviews.length) { %>
+        <div class="vstack gap-2">
+          <% product.reviews.forEach((review) => { %>
+          <div class="border rounded p-3 bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+              <strong><%= review.user.name || review.user.email || "User" %></strong>
+              <span class="small text-muted"><%= review.rating %>/5</span>
+            </div>
+            <% if (review.comment) { %>
+            <p class="mb-0 small mt-2"><%= review.comment %></p>
+            <% } %>
+          </div>
+          <% }) %>
         </div>
-        <% if (review.comment) { %>
-        <p class="mb-0 small mt-2"><%= review.comment %></p>
+        <% } else { %>
+        <p class="text-muted mb-0">No reviews yet for this product.</p>
         <% } %>
-      </div>
-      <% }) %>
+      </section>
     </div>
-    <% } else { %>
-    <p class="text-muted mb-0">No reviews yet for this product.</p>
-    <% } %>
   </section>
 </main>
 <%- include("partials/footer") %>

@@ -1,33 +1,35 @@
 <%- include("partials/header", { title: "Your Cart" }) %>
 <%- include("partials/navbar") %>
 
-<main class="container py-5">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0">Your Cart</h1>
-    <a href="/auth/products" class="btn btn-outline-secondary">Continue Shopping</a>
-  </div>
+<main class="cz-banded">
+  <section class="cz-band">
+    <div class="container py-5">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">Your Cart</h1>
+        <a href="/auth/products" class="btn btn-outline-secondary">Continue Shopping</a>
+      </div>
 
-  <% if (error) { %>
-  <div class="alert alert-danger"><%= error %></div>
-  <% } %>
+      <% if (error) { %>
+      <div class="alert alert-danger"><%= error %></div>
+      <% } %>
 
-  <% if (!cartItems || cartItems.length === 0) { %>
-  <div class="alert alert-info mb-0">
-    Your cart is empty. Add products from the products page.
-  </div>
-  <% } else { %>
-  <% if (hasUnavailableItems) { %>
-  <div class="alert alert-warning">
-    Some items in your cart are hidden and cannot be checked out.
-  </div>
-  <% } %>
-  <div class="d-flex justify-content-end mb-3">
-    <% if (!hasUnavailableItems) { %>
-    <a href="/auth/checkout" class="btn btn-success">Proceed to Checkout</a>
-    <% } %>
-  </div>
-  <div class="table-responsive">
-    <table class="table align-middle">
+      <% if (!cartItems || cartItems.length === 0) { %>
+      <div class="alert alert-info mb-0">
+        Your cart is empty. Add products from the products page.
+      </div>
+      <% } else { %>
+      <% if (hasUnavailableItems) { %>
+      <div class="alert alert-warning">
+        Some items in your cart are hidden and cannot be checked out.
+      </div>
+      <% } %>
+      <div class="d-flex justify-content-end mb-3">
+        <% if (!hasUnavailableItems) { %>
+        <a href="/auth/checkout" class="btn btn-success">Proceed to Checkout</a>
+        <% } %>
+      </div>
+      <div class="table-responsive cz-panel cz-panel-tight">
+        <table class="table align-middle mb-0">
       <thead>
         <tr>
           <th scope="col">Product</th>
@@ -108,9 +110,11 @@
           <th></th>
         </tr>
       </tfoot>
-    </table>
-  </div>
-  <% } %>
+        </table>
+      </div>
+      <% } %>
+    </div>
+  </section>
 </main>
 
 <script>

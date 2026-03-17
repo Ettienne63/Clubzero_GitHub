@@ -1,161 +1,165 @@
 <%- include("partials/header", { title: "Club Zero Goal Tracker" }) %>
 <%- include("partials/navbar") %>
-<main class="container py-5 goals-page">
-  <div
-    class="d-flex flex-wrap justify-content-center align-items-center gap-3 mb-4 text-center goals-hero"
-  >
-    <div>
-      <span class="goals-kicker">Track. Celebrate. Repeat.</span>
-      <h1 class="h3 mb-1">Club Zero Goal Tracker</h1>
-      <p class="text-muted mb-0">
-        Company main target is total bottles sold. Current total:
-        <strong><%= totalBottlesSold %></strong>
-      </p>
-    </div>
-  </div>
-
-  <% if (success) { %>
-  <div class="alert alert-success"><%= success %></div>
-  <% } %>
-  <% if (error) { %>
-  <div class="alert alert-danger"><%= error %></div>
-  <% } %>
-
-  <section class="card shadow-sm mb-4 goals-add-card">
-    <div class="card-body">
-      <h2 class="h5 mb-3">Add New Goal</h2>
-      <form action="/auth/goals" method="POST" class="row g-3">
-        <div class="col-md-8">
-          <label for="title" class="form-label">Goal title</label>
-          <input
-            id="title"
-            type="text"
-            name="title"
-            class="form-control"
-            maxlength="120"
-            required
-            placeholder="Example: Reach 2,000 bottles sold"
-          />
-        </div>
-        <div class="col-md-4">
-          <label for="targetBottles" class="form-label">Target bottles</label>
-          <input
-            id="targetBottles"
-            type="number"
-            name="targetBottles"
-            min="1"
-            class="form-control"
-            required
-          />
-        </div>
-        <div class="col-12">
-          <button type="submit" class="btn btn-primary goals-add-btn">
-            Add Goal
-          </button>
-        </div>
-      </form>
-    </div>
-  </section>
-
-  <section class="goals-board">
-    <h2 class="h5 mb-3 goals-board-title">Goals by User</h2>
-    <% if (!goalsByCreator || goalsByCreator.length === 0) { %>
-    <div class="alert alert-info mb-0">No goals added yet.</div>
-    <% } else { %>
-    <div class="accordion goals-accordion" id="goalsByUserAccordion">
-      <% goalsByCreator.forEach((group, groupIndex) => { %>
-      <div class="accordion-item goals-accordion-item">
-        <h3 class="accordion-header" id="heading-<%= groupIndex %>">
-          <button
-            class="accordion-button <%= groupIndex === 0 ? '' : 'collapsed' %>"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#collapse-<%= groupIndex %>"
-            aria-expanded="<%= groupIndex === 0 ? 'true' : 'false' %>"
-            aria-controls="collapse-<%= groupIndex %>"
-          >
-            @<%= group.creatorUsername %>
-            (<%= group.goals.length %>
-            goal<%= group.goals.length === 1 ? '' : 's' %>)
-          </button>
-        </h3>
-        <div
-          id="collapse-<%= groupIndex %>"
-          class="accordion-collapse collapse <%= groupIndex === 0 ? 'show' : '' %>"
-          aria-labelledby="heading-<%= groupIndex %>"
-          data-bs-parent="#goalsByUserAccordion"
-        >
-          <div class="accordion-body">
-            <div class="row g-3">
-              <% group.goals.forEach((goal) => { %>
-              <div class="col-12">
-                <article class="card shadow-sm goal-item-card">
-                  <div class="card-body">
-                    <div
-                      class="d-flex flex-wrap justify-content-between gap-2 mb-2"
-                    >
-                      <h4 class="h6 mb-0"><%= goal.title %></h4>
-                      <span
-                        class="badge <%= goal.isReached ? 'text-bg-success' : 'text-bg-secondary' %>"
-                      >
-                        <%= goal.isReached ? "Reached" : "In Progress" %>
-                      </span>
-                    </div>
-                    <p class="small text-muted mb-2">
-                      Target: <strong><%= goal.targetBottles %></strong> bottles
-                      | Remaining: <strong><%= goal.remainingBottles %></strong>
-                    </p>
-                    <div
-                      class="progress goal-progress-track"
-                      role="progressbar"
-                      aria-valuemin="0"
-                      aria-valuemax="100"
-                      aria-valuenow="<%= goal.progressPercent %>"
-                    >
-                      <div
-                        class="progress-bar goal-progress-bar"
-                        style="width: 0%"
-                        data-progress="<%= goal.progressPercent %>"
-                      >
-                        <%= goal.progressPercent %>%
-                      </div>
-                    </div>
-                    <p class="small text-muted mb-0 mt-2">
-                      Created by
-                      <strong>@<%= goal.creatorUsername %></strong> on
-                      <%= new Date(goal.createdAt).toLocaleDateString() %>
-                    </p>
-                    <div class="d-flex gap-2 mt-3">
-                      <a
-                        href="/auth/goals/<%= goal.id %>/edit"
-                        class="btn btn-sm btn-outline-primary"
-                      >
-                        Edit
-                      </a>
-                      <form
-                        action="/auth/goals/<%= goal.id %>/delete"
-                        method="POST"
-                      >
-                        <button
-                          type="submit"
-                          class="btn btn-sm btn-outline-danger"
-                          onclick="return confirm('Delete this goal?');"
-                        >
-                          Delete
-                        </button>
-                      </form>
-                    </div>
-                  </div>
-                </article>
-              </div>
-              <% }) %>
-            </div>
-          </div>
+<main class="cz-banded">
+  <section class="cz-band">
+    <div class="container py-5 goals-page">
+      <div
+        class="d-flex flex-wrap justify-content-center align-items-center gap-3 mb-4 text-center goals-hero"
+      >
+        <div>
+          <span class="goals-kicker">Track. Celebrate. Repeat.</span>
+          <h1 class="h3 mb-1">Club Zero Goal Tracker</h1>
+          <p class="text-muted mb-0">
+            Company main target is total bottles sold. Current total:
+            <strong><%= totalBottlesSold %></strong>
+          </p>
         </div>
       </div>
-      <% }) %>
+
+      <% if (success) { %>
+      <div class="alert alert-success"><%= success %></div>
+      <% } %>
+      <% if (error) { %>
+      <div class="alert alert-danger"><%= error %></div>
+      <% } %>
+
+      <section class="card shadow-sm mb-4 goals-add-card">
+        <div class="card-body">
+          <h2 class="h5 mb-3">Add New Goal</h2>
+          <form action="/auth/goals" method="POST" class="row g-3">
+            <div class="col-md-8">
+              <label for="title" class="form-label">Goal title</label>
+              <input
+                id="title"
+                type="text"
+                name="title"
+                class="form-control"
+                maxlength="120"
+                required
+                placeholder="Example: Reach 2,000 bottles sold"
+              />
+            </div>
+            <div class="col-md-4">
+              <label for="targetBottles" class="form-label">Target bottles</label>
+              <input
+                id="targetBottles"
+                type="number"
+                name="targetBottles"
+                min="1"
+                class="form-control"
+                required
+              />
+            </div>
+            <div class="col-12">
+              <button type="submit" class="btn btn-primary goals-add-btn">
+                Add Goal
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="goals-board">
+        <h2 class="h5 mb-3 goals-board-title">Goals by User</h2>
+        <% if (!goalsByCreator || goalsByCreator.length === 0) { %>
+        <div class="alert alert-info mb-0">No goals added yet.</div>
+        <% } else { %>
+        <div class="accordion goals-accordion" id="goalsByUserAccordion">
+          <% goalsByCreator.forEach((group, groupIndex) => { %>
+          <div class="accordion-item goals-accordion-item">
+            <h3 class="accordion-header" id="heading-<%= groupIndex %>">
+              <button
+                class="accordion-button <%= groupIndex === 0 ? '' : 'collapsed' %>"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#collapse-<%= groupIndex %>"
+                aria-expanded="<%= groupIndex === 0 ? 'true' : 'false' %>"
+                aria-controls="collapse-<%= groupIndex %>"
+              >
+                @<%= group.creatorUsername %>
+                (<%= group.goals.length %>
+                goal<%= group.goals.length === 1 ? '' : 's' %>)
+              </button>
+            </h3>
+            <div
+              id="collapse-<%= groupIndex %>"
+              class="accordion-collapse collapse <%= groupIndex === 0 ? 'show' : '' %>"
+              aria-labelledby="heading-<%= groupIndex %>"
+              data-bs-parent="#goalsByUserAccordion"
+            >
+              <div class="accordion-body">
+                <div class="row g-3">
+                  <% group.goals.forEach((goal) => { %>
+                  <div class="col-12">
+                    <article class="card shadow-sm goal-item-card">
+                      <div class="card-body">
+                        <div
+                          class="d-flex flex-wrap justify-content-between gap-2 mb-2"
+                        >
+                          <h4 class="h6 mb-0"><%= goal.title %></h4>
+                          <span
+                            class="badge <%= goal.isReached ? 'text-bg-success' : 'text-bg-secondary' %>"
+                          >
+                            <%= goal.isReached ? "Reached" : "In Progress" %>
+                          </span>
+                        </div>
+                        <p class="small text-muted mb-2">
+                          Target: <strong><%= goal.targetBottles %></strong> bottles
+                          | Remaining: <strong><%= goal.remainingBottles %></strong>
+                        </p>
+                        <div
+                          class="progress goal-progress-track"
+                          role="progressbar"
+                          aria-valuemin="0"
+                          aria-valuemax="100"
+                          aria-valuenow="<%= goal.progressPercent %>"
+                        >
+                          <div
+                            class="progress-bar goal-progress-bar"
+                            style="width: 0%"
+                            data-progress="<%= goal.progressPercent %>"
+                          >
+                            <%= goal.progressPercent %>%
+                          </div>
+                        </div>
+                        <p class="small text-muted mb-0 mt-2">
+                          Created by
+                          <strong>@<%= goal.creatorUsername %></strong> on
+                          <%= new Date(goal.createdAt).toLocaleDateString() %>
+                        </p>
+                        <div class="d-flex gap-2 mt-3">
+                          <a
+                            href="/auth/goals/<%= goal.id %>/edit"
+                            class="btn btn-sm btn-outline-primary"
+                          >
+                            Edit
+                          </a>
+                          <form
+                            action="/auth/goals/<%= goal.id %>/delete"
+                            method="POST"
+                          >
+                            <button
+                              type="submit"
+                              class="btn btn-sm btn-outline-danger"
+                              onclick="return confirm('Delete this goal?');"
+                            >
+                              Delete
+                            </button>
+                          </form>
+                        </div>
+                      </div>
+                    </article>
+                  </div>
+                  <% }) %>
+                </div>
+              </div>
+            </div>
+          </div>
+          <% }) %>
+        </div>
+        <% } %>
+      </section>
     </div>
-    <% } %>
   </section>
 </main>
 <script>

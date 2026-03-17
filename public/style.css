@@ -24,6 +24,57 @@ main {
   flex: 1;
 }
 
+.cz-banded {
+  background: #ffffff;
+}
+
+.cz-band {
+  padding: 3.5rem 0;
+  border-top: 1px solid #e6eef7;
+}
+
+.cz-band:first-of-type {
+  border-top: 0;
+}
+
+.cz-banded > .cz-band:nth-of-type(odd):not(.cz-band--custom) {
+  background: #ffffff;
+}
+
+.cz-banded > .cz-band:nth-of-type(even):not(.cz-band--custom) {
+  background: #f7fbff;
+}
+
+.cz-band--soft {
+  background: linear-gradient(180deg, #f7fbff 0%, #ffffff 80%);
+}
+
+.cz-band--warm {
+  background: linear-gradient(180deg, #fff8f2 0%, #ffffff 80%);
+}
+
+.cz-band--dark {
+  background: #1e1e2f;
+  color: #ffffff;
+}
+
+.cz-band--dark .text-secondary,
+.cz-band--dark .text-muted {
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+
+.cz-panel {
+  background: #ffffff;
+  border: 1px solid #dbe9ff;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: var(--surface-shadow);
+}
+
+.cz-panel-tight {
+  padding: 1.1rem;
+}
+
 .cz-navbar {
   border-bottom: 1px solid #e6eef7;
   background: rgba(255, 255, 255, 0.96);
