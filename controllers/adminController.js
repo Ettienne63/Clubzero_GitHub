@@ -89,6 +89,50 @@ const sendInviteEmail = async ({ to, inviteUrl, role }) => {
   return { sent: true };
 };
 
+const createAndDeliverInvite = async ({
+  req,
+  email,
+  role,
+  actorUserId,
+  auditAction,
+}) => {
+  const token = createInviteToken();
+  const tokenHash = hashToken(token);
+  const tokenPreview = token.slice(0, 10);
+  const expiresAt = new Date(Date.now() + INVITE_EXPIRY_HOURS * 60 * 60 * 1000);
+
+  await prisma.adminInvite.updateMany({
+    where: {
+      email,
+      acceptedAt: null,
+      revokedAt: null,
+    },
+    data: { revokedAt: new Date() },
+  });
+
+  const invite = await prisma.adminInvite.create({
+    data: {
+      email,
+      role,
+      tokenHash,
+      tokenPreview,
+      expiresAt,
+      invitedByUserId: Number.isInteger(actorUserId) ? actorUserId : null,
+    },
+  });
+
+  const inviteUrl = `${buildBaseUrl(req)}/auth/invite/${token}`;
+  const emailResult = await sendInviteEmail({ to: email, inviteUrl, role });
+
+  await logAudit({
+    action: auditAction,
+    actorUserId,
+    metadata: { email, role, inviteId: invite.id },
+  });
+
+  return { invite, inviteUrl, emailResult };
+};
+
 exports.getAdminTeamPage = async (req, res) => {
   const users = await prisma.user.findMany({
     where: {
@@ -134,38 +178,12 @@ exports.postAdminInvite = async (req, res) => {
     );
   }
 
-  const token = createInviteToken();
-  const tokenHash = hashToken(token);
-  const tokenPreview = token.slice(0, 10);
-  const expiresAt = new Date(Date.now() + INVITE_EXPIRY_HOURS * 60 * 60 * 1000);
-
-  await prisma.adminInvite.updateMany({
-    where: {
-      email,
-      acceptedAt: null,
-      revokedAt: null,
-    },
-    data: { revokedAt: new Date() },
-  });
-
-  const invite = await prisma.adminInvite.create({
-    data: {
-      email,
-      role,
-      tokenHash,
-      tokenPreview,
-      expiresAt,
-      invitedByUserId: Number.isInteger(actorUserId) ? actorUserId : null,
-    },
-  });
-
-  const inviteUrl = `${buildBaseUrl(req)}/auth/invite/${token}`;
-  const emailResult = await sendInviteEmail({ to: email, inviteUrl, role });
-
-  await logAudit({
-    action: "admin_invite_created",
+  const { inviteUrl, emailResult } = await createAndDeliverInvite({
+    req,
+    email,
+    role,
     actorUserId,
-    metadata: { email, role, inviteId: invite.id },
+    auditAction: "admin_invite_created",
   });
 
   const successMessage = emailResult.sent
@@ -174,6 +192,51 @@ exports.postAdminInvite = async (req, res) => {
 
   const inviteLinkParam =
     emailResult.sent ? "" : `&inviteLink=${encodeURIComponent(inviteUrl)}`;
+  return res.redirect(
+    `/admin/team?success=${encodeURIComponent(successMessage)}${inviteLinkParam}`,
+  );
+};
+
+exports.resendAdminInvite = async (req, res) => {
+  const inviteId = Number.parseInt(req.params.id, 10);
+  const actorUserId = Number.parseInt(req.session?.user?.id, 10);
+
+  if (!Number.isInteger(inviteId)) {
+    return res.redirect(`/admin/team?error=Invalid+invite+id`);
+  }
+
+  const sourceInvite = await prisma.adminInvite.findFirst({
+    where: {
+      id: inviteId,
+      acceptedAt: null,
+      revokedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+    select: { id: true, email: true, role: true },
+  });
+
+  if (!sourceInvite) {
+    return res.redirect(`/admin/team?error=Invite+not+found+or+expired`);
+  }
+
+  if (!ADMIN_ROLES.has(sourceInvite.role) || sourceInvite.role === "OWNER") {
+    return res.redirect(`/admin/team?error=Invite+role+is+invalid`);
+  }
+
+  const { inviteUrl, emailResult } = await createAndDeliverInvite({
+    req,
+    email: sourceInvite.email,
+    role: sourceInvite.role,
+    actorUserId,
+    auditAction: "admin_invite_resent",
+  });
+
+  const successMessage = emailResult.sent
+    ? `Invite resent to ${sourceInvite.email}.`
+    : `Invite recreated for ${sourceInvite.email}. Email not sent (SMTP not configured).`;
+  const inviteLinkParam =
+    emailResult.sent ? "" : `&inviteLink=${encodeURIComponent(inviteUrl)}`;
+
   return res.redirect(
     `/admin/team?success=${encodeURIComponent(successMessage)}${inviteLinkParam}`,
   );

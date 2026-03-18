@@ -1,0 +1,83 @@
+  <section class="mb-4">
+    <h2 class="h5 mb-3">Add Supplier</h2>
+    <button
+      type="button"
+      class="card w-100 text-start border-2 border-dashed bg-light"
+      data-bs-toggle="modal"
+      data-bs-target="#addSupplierModal"
+      style="border-style: dashed;"
+    >
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <h3 class="h6 mb-1">Create New Supplier</h3>
+          <p class="text-muted mb-0 small">Click to open supplier form</p>
+        </div>
+        <span class="btn btn-success btn-sm">Open Form</span>
+      </div>
+    </button>
+  </section>
+
+  <section>
+    <div class="d-flex justify-content-between align-items-center mb-3 gap-3 flex-wrap">
+      <h2 class="h5 mb-0">Supplier Stock Sections</h2>
+      <div class="d-flex align-items-center gap-2 ms-auto inventory-supplier-search-wrap">
+        <span class="badge text-bg-secondary"><%= suppliers ? suppliers.length : 0 %> suppliers</span>
+        <input
+          id="supplierSearchInput"
+          type="search"
+          class="form-control inventory-supplier-search-input"
+          placeholder="Search for supplier"
+          autocomplete="off"
+        />
+      </div>
+    </div>
+
+    <% if (!suppliers || suppliers.length === 0) { %>
+    <p class="text-muted">No suppliers added yet. Use the Add Supplier block above.</p>
+    <% } else { %>
+    <div class="row g-3">
+      <% suppliers.forEach((supplier) => { %>
+      <% const supplierSearchText = [
+        supplier.name,
+        supplier.contactName,
+        supplier.contactEmail,
+        supplier.contactPhone,
+        supplier.notes,
+        ...(supplier.customProducts || []).map((product) => product.name),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase(); %>
+      <div
+        class="col-12 col-md-6 col-lg-4"
+        data-supplier-card
+        data-supplier-search="<%= supplierSearchText %>"
+      >
+        <button
+          type="button"
+          class="card w-100 text-start h-100"
+          data-bs-toggle="modal"
+          data-bs-target="#supplierModal-<%= supplier.id %>"
+        >
+          <div class="card-body">
+            <h3 class="h6 mb-1"><%= supplier.name %></h3>
+            <p class="text-muted mb-2 small">
+              <%= supplier.contactName || 'No contact name' %>
+            </p>
+            <p class="text-muted mb-0 small">
+              Supplier-only products: <%= supplier.customProducts ? supplier.customProducts.length : 0 %>
+            </p>
+            <span class="badge <%= supplier.supplierPriority.badgeClass %> mt-2">
+              <%= supplier.supplierPriority.label %>
+            </span>
+          </div>
+        </button>
+      </div>
+      <% }) %>
+    </div>
+    <p class="text-muted mt-3 d-none" id="supplierSearchEmptyState">
+      No suppliers match your search.
+    </p>
+    <% } %>
+  </section>
+</main>

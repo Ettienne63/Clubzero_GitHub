@@ -34,6 +34,7 @@ const productController = require("./controllers/productController");
 const orderController = require("./controllers/orderController");
 const contactController = require("./controllers/contactController");
 const adminController = require("./controllers/adminController");
+const inventoryController = require("./controllers/inventoryController");
 const storeLocationController = require("./controllers/storeLocationController");
 const homeController = require("./controllers/homeController");
 const { getPromoSettings } = require("./lib/promoSettings");
@@ -223,9 +224,7 @@ app.use(async (req, res, next) => {
   }
 
   const userId = Number.parseInt(req.session?.user?.id, 10);
-  const isAdmin = Boolean(req.session?.user?.isAdmin);
-
-  if (!Number.isInteger(userId) || isAdmin) {
+  if (!Number.isInteger(userId)) {
     return next();
   }
 
@@ -372,6 +371,11 @@ app.get(
   asyncHandler(adminController.getAdminStockistsPage),
 );
 app.get(
+  "/admin/inventory",
+  requireAdmin,
+  asyncHandler(inventoryController.getAdminInventoryPage),
+);
+app.get(
   "/admin/home-hero",
   requireAdmin,
   asyncHandler(homeController.getAdminHomeHero),
@@ -415,6 +419,11 @@ app.post(
   asyncHandler(adminController.postAdminInvite),
 );
 app.post(
+  "/admin/team/invite/:id/resend",
+  requireOwner,
+  asyncHandler(adminController.resendAdminInvite),
+);
+app.post(
   "/admin/team/invite/:id/revoke",
   requireOwner,
   asyncHandler(adminController.revokeAdminInvite),
@@ -433,6 +442,66 @@ app.post(
   "/admin/stockists/:id/status",
   requireAdmin,
   asyncHandler(adminController.updateStockistStatus),
+);
+app.post(
+  "/admin/inventory/suppliers",
+  requireAdmin,
+  asyncHandler(inventoryController.createSupplier),
+);
+app.post(
+  "/admin/inventory/suppliers/:id/edit",
+  requireAdmin,
+  asyncHandler(inventoryController.updateSupplier),
+);
+app.post(
+  "/admin/inventory/suppliers/:id/delete",
+  requireAdmin,
+  asyncHandler(inventoryController.deleteSupplier),
+);
+app.post(
+  "/admin/inventory/suppliers/:id/custom-products",
+  requireAdmin,
+  asyncHandler(inventoryController.createSupplierCustomProduct),
+);
+app.post(
+  "/admin/inventory/suppliers/:id/custom-products/import-website",
+  requireAdmin,
+  asyncHandler(inventoryController.importSupplierCustomProductsFromWebsite),
+);
+app.post(
+  "/admin/inventory/suppliers/:id/custom-products/:customProductId/edit",
+  requireAdmin,
+  asyncHandler(inventoryController.updateSupplierCustomProduct),
+);
+app.post(
+  "/admin/inventory/suppliers/:id/custom-products/:customProductId/threshold",
+  requireAdmin,
+  asyncHandler(inventoryController.updateSupplierCustomLowStockThreshold),
+);
+app.post(
+  "/admin/inventory/suppliers/:id/custom-products/:customProductId/delete",
+  requireAdmin,
+  asyncHandler(inventoryController.deleteSupplierCustomProduct),
+);
+app.post(
+  "/admin/inventory/website-stock/:id",
+  requireAdmin,
+  asyncHandler(inventoryController.updateWebsiteStock),
+);
+app.post(
+  "/admin/inventory/products/:id/threshold",
+  requireAdmin,
+  asyncHandler(inventoryController.updateWebsiteLowStockThreshold),
+);
+app.post(
+  "/admin/inventory/alerts-toggle",
+  requireAdmin,
+  asyncHandler(inventoryController.updateLowStockAlertsSetting),
+);
+app.post(
+  "/admin/inventory/products/:id/stock-visibility",
+  requireAdmin,
+  asyncHandler(inventoryController.updateProductStockVisibility),
 );
 app.post(
   "/admin/products",

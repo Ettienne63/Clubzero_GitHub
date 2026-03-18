@@ -1,0 +1,77 @@
+<%- include("partials/header", { title: "Inventory" }) %>
+<%- include("partials/navbar") %>
+<%- include("partials/admin-nav") %>
+
+<main class="container py-5 admin-shell">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Inventory Tracking</h1>
+  </div>
+
+  <% if (success) { %>
+  <div class="alert alert-success" role="alert"><%= success %></div>
+  <% } %>
+
+  <% if (error) { %>
+  <div class="alert alert-danger" role="alert"><%= error %></div>
+  <% } %>
+
+  <section class="card mb-3">
+    <div class="card-body py-2">
+      <form action="/admin/inventory/alerts-toggle" method="POST" class="d-flex justify-content-between align-items-center gap-3" id="lowStockAlertsForm">
+        <div>
+          <strong class="d-block">Low-stock email alerts</strong>
+          <span class="small text-muted">Send alert emails to the configured low-stock address.</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <div class="form-check form-switch m-0">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              role="switch"
+              id="lowStockAlertsEnabled"
+              name="lowStockAlertsEnabled"
+              <%= lowStockEmailsEnabled ? "checked" : "" %>
+            />
+            <label class="form-check-label small" for="lowStockAlertsEnabled">
+              <%= lowStockEmailsEnabled ? "Enabled" : "Disabled" %>
+            </label>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <% if (notifications && notifications.length > 0) { %>
+  <div class="alert alert-warning" role="alert">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <strong>Low stock notifications</strong>
+      <span class="badge text-bg-dark"><%= notifications.length %> item(s)</span>
+    </div>
+    <ul class="mb-0 ps-3">
+      <% notifications.slice(0, 8).forEach((notice) => { %>
+      <li>
+        <strong><%= notice.scope %></strong>
+        <% if (notice.supplierName) { %>
+        - <%= notice.supplierName %>
+        <% } %>
+        - <%= notice.itemName %>: <%= notice.quantity %> case(s)
+        <span class="badge <%= notice.priority.badgeClass %>"><%= notice.priority.label %></span>
+      </li>
+      <% }) %>
+      <% if (notifications.length > 8) { %>
+      <li>...and <%= notifications.length - 8 %> more.</li>
+      <% } %>
+    </ul>
+  </div>
+  <% } %>
+
+  <%- include("partials/inventory/website-stock-table") %>
+  <%- include("partials/inventory/supplier-card-grid") %>
+</main>
+
+<%- include("partials/inventory/supplier-modals") %>
+<%- include("partials/inventory/history-modals") %>
+
+<script src="/js/admin-inventory.js"></script>
+
+<%- include("partials/footer") %>

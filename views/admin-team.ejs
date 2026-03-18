@@ -2,7 +2,7 @@
 <%- include("partials/navbar") %>
 <%- include("partials/admin-nav") %>
 
-<main class="container py-5">
+<main class="container py-5 admin-shell">
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
     <div>
       <h1 class="h3 mb-1">Admin Team</h1>
@@ -82,12 +82,20 @@
               <td><%= invite.role %></td>
               <td><%= new Date(invite.expiresAt).toLocaleString() %></td>
               <td class="text-end">
-                <form action="/admin/team/invite/<%= invite.id %>/revoke" method="POST">
-                  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-                  <button class="btn btn-sm btn-outline-danger" type="submit">
-                    Revoke
-                  </button>
-                </form>
+                <div class="d-inline-flex gap-2">
+                  <form action="/admin/team/invite/<%= invite.id %>/resend" method="POST">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                    <button class="btn btn-sm btn-outline-primary" type="submit">
+                      Resend
+                    </button>
+                  </form>
+                  <form action="/admin/team/invite/<%= invite.id %>/revoke" method="POST">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                    <button class="btn btn-sm btn-outline-danger" type="submit">
+                      Revoke
+                    </button>
+                  </form>
+                </div>
               </td>
             </tr>
             <% }) %>

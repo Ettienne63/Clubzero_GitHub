@@ -537,6 +537,11 @@ const getInvoiceStatusBadge = (invoice) =>
 const hasUnavailableItems = (cartItems) =>
   cartItems.some((item) => !item.product?.isActive);
 
+const getInsufficientStockItem = (cartItems) =>
+  cartItems.find(
+    (item) => Number(item.quantity || 0) > Number(item.product?.websiteStock || 0),
+  );
+
 const getAddressBookEntries = async (userId) => {
   if (!hasAddressBookModel()) {
     return [];
@@ -648,6 +653,26 @@ const finalizePaidOrder = async ({
     const alreadyPaid = order.status === "PAID";
 
     if (!alreadyPaid) {
+      for (const item of order.orderItems) {
+        const updated = await tx.product.updateMany({
+          where: {
+            id: item.productId,
+            websiteStock: { gte: item.quantity },
+          },
+          data: {
+            websiteStock: { decrement: item.quantity },
+          },
+        });
+
+        if (!updated.count) {
+          const stockError = new Error(
+            `${item.productName} is out of stock for this order.`,
+          );
+          stockError.code = "INSUFFICIENT_STOCK";
+          throw stockError;
+        }
+      }
+
       await tx.order.update({
         where: { id: order.id },
         data: { status: "PAID" },
@@ -772,6 +797,15 @@ exports.getCheckout = async (req, res) => {
     );
   }
 
+  const insufficientStockItem = getInsufficientStockItem(cartItems);
+  if (insufficientStockItem) {
+    return res.redirect(
+      `/auth/cart?error=${encodeURIComponent(
+        `${insufficientStockItem.product?.name || "An item"} doesn’t have enough stock for your quantity. Please reduce it and try again.`,
+      )}`,
+    );
+  }
+
   const buyer = await prisma.user.findUnique({
     where: { id: userId },
     select: { affiliateBalance: true },
@@ -824,6 +858,35 @@ exports.postCheckout = async (req, res) => {
     );
   }
 
+  const insufficientStockItem = getInsufficientStockItem(cartItems);
+  if (insufficientStockItem) {
+    return res.redirect(
+      `/auth/cart?error=${encodeURIComponent(
+        `${insufficientStockItem.product?.name || "An item"} doesn’t have enough stock for your quantity. Please reduce it and try again.`,
+      )}`,
+    );
+  }
+
+  const buyer = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      referredByAffiliateId: true,
+      affiliateBalance: true,
+    },
+  });
+  const availableAffiliateBalance = Math.max(
+    Number(buyer?.affiliateBalance || 0),
+    0,
+  );
+  const wantsAffiliateCredit = Boolean(formData.applyAffiliateCredit);
+  const creditApplied = wantsAffiliateCredit
+    ? Math.min(availableAffiliateBalance, Number(total))
+    : 0;
+  const payableTotal = Math.max(Number(total) - creditApplied, 0);
+
   if (!hasAllRequiredDeliveryFields(formData) && Number.isInteger(selectedAddressId)) {
     const selectedAddress = savedAddresses.find(
       (address) => address.id === selectedAddressId,
@@ -854,26 +917,6 @@ exports.postCheckout = async (req, res) => {
       discountsEnabled,
     });
   }
-
-  const buyer = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      referredByAffiliateId: true,
-      affiliateBalance: true,
-    },
-  });
-  const availableAffiliateBalance = Math.max(
-    Number(buyer?.affiliateBalance || 0),
-    0,
-  );
-  const wantsAffiliateCredit = Boolean(formData.applyAffiliateCredit);
-  const creditApplied = wantsAffiliateCredit
-    ? Math.min(availableAffiliateBalance, Number(total))
-    : 0;
-  const payableTotal = Math.max(Number(total) - creditApplied, 0);
 
   let affiliateReferrerUserId = Number.parseInt(
     req.session?.refAffiliateUserId,
@@ -1068,12 +1111,28 @@ exports.postCheckout = async (req, res) => {
   }
 
   if (payableTotal <= 0) {
-    const affiliateRate = await getAffiliateRate();
-    const finalized = await finalizePaidOrder({
-      orderId: createdOrder.id,
-      paidAt: new Date(),
-      affiliateRate,
-    });
+    let finalized = null;
+    try {
+      const affiliateRate = await getAffiliateRate();
+      finalized = await finalizePaidOrder({
+        orderId: createdOrder.id,
+        paidAt: new Date(),
+        affiliateRate,
+      });
+    } catch (error) {
+      if (error.code === "INSUFFICIENT_STOCK") {
+        await prisma.order.update({
+          where: { id: createdOrder.id },
+          data: { status: "PAYMENT_FAILED" },
+        });
+        return res.redirect(
+          `/auth/cart?error=${encodeURIComponent(
+            error.message || "One or more products no longer have stock.",
+          )}`,
+        );
+      }
+      throw error;
+    }
 
     if (finalized?.invoice) {
       await sendInvoiceForOrder({
@@ -1291,6 +1350,13 @@ exports.handlePaystackCallback = async (req, res) => {
 
     return res.redirect(`/auth/orders/thank-you/${finalized.order.id}`);
   } catch (error) {
+    if (error.code === "INSUFFICIENT_STOCK") {
+      return res.redirect(
+        `/auth/cart?error=${encodeURIComponent(
+          error.message || "One or more products no longer have stock.",
+        )}`,
+      );
+    }
     logger.warn("paystack_verify_failed", {
       reference,
       error: error.message,

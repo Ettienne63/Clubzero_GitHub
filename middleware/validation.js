@@ -135,6 +135,10 @@ const productValidationRules = [
   body("price")
     .isFloat({ min: 0 })
     .withMessage("Price must be a valid non-negative number."),
+  body("websiteStock")
+    .optional({ values: "falsy" })
+    .isInt({ min: 0 })
+    .withMessage("Website stock must be a whole number 0 or greater."),
   body("discountPercent")
     .optional({ values: "falsy" })
     .isFloat({ min: 0, max: 90 })

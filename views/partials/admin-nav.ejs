@@ -1,6 +1,24 @@
 <% if (user && user.isAdmin) { %>
+<% const adminSectionTitles = {
+  "/admin": "Product Settings",
+  "/admin/inventory": "Inventory Tracking",
+  "/admin/promo": "Promotions",
+  "/admin/locations": "Store Locations",
+  "/admin/payments": "Payments",
+  "/admin/affiliate/stats": "Affiliates",
+  "/admin/stockists": "Stockist Requests",
+  "/admin/home-hero": "Homepage Hero",
+  "/admin/team": "Team"
+}; %>
+<% const currentAdminSection = adminSectionTitles[currentPath] || "Control Center"; %>
 <div class="admin-nav-wrap">
   <div class="container">
+    <div class="admin-nav-header">
+      <div>
+        <p class="admin-nav-kicker mb-1">Club Zero Admin</p>
+        <h2 class="admin-nav-title mb-0"><%= currentAdminSection %></h2>
+      </div>
+    </div>
     <nav class="admin-nav">
       <a
         href="/admin"
@@ -9,10 +27,10 @@
         Products
       </a>
       <a
-        href="/admin/home-hero"
-        class="admin-nav-link <%= currentPath === '/admin/home-hero' ? 'is-active' : '' %>"
+        href="/admin/inventory"
+        class="admin-nav-link <%= currentPath === '/admin/inventory' ? 'is-active' : '' %>"
       >
-        Homepage Hero
+        Inventory
       </a>
       <a
         href="/admin/promo"
@@ -27,10 +45,10 @@
         Store Locations
       </a>
       <a
-        href="/admin/stockists"
-        class="admin-nav-link <%= currentPath === '/admin/stockists' ? 'is-active' : '' %>"
+        href="/admin/payments"
+        class="admin-nav-link <%= currentPath === '/admin/payments' ? 'is-active' : '' %>"
       >
-        Stockist Requests
+        Payments
       </a>
       <a
         href="/admin/affiliate/stats"
@@ -39,10 +57,16 @@
         Affiliates
       </a>
       <a
-        href="/admin/payments"
-        class="admin-nav-link <%= currentPath === '/admin/payments' ? 'is-active' : '' %>"
+        href="/admin/stockists"
+        class="admin-nav-link <%= currentPath === '/admin/stockists' ? 'is-active' : '' %>"
       >
-        Payments
+        Stockist Requests
+      </a>
+      <a
+        href="/admin/home-hero"
+        class="admin-nav-link <%= currentPath === '/admin/home-hero' ? 'is-active' : '' %>"
+      >
+        Homepage Hero
       </a>
       <% if (user.isOwner) { %>
       <a

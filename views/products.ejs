@@ -67,6 +67,10 @@
     <% const discountPercent = Number(product.discountPercent || 0); %>
     <% const hasDiscount = Boolean(discountsEnabled) && product.discountEnabled !== false && discountPercent > 0; %>
     <% const discountedPrice = hasDiscount ? Number(product.price) * (1 - discountPercent / 100) : Number(product.price); %>
+    <% const websiteStock = Number(product.websiteStock || 0); %>
+    <% const isOutOfStock = websiteStock <= 0; %>
+    <% const showStockOnCard = product.showStockOnCard !== false; %>
+    <% const stockLabel = websiteStock === 1 ? "Only 1 case left" : `Only ${websiteStock} cases left`; %>
     <div class="col-12">
       <article class="card shadow-sm product-list-card">
         <div class="row g-0">
@@ -96,6 +100,13 @@
                     <% } %>
                     <% if (hasDiscount) { %>
                     <span class="discount-badge"><%= discountPercent.toFixed(0) %>% Off</span>
+                    <% } %>
+                    <% if (showStockOnCard) { %>
+                      <% if (isOutOfStock) { %>
+                      <span class="product-pill bg-danger text-white">Out Of Stock</span>
+                      <% } else { %>
+                    <span class="product-pill product-pill-muted"><%= stockLabel %></span>
+                      <% } %>
                     <% } %>
                     <span class="product-pill product-pill-muted">Zero Sugar</span>
                   </div>
@@ -141,8 +152,11 @@
                     class="form-control"
                     style="max-width: 90px"
                     aria-label="Cases"
+                    <%= isOutOfStock ? "disabled" : "" %>
                   />
-                  <button type="submit" class="btn btn-primary">Add Case(s)</button>
+                  <button type="submit" class="btn btn-primary" <%= isOutOfStock ? "disabled" : "" %>>
+                    <%= isOutOfStock ? "Unavailable" : "Add Case(s)" %>
+                  </button>
                 </form>
                 <% } else { %>
                 <a href="/auth/login" class="btn btn-outline-primary">Login to buy</a>

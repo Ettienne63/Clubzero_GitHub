@@ -61,6 +61,8 @@ model Product {
   description     String?
   price           Float
   imageUrl        String
+  websiteStock    Int         @default(0)
+  lowStockThreshold Int       @default(5)
   createdAt       DateTime    @default(now())
   nutritionInfo   String?
   ingredients     String?
@@ -69,6 +71,7 @@ model Product {
   isActive        Boolean     @default(true)
   discountPercent Float       @default(0)
   discountEnabled Boolean     @default(true)
+  showStockOnCard Boolean     @default(false)
   cartItems       CartItem[]
   orderItems      OrderItem[]
   reviews         Review[]
@@ -286,6 +289,51 @@ model AppSetting {
   value     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Supplier {
+  id           Int                  @id @default(autoincrement())
+  name         String               @unique
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+  notes        String?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  customProducts SupplierCustomProduct[]
+}
+
+model SupplierCustomProduct {
+  id         Int      @id @default(autoincrement())
+  supplierId Int
+  name       String
+  quantity   Int      @default(0)
+  lowStockThreshold Int @default(5)
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@unique([supplierId, name])
+  @@index([supplierId])
+}
+
+model InventoryHistory {
+  id               Int      @id @default(autoincrement())
+  scope            String
+  entityId         Int
+  action           String
+  itemName         String
+  reason           String?
+  supplierName     String?
+  previousQuantity Int?
+  changeQuantity   Int?
+  newQuantity      Int?
+  actorEmail       String?
+  createdAt        DateTime @default(now())
+
+  @@index([scope, entityId, createdAt])
+  @@index([createdAt])
 }
 
 model user_sessions {

@@ -1,0 +1,573 @@
+<div class="modal fade" id="addSupplierModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title fs-5">Add Supplier</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form action="/admin/inventory/suppliers" method="POST" class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Supplier Name</label>
+            <input name="name" class="form-control" required />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Contact Name</label>
+            <input name="contactName" class="form-control" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Contact Email</label>
+            <input name="contactEmail" type="email" class="form-control" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Contact Phone</label>
+            <input name="contactPhone" class="form-control" />
+          </div>
+          <div class="col-12">
+            <label class="form-label">Notes</label>
+            <input name="notes" class="form-control" />
+          </div>
+          <div class="col-12 d-flex justify-content-end">
+            <button type="submit" class="btn btn-success">Create Supplier</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% if (suppliers && suppliers.length > 0) { %>
+  <% suppliers.forEach((supplier) => { %>
+  <div class="modal fade" id="supplierModal-<%= supplier.id %>" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title fs-5"><%= supplier.name %> Inventory</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="d-flex justify-content-end align-items-start gap-2 mb-2">
+            <form
+              action="/admin/inventory/suppliers/<%= supplier.id %>/delete"
+              method="POST"
+            >
+              <button
+                type="submit"
+                class="btn btn-outline-danger btn-sm"
+                onclick="return confirm('Delete this supplier and all linked stock?');"
+              >
+                Delete Supplier
+              </button>
+            </form>
+          </div>
+
+          <details class="admin-compact-details mb-4">
+            <summary>Supplier Details</summary>
+            <form action="/admin/inventory/suppliers/<%= supplier.id %>/edit" method="POST" class="row g-2">
+              <div class="col-md-4">
+                <label class="form-label">Supplier Name</label>
+                <input name="name" class="form-control form-control-sm" value="<%= supplier.name %>" required />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Contact Name</label>
+                <input name="contactName" class="form-control form-control-sm" value="<%= supplier.contactName || '' %>" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Contact Email</label>
+                <input name="contactEmail" type="email" class="form-control form-control-sm" value="<%= supplier.contactEmail || '' %>" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Contact Phone</label>
+                <input name="contactPhone" class="form-control form-control-sm" value="<%= supplier.contactPhone || '' %>" />
+              </div>
+              <div class="col-md-8">
+                <label class="form-label">Notes</label>
+                <input name="notes" class="form-control form-control-sm" value="<%= supplier.notes || '' %>" />
+              </div>
+            </form>
+          </details>
+
+          <h3 class="h6 mb-2">Supplier-Only Products</h3>
+         
+          <details class="admin-compact-details mb-3 supplier-import-panel">
+            <summary>Add from Website Products</summary>
+            <p class="small text-muted mb-2 supplier-import-subtitle">
+              Pick one or more website products and add them to this supplier in one step.
+            </p>
+            <form
+              action="/admin/inventory/suppliers/<%= supplier.id %>/custom-products/import-website"
+              method="POST"
+              class="row g-2 align-items-end mt-1"
+            >
+              <div class="col-md-7">
+                <label class="form-label form-label-sm mb-1">Website Products</label>
+                <div class="supplier-import-picker" data-import-picker>
+                  <input
+                    type="search"
+                    class="form-control form-control-sm mb-2"
+                    placeholder="Search website products..."
+                    data-import-search
+                    autocomplete="off"
+                  />
+                  <div class="supplier-import-options" data-import-options>
+                    <% (products || []).forEach((websiteProduct) => { %>
+                    <label
+                      class="supplier-import-option"
+                      data-import-option
+                      data-search-text="<%= `${websiteProduct.name} ${websiteProduct.isActive ? 'visible' : 'hidden'}`.toLowerCase() %>"
+                    >
+                      <input
+                        type="checkbox"
+                        name="websiteProductIds"
+                        value="<%= websiteProduct.id %>"
+                        class="form-check-input"
+                        data-import-checkbox
+                      />
+                      <span>
+                        <%= websiteProduct.name %>
+                        <% if (!websiteProduct.isActive) { %>
+                        <span class="text-muted">(Hidden)</span>
+                        <% } %>
+                      </span>
+                    </label>
+                    <% }) %>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center mt-2">
+                    <div class="form-text mb-0">Select one or more products.</div>
+                    <span class="small text-muted" data-import-selected-count>0 selected</span>
+                  </div>
+                  <div class="small text-muted d-none mt-1" data-import-empty>
+                    No matching products.
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-5">
+                <div class="supplier-import-settings">
+                <div class="row g-2">
+                  <div class="col-6">
+                <label class="form-label form-label-sm mb-1 supplier-import-field-label">Opening Stock</label>
+                <input
+                  name="quantity"
+                  type="number"
+                  min="0"
+                  step="1"
+                  class="form-control form-control-sm supplier-import-field-input"
+                  value="0"
+                  required
+                />
+                  </div>
+                  <div class="col-6">
+                <label class="form-label form-label-sm mb-1 supplier-import-field-label">Low Threshold</label>
+                <input
+                  name="lowStockThreshold"
+                  type="number"
+                  min="0"
+                  step="1"
+                  class="form-control form-control-sm supplier-import-field-input"
+                  value="5"
+                  required
+                />
+                  </div>
+                  <div class="col-12">
+                <label class="form-label form-label-sm mb-1 supplier-import-field-label">Notes</label>
+                <textarea
+                  name="notes"
+                  class="form-control form-control-sm supplier-import-field-input"
+                  placeholder="Optional internal note"
+                  rows="3"
+                ></textarea>
+                  </div>
+                </div>
+                </div>
+              </div>
+              <div class="col-12 d-flex justify-content-end">
+                <button type="submit" class="btn btn-primary btn-sm px-3">
+                  Add Selected
+                </button>
+              </div>
+            </form>
+          </details>
+
+          <% if (!supplier.customProducts || supplier.customProducts.length === 0) { %>
+          <p class="text-muted mb-0 small">No supplier-only products yet.</p>
+          <% } else { %>
+          <div class="table-responsive inventory-table-wrap">
+            <table class="table table-sm table-striped align-middle mb-0 inventory-sticky-table inventory-responsive-table">
+              <thead>
+                <tr>
+                  <th style="min-width: 180px">Name</th>
+                  <th>Current Stock</th>
+                  <th>Low Threshold</th>
+                  <th>Priority</th>
+                  <th>Notes</th>
+                  <th style="min-width: 240px">Adjust Stock</th>
+                  <th>History</th>
+                  <th>Delete</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% supplier.customProducts.forEach((customProduct) => { %>
+                <tr class="<%= customProduct.stockPriority.rank === 3 ? 'table-danger' : (customProduct.stockPriority.rank === 2 ? 'table-warning' : '') %>">
+                  <td data-label="Name">
+                    <input
+                      name="name"
+                      form="custom-product-form-<%= customProduct.id %>"
+                      class="form-control form-control-sm d-none d-md-block inventory-name-input"
+                      value="<%= customProduct.name %>"
+                      required
+                    />
+                    <button
+                      type="button"
+                      class="btn btn-link p-0 text-start d-md-none inventory-mobile-edit-trigger"
+                      data-bs-toggle="modal"
+                      data-bs-target="#supplierCustomMobileEditModal-<%= customProduct.id %>"
+                    >
+                      <%= customProduct.name %>
+                    </button>
+                  </td>
+                  <td data-label="Current Stock">
+                      <strong><%= Number(customProduct.quantity || 0) %></strong>
+                  </td>
+                  <td data-label="Low Threshold" class="inventory-mobile-inline-control">
+                    <form
+                      action="/admin/inventory/suppliers/<%= supplier.id %>/custom-products/<%= customProduct.id %>/threshold"
+                      method="POST"
+                      class="d-flex gap-2 align-items-center"
+                      data-auto-submit-threshold
+                    >
+                      <input
+                        name="lowStockThreshold"
+                        type="number"
+                        min="0"
+                        step="1"
+                        class="form-control form-control-sm"
+                        value="<%= Number(customProduct.lowStockThreshold || 0) %>"
+                        required
+                        style="max-width: 90px"
+                        data-threshold-input
+                      />
+                    </form>
+                  </td>
+                  <td data-label="Priority">
+                    <span class="badge <%= customProduct.stockPriority.badgeClass %>">
+                      <%= customProduct.stockPriority.label %>
+                    </span>
+                  </td>
+                  <td data-label="Notes" class="inventory-mobile-inline-control">
+                    <details class="inventory-notes-expand">
+                      <summary class="inventory-notes-summary">
+                        <%= customProduct.notes ? customProduct.notes : "Add notes" %>
+                      </summary>
+                      <textarea
+                        name="notes"
+                        form="custom-product-form-<%= customProduct.id %>"
+                        class="form-control form-control-sm mt-2"
+                        rows="4"
+                      ><%= customProduct.notes || '' %></textarea>
+                    </details>
+                  </td>
+                  <td data-label="Adjust Stock" class="inventory-mobile-inline-control">
+                      <div class="d-flex gap-2 align-items-center">
+                        <input
+                          name="stockValue"
+                          form="custom-product-form-<%= customProduct.id %>"
+                          type="number"
+                          min="0"
+                          step="1"
+                          class="form-control form-control-sm"
+                          value="0"
+                          required
+                          style="max-width: 90px"
+                        />
+                        <select
+                          name="reason"
+                          form="custom-product-form-<%= customProduct.id %>"
+                          class="form-select form-select-sm"
+                          style="max-width: 170px"
+                          required
+                        >
+                          <option value="">Reason</option>
+                          <% (stockMovementReasonOptions || []).forEach((reasonOption) => { %>
+                          <option value="<%= reasonOption %>"><%= reasonOption.replace(/_/g, " ") %></option>
+                          <% }) %>
+                        </select>
+                        <button
+                          type="submit"
+                          name="action"
+                          value="add"
+                          form="custom-product-form-<%= customProduct.id %>"
+                          class="btn btn-primary btn-sm"
+                        >
+                          Add
+                        </button>
+                        <button
+                          type="submit"
+                          name="action"
+                          value="remove"
+                          form="custom-product-form-<%= customProduct.id %>"
+                          class="btn btn-danger btn-sm"
+                          <%= Number(customProduct.quantity || 0) <= 0 ? "disabled" : "" %>
+                        >
+                          Remove
+                        </button>
+                      </div>
+                   </td>
+                  <td data-label="History" class="inventory-mobile-inline-control">
+                    <% const customHistory = customHistoryByProductId && customHistoryByProductId[customProduct.id] ? customHistoryByProductId[customProduct.id] : []; %>
+                    <button
+                      type="button"
+                      class="btn btn-link btn-sm px-0"
+                      data-bs-toggle="modal"
+                      data-bs-target="#supplierCustomHistoryModal-<%= customProduct.id %>"
+                    >
+                      View (<%= customHistory.length %>)
+                    </button>
+                  </td>
+                  <td data-label="Delete" class="inventory-mobile-inline-control">
+                    <form
+                      id="custom-product-form-<%= customProduct.id %>"
+                      action="/admin/inventory/suppliers/<%= supplier.id %>/custom-products/<%= customProduct.id %>/edit"
+                      method="POST"
+                    ></form>
+                    <form
+                      action="/admin/inventory/suppliers/<%= supplier.id %>/custom-products/<%= customProduct.id %>/delete"
+                      method="POST"
+                    >
+                      <button
+                        type="submit"
+                        class="btn btn-outline-danger btn-sm"
+                        onclick="return confirm('Delete this supplier-only product?');"
+                      >
+                        Delete
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+  <% }) %>
+<% } %>
+
+<% if (products && products.length > 0) { %>
+  <% products.forEach((product) => { %>
+  <div class="modal fade" id="websiteMobileEditModal-<%= product.id %>" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title fs-5"><%= product.name %> Adjustments</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="small text-muted mb-2">
+            Current stock: <strong><%= Number(product.websiteStock || 0) %></strong>
+          </p>
+          <div class="mb-3">
+            <span class="badge <%= product.stockPriority.badgeClass %>">
+              <%= product.stockPriority.label %>
+            </span>
+          </div>
+
+          <form
+            action="/admin/inventory/products/<%= product.id %>/threshold"
+            method="POST"
+            class="mb-3 d-flex gap-2 align-items-end"
+          >
+            <div>
+              <label class="form-label form-label-sm mb-1">Low Threshold</label>
+              <input
+                name="lowStockThreshold"
+                type="number"
+                min="0"
+                step="1"
+                class="form-control form-control-sm"
+                value="<%= Number(product.lowStockThreshold || 0) %>"
+                required
+              />
+            </div>
+            <button type="submit" class="btn btn-outline-secondary btn-sm">Save</button>
+          </form>
+
+          <form
+            action="/admin/inventory/products/<%= product.id %>/stock-visibility"
+            method="POST"
+            class="mb-3 d-flex align-items-center gap-2"
+          >
+            <input type="hidden" name="showStockOnCard" value="off" />
+            <div class="form-check form-switch m-0">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                role="switch"
+                id="showStockOnCard-mobile-<%= product.id %>"
+                name="showStockOnCard"
+                <%= product.showStockOnCard !== false ? "checked" : "" %>
+              />
+            </div>
+            <button type="submit" class="btn btn-outline-secondary btn-sm">Save Display</button>
+          </form>
+
+          <form
+            action="/admin/inventory/website-stock/<%= product.id %>"
+            method="POST"
+            class="d-grid gap-2"
+          >
+            <div class="row g-2">
+              <div class="col-4">
+                <label class="form-label form-label-sm mb-1">Qty</label>
+                <input
+                  name="stockValue"
+                  type="number"
+                  min="0"
+                  step="1"
+                  class="form-control form-control-sm"
+                  value="0"
+                  required
+                />
+              </div>
+              <div class="col-8">
+                <label class="form-label form-label-sm mb-1">Reason</label>
+                <select name="reason" class="form-select form-select-sm" required>
+                  <option value="">Reason</option>
+                  <% (stockMovementReasonOptions || []).forEach((reasonOption) => { %>
+                  <option value="<%= reasonOption %>"><%= reasonOption.replace(/_/g, " ") %></option>
+                  <% }) %>
+                </select>
+              </div>
+            </div>
+            <div class="d-flex gap-2">
+              <button type="submit" name="action" value="add" class="btn btn-primary btn-sm">Add</button>
+              <button
+                type="submit"
+                name="action"
+                value="remove"
+                class="btn btn-danger btn-sm"
+                <%= Number(product.websiteStock || 0) <= 0 ? "disabled" : "" %>
+              >
+                Remove
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  <% }) %>
+<% } %>
+
+<% if (suppliers && suppliers.length > 0) { %>
+  <% suppliers.forEach((supplier) => { %>
+    <% if (supplier.customProducts && supplier.customProducts.length > 0) { %>
+      <% supplier.customProducts.forEach((customProduct) => { %>
+      <div class="modal fade" id="supplierCustomMobileEditModal-<%= customProduct.id %>" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2 class="modal-title fs-5"><%= customProduct.name %> Adjustments</h2>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <p class="small text-muted mb-2">
+                Supplier: <strong><%= supplier.name %></strong>
+              </p>
+              <p class="small text-muted mb-2">
+                Current stock: <strong><%= Number(customProduct.quantity || 0) %></strong>
+              </p>
+              <div class="mb-3">
+                <span class="badge <%= customProduct.stockPriority.badgeClass %>">
+                  <%= customProduct.stockPriority.label %>
+                </span>
+              </div>
+
+              <form
+                action="/admin/inventory/suppliers/<%= supplier.id %>/custom-products/<%= customProduct.id %>/threshold"
+                method="POST"
+                class="mb-3 d-flex gap-2 align-items-end"
+              >
+                <div>
+                  <label class="form-label form-label-sm mb-1">Low Threshold</label>
+                  <input
+                    name="lowStockThreshold"
+                    type="number"
+                    min="0"
+                    step="1"
+                    class="form-control form-control-sm"
+                    value="<%= Number(customProduct.lowStockThreshold || 0) %>"
+                    required
+                  />
+                </div>
+                <button type="submit" class="btn btn-outline-secondary btn-sm">Save</button>
+              </form>
+
+              <form
+                action="/admin/inventory/suppliers/<%= supplier.id %>/custom-products/<%= customProduct.id %>/edit"
+                method="POST"
+                class="d-grid gap-2"
+              >
+                <div>
+                  <label class="form-label form-label-sm mb-1">Name</label>
+                  <input
+                    name="name"
+                    class="form-control form-control-sm"
+                    value="<%= customProduct.name %>"
+                    required
+                  />
+                </div>
+                <div>
+                  <label class="form-label form-label-sm mb-1">Notes</label>
+                  <input
+                    name="notes"
+                    class="form-control form-control-sm"
+                    value="<%= customProduct.notes || '' %>"
+                  />
+                </div>
+                <div class="row g-2">
+                  <div class="col-4">
+                    <label class="form-label form-label-sm mb-1">Qty</label>
+                    <input
+                      name="stockValue"
+                      type="number"
+                      min="0"
+                      step="1"
+                      class="form-control form-control-sm"
+                      value="0"
+                      required
+                    />
+                  </div>
+                  <div class="col-8">
+                    <label class="form-label form-label-sm mb-1">Reason</label>
+                    <select name="reason" class="form-select form-select-sm" required>
+                      <option value="">Reason</option>
+                      <% (stockMovementReasonOptions || []).forEach((reasonOption) => { %>
+                      <option value="<%= reasonOption %>"><%= reasonOption.replace(/_/g, " ") %></option>
+                      <% }) %>
+                    </select>
+                  </div>
+                </div>
+                <div class="d-flex gap-2">
+                  <button type="submit" name="action" value="add" class="btn btn-primary btn-sm">Add</button>
+                  <button
+                    type="submit"
+                    name="action"
+                    value="remove"
+                    class="btn btn-danger btn-sm"
+                    <%= Number(customProduct.quantity || 0) <= 0 ? "disabled" : "" %>
+                  >
+                    Remove
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      <% }) %>
+    <% } %>
+  <% }) %>
+<% } %>

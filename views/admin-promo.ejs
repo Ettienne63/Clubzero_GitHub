@@ -2,7 +2,7 @@
 <%- include("partials/navbar") %>
 <%- include("partials/admin-nav") %>
 
-<main class="container py-5">
+<main class="container py-5 admin-shell">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
       <h1 class="h3 mb-1">Promotion Settings</h1>
@@ -33,7 +33,7 @@
         action="/admin/promo"
         method="POST"
         enctype="multipart/form-data"
-        class="admin-compact-form"
+        class="admin-compact-form admin-promo-form"
         id="promoSettingsForm"
       >
         <div class="form-check form-switch">
@@ -59,7 +59,7 @@
             placeholder="Limited Offer"
           />
         </div>
-          <div class="admin-compact-field admin-compact-field-wide">
+          <div class="admin-compact-field">
           <label for="promoTitle" class="form-label">Title</label>
           <input
             id="promoTitle"
@@ -71,7 +71,7 @@
         </div>
         </div>
         <div class="admin-compact-row">
-          <div class="admin-compact-field admin-compact-field-wide">
+          <div class="admin-compact-field">
           <label for="promoSubtitle" class="form-label">Subtitle</label>
           <input
             id="promoSubtitle"
@@ -81,13 +81,13 @@
             placeholder="Bright flavor, limited pricing."
           />
         </div>
-          <div class="admin-compact-field admin-compact-field-wide">
+          <div class="admin-compact-field">
           <label for="promoBody" class="form-label">Body</label>
           <textarea
             id="promoBody"
             name="promoBody"
             class="form-control"
-            rows="2"
+            rows="3"
           ><%= promoSettings?.body || '' %></textarea>
         </div>
         </div>
@@ -201,15 +201,6 @@
             accept="image/*"
           />
         </div>
-            <div class="admin-compact-field">
-          <label for="promoImageUrl" class="form-label">Or Image URL</label>
-          <input
-            id="promoImageUrl"
-            name="promoImageUrl"
-            class="form-control"
-            value="<%= promoSettings?.imageUrl || '' %>"
-          />
-        </div>
           </div>
           <div class="form-check">
           <input
@@ -236,7 +227,7 @@
         </details>
 
         <div class="admin-compact-row">
-          <div class="admin-compact-field admin-compact-field-wide">
+          <div class="admin-compact-field">
           <label for="promoFinePrint" class="form-label">Fine Print</label>
           <input
             id="promoFinePrint"
@@ -246,6 +237,16 @@
             placeholder="Available while supplies last."
           />
         </div>
+          <div class="admin-compact-field">
+            <label for="promoImageUrl" class="form-label">Image URL</label>
+            <input
+              id="promoImageUrl"
+              name="promoImageUrl"
+              class="form-control"
+              value="<%= promoSettings?.imageUrl || '' %>"
+              placeholder="https://..."
+            />
+          </div>
         </div>
 
         <div class="admin-compact-actions">

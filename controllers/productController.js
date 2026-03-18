@@ -63,7 +63,11 @@ const setRecentlyViewedProductIds = (req, ids) => {
 };
 
 const parseProductInput = (body, file, options = {}) => {
-  const { currentImageUrl = "", requireImage = true } = options;
+  const {
+    currentImageUrl = "",
+    currentWebsiteStock = null,
+    requireImage = true,
+  } = options;
   const name = (body.name || "").trim();
   const imageUrlFromInput = (body.imageUrl || "").trim();
   const description = (body.description || "").trim();
@@ -72,6 +76,11 @@ const parseProductInput = (body, file, options = {}) => {
   const bestFor = toOptionalText(body.bestFor);
   const storageInfo = toOptionalText(body.storageInfo);
   const price = Number.parseFloat(body.price);
+  const websiteStockRaw = (body.websiteStock || "").toString().trim();
+  const hasWebsiteStockInput = websiteStockRaw !== "";
+  const websiteStock = hasWebsiteStockInput
+    ? Number.parseInt(websiteStockRaw, 10)
+    : null;
   const discountPercentRaw = (body.discountPercent || "").toString().trim();
   const parsedDiscount = Number.parseFloat(discountPercentRaw);
   const discountPercent = discountPercentRaw
@@ -89,6 +98,10 @@ const parseProductInput = (body, file, options = {}) => {
     return { error: "Price must be a valid non-negative number." };
   }
 
+  if (hasWebsiteStockInput && (!Number.isInteger(websiteStock) || websiteStock < 0)) {
+    return { error: "Website stock must be a whole number 0 or greater." };
+  }
+
   if (discountPercentRaw && !Number.isFinite(parsedDiscount)) {
     return { error: "Discount must be a valid percentage." };
   }
@@ -97,19 +110,25 @@ const parseProductInput = (body, file, options = {}) => {
     return { error: "Discount must be between 0% and 90%." };
   }
 
-  return {
-    data: {
-      name,
-      imageUrl,
-      description,
-      price,
+  const data = {
+    name,
+    imageUrl,
+    description,
+    price,
       discountPercent,
       nutritionInfo,
-      ingredients,
-      bestFor,
-      storageInfo,
-    },
+    ingredients,
+    bestFor,
+    storageInfo,
   };
+
+  if (hasWebsiteStockInput) {
+    data.websiteStock = websiteStock;
+  } else if (!Number.isInteger(currentWebsiteStock)) {
+    data.websiteStock = 0;
+  }
+
+  return { data };
 };
 
 const normalizePromoUrl = (value, label) => {
@@ -724,6 +743,7 @@ exports.updateProduct = async (req, res) => {
 
   const parsed = parseProductInput(req.body, req.file, {
     currentImageUrl: existingProduct.imageUrl,
+    currentWebsiteStock: existingProduct.websiteStock,
     requireImage: true,
   });
 

@@ -9,6 +9,11 @@ const getEffectiveDiscountPercent = (product, discountsEnabled) =>
   discountsEnabled && product?.discountEnabled !== false
     ? product?.discountPercent
     : 0;
+const formatCaseCount = (count) => {
+  const normalized = Number(count || 0);
+  const label = normalized === 1 ? "case" : "cases";
+  return `${normalized} ${label}`;
+};
 const touchCartActivity = async (userId) => {
   if (!Number.isInteger(userId)) {
     return;
@@ -49,11 +54,17 @@ exports.getCart = async (req, res) => {
     );
     return sum + unitPrice * item.quantity;
   }, 0);
+  const totalCases = cartItems.reduce(
+    (sum, item) => sum + Number(item.quantity || 0),
+    0,
+  );
   const hasUnavailableItems = cartItems.some((item) => !item.product?.isActive);
 
   return res.render("cart", {
     cartItems,
     total,
+    totalCases,
+    success: req.query.success || null,
     error: req.query.error || null,
     hasUnavailableItems,
     discountsEnabled,
@@ -75,13 +86,44 @@ exports.addToCart = async (req, res) => {
 
   const product = await prisma.product.findFirst({
     where: { id: productId, isActive: true },
-    select: { id: true },
+    select: { id: true, websiteStock: true },
   });
 
   if (!product) {
     return res.redirect(
       `/auth/products?error=${encodeURIComponent(
         "This product is no longer available.",
+      )}`,
+    );
+  }
+
+  const existingCartItem = await prisma.cartItem.findUnique({
+    where: {
+      userId_productId: {
+        userId,
+        productId,
+      },
+    },
+    select: { quantity: true },
+  });
+  const existingQuantity = Number(existingCartItem?.quantity || 0);
+  const websiteStock = Number(product.websiteStock || 0);
+
+  if (websiteStock <= 0) {
+    return res.redirect(
+      `/auth/products?error=${encodeURIComponent(
+        `Only ${formatCaseCount(websiteStock)} left right now. Please reduce your quantity or check back soon.`,
+      )}`,
+    );
+  }
+
+  const remainingStock = Math.max(0, websiteStock - existingQuantity);
+  const quantityToAdd = Math.min(quantity, remainingStock);
+
+  if (quantityToAdd <= 0) {
+    return res.redirect(
+      `/auth/products?error=${encodeURIComponent(
+        `Only ${formatCaseCount(websiteStock)} left right now. Please reduce your quantity or check back soon.`,
       )}`,
     );
   }
@@ -96,15 +138,22 @@ exports.addToCart = async (req, res) => {
     create: {
       userId,
       productId,
-      quantity,
+      quantity: quantityToAdd,
     },
     update: {
-      quantity: { increment: quantity },
+      quantity: { increment: quantityToAdd },
     },
   });
   await touchCartActivity(userId);
 
-  return res.redirect("/auth/cart");
+  const successMessage =
+    quantityToAdd < quantity
+      ? `Added ${formatCaseCount(quantityToAdd)} to your cart. Only ${formatCaseCount(websiteStock)} available right now.`
+      : `Added ${formatCaseCount(quantityToAdd)} to your cart.`;
+
+  return res.redirect(
+    `/auth/cart?success=${encodeURIComponent(successMessage)}`,
+  );
 };
 
 exports.updateCartItem = async (req, res) => {
@@ -122,7 +171,7 @@ exports.updateCartItem = async (req, res) => {
 
   const cartItem = await prisma.cartItem.findUnique({
     where: { id: itemId },
-    select: { id: true, userId: true },
+    select: { id: true, userId: true, productId: true },
   });
 
   if (!cartItem || cartItem.userId !== userId) {
@@ -167,6 +216,25 @@ exports.updateCartItem = async (req, res) => {
     }
 
     return res.redirect("/auth/cart");
+  }
+
+  const stockProduct = await prisma.product.findUnique({
+    where: { id: cartItem.productId },
+    select: { websiteStock: true },
+  });
+  const websiteStock = Number(stockProduct?.websiteStock || 0);
+  if (quantity > websiteStock) {
+    if (isAjaxRequest(req)) {
+      return res.status(400).json({
+        success: false,
+        message: `Only ${formatCaseCount(websiteStock)} left right now. Please reduce your quantity or check back soon.`,
+      });
+    }
+    return res.redirect(
+      `/auth/cart?error=${encodeURIComponent(
+        `Only ${formatCaseCount(websiteStock)} left right now. Please reduce your quantity or check back soon.`,
+      )}`,
+    );
   }
 
   const updatedItem = await prisma.cartItem.update({

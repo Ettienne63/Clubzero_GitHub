@@ -5,13 +5,23 @@
   <section class="cz-band">
     <div class="container cz-section">
       <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">Your Cart</h1>
+        <div class="d-flex align-items-center gap-2">
+          <h1 class="h3 mb-0">Your Cart</h1>
+          <% if (Number(totalCases || 0) > 0) { %>
+          <span class="badge rounded-pill text-bg-primary"><%= Number(totalCases) %> case(s)</span>
+          <% } %>
+        </div>
         <a href="/auth/products" class="btn btn-outline-secondary">Continue Shopping</a>
       </div>
+
+      <% if (success) { %>
+      <div class="alert alert-success"><%= success %></div>
+      <% } %>
 
       <% if (error) { %>
       <div class="alert alert-danger"><%= error %></div>
       <% } %>
+      <div class="alert alert-danger d-none" role="alert" id="cart-inline-error"></div>
 
       <% if (!cartItems || cartItems.length === 0) { %>
       <div class="alert alert-info mb-0">
@@ -44,6 +54,8 @@
         <% const discountPercent = Number(item.product.discountPercent || 0); %>
         <% const hasDiscount = Boolean(discountsEnabled) && item.product.discountEnabled !== false && discountPercent > 0; %>
         <% const discountedPrice = hasDiscount ? Number(item.product.price) * (1 - discountPercent / 100) : Number(item.product.price); %>
+        <% const availableStock = Number(item.product.websiteStock || 0); %>
+        <% const canIncreaseQuantity = availableStock > Number(item.quantity || 0); %>
         <tr data-cart-item-row="<%= item.id %>">
           <td>
             <div class="d-flex align-items-center gap-3">
@@ -75,22 +87,29 @@
             <% } %>
           </td>
           <td>
-            <form
-              action="/auth/cart/<%= item.id %>/update"
-              method="POST"
-              class="d-flex gap-2"
-              data-cart-update-form
-            >
-              <input
-                type="number"
-                name="quantity"
-                min="1"
-                value="<%= item.quantity %>"
-                class="form-control"
-                style="max-width: 90px"
-              />
-            </form>
-            <div class="small text-muted mt-1" data-bottles-count><%= item.quantity * 12 %> bottles</div>
+            <div class="cart-qty-stack">
+              <form
+                action="/auth/cart/<%= item.id %>/update"
+                method="POST"
+                class="cart-qty-form"
+                data-cart-update-form
+              >
+                <input
+                  type="number"
+                  name="quantity"
+                  min="1"
+                  max="<%= Math.max(1, availableStock) %>"
+                  value="<%= item.quantity %>"
+                  class="form-control cart-qty-input"
+                />
+              </form>
+              <div
+                class="small text-muted cart-qty-meta"
+                data-bottles-count
+              >
+                <%= item.quantity * 12 %> bottles
+              </div>
+            </div>
           </td>
           <td data-subtotal-cell>
             R<%= (Number(discountedPrice) * item.quantity).toFixed(2) %>
@@ -99,6 +118,12 @@
             <form action="/auth/cart/<%= item.id %>/delete" method="POST">
               <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
             </form>
+            <div
+              class="small cart-stock-note mt-1 <%= canIncreaseQuantity ? 'invisible' : '' %>"
+              data-max-stock-note
+            >
+              Stock limit reached
+            </div>
           </td>
         </tr>
         <% }) %>
@@ -123,24 +148,56 @@
     if (!updateForms.length) return;
 
     const totalCell = document.getElementById("cart-total-cell");
+    const inlineError = document.getElementById("cart-inline-error");
     const csrfToken = document
       .querySelector('meta[name="csrf-token"]')
       ?.getAttribute("content");
     const formatCurrency = (amount) => `R${Number(amount).toFixed(2)}`;
+    const showInlineError = (message) => {
+      if (!inlineError) return;
+      inlineError.textContent = message || "Unable to update cart item.";
+      inlineError.classList.remove("d-none");
+    };
+    const clearInlineError = () => {
+      if (!inlineError) return;
+      inlineError.textContent = "";
+      inlineError.classList.add("d-none");
+    };
 
     updateForms.forEach((form) => {
       const quantityInput = form.querySelector('input[name="quantity"]');
       if (!quantityInput) return;
+      const row = form.closest("[data-cart-item-row]");
+      const maxStockNote = row?.querySelector("[data-max-stock-note]");
+
+      const refreshMaxStockNote = () => {
+        if (!maxStockNote) return;
+        const maxValue = Number.parseInt(quantityInput.getAttribute("max"), 10);
+        const quantityValue = Number.parseInt(quantityInput.value, 10) || 0;
+        const hasReachedMax = Number.isInteger(maxValue) && quantityValue >= maxValue;
+        maxStockNote.classList.toggle("invisible", !hasReachedMax);
+      };
 
       let timerId = null;
 
       const submitUpdate = async () => {
+        const maxValue = Number.parseInt(quantityInput.getAttribute("max"), 10);
+        const minValue = Number.parseInt(quantityInput.getAttribute("min"), 10) || 1;
+        const parsedValue = Number.parseInt(quantityInput.value, 10);
+        const normalizedValue = Number.isInteger(parsedValue) ? parsedValue : minValue;
+        const clampedValue = Number.isInteger(maxValue)
+          ? Math.min(Math.max(normalizedValue, minValue), maxValue)
+          : Math.max(normalizedValue, minValue);
+        quantityInput.value = String(clampedValue);
+        refreshMaxStockNote();
+
         const formData = new URLSearchParams();
         formData.set("quantity", quantityInput.value);
 
         quantityInput.disabled = true;
 
         try {
+          clearInlineError();
           const response = await fetch(form.action, {
             method: "POST",
             headers: {
@@ -167,7 +224,6 @@
             return;
           }
 
-          const row = form.closest("[data-cart-item-row]");
           if (row) {
             const bottles = row.querySelector("[data-bottles-count]");
             const subtotalCell = row.querySelector("[data-subtotal-cell]");
@@ -180,6 +236,7 @@
           }
 
           quantityInput.value = payload.quantity;
+          refreshMaxStockNote();
           if (totalCell) {
             totalCell.textContent = formatCurrency(payload.total);
           }
@@ -191,6 +248,11 @@
             if (cartCount > 0) {
               if (badge) {
                 badge.textContent = String(cartCount);
+              } else {
+                const newBadge = document.createElement("span");
+                newBadge.className = "badge rounded-pill text-bg-light text-primary";
+                newBadge.textContent = String(cartCount);
+                cartLink.appendChild(newBadge);
               }
             } else if (badge) {
               badge.remove();
@@ -198,7 +260,7 @@
           }
 
         } catch (error) {
-          window.alert(error.message || "Unable to update cart item.");
+          showInlineError(error.message || "Unable to update cart item.");
         } finally {
           quantityInput.disabled = false;
         }
@@ -210,6 +272,7 @@
       });
 
       quantityInput.addEventListener("input", () => {
+        refreshMaxStockNote();
         if (timerId) {
           clearTimeout(timerId);
         }
@@ -217,6 +280,8 @@
           form.requestSubmit();
         }, 250);
       });
+
+      refreshMaxStockNote();
     });
   })();
 </script>

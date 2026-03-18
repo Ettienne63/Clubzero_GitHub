@@ -37,6 +37,12 @@
           <% const discountPercent = Number(product.discountPercent || 0); %>
           <% const hasDiscount = Boolean(discountsEnabled) && product.discountEnabled !== false && discountPercent > 0; %>
           <% const discountedPrice = hasDiscount ? Number(product.price) * (1 - discountPercent / 100) : Number(product.price); %>
+          <% const websiteStock = Number(product.websiteStock || 0); %>
+          <% const isOutOfStock = websiteStock <= 0; %>
+          <% const stockLabel = websiteStock === 1 ? "Only 1 case left" : `Only ${websiteStock} cases left`; %>
+          <p class="small mb-2 <%= isOutOfStock ? 'text-danger' : 'text-muted' %>">
+            <%= isOutOfStock ? "Out of stock" : stockLabel %>
+          </p>
           <p class="fw-bold fs-5 mb-3">
             <% if (hasDiscount) { %>
             <span class="price-discounted">
@@ -65,8 +71,11 @@
               class="form-control"
               style="max-width: 100px"
               aria-label="Cases"
+              <%= isOutOfStock ? "disabled" : "" %>
             />
-            <button type="submit" class="btn btn-primary">Add Case(s)</button>
+            <button type="submit" class="btn btn-primary" <%= isOutOfStock ? "disabled" : "" %>>
+              <%= isOutOfStock ? "Unavailable" : "Add Case(s)" %>
+            </button>
           </form>
           <% } else { %>
           <a href="/auth/login" class="btn btn-outline-primary">Login to buy</a>
