@@ -101,12 +101,12 @@
                     <% if (hasDiscount) { %>
                     <span class="discount-badge"><%= discountPercent.toFixed(0) %>% Off</span>
                     <% } %>
-                    <% if (showStockOnCard) { %>
-                      <% if (isOutOfStock) { %>
-                      <span class="product-pill bg-danger text-white">Out Of Stock</span>
-                      <% } else { %>
+                    <% if (showStockOnCard || isOutOfStock) { %>
+                    <% if (isOutOfStock) { %>
+                    <span class="product-pill bg-danger text-white">Out Of Stock</span>
+                    <% } else { %>
                     <span class="product-pill product-pill-muted"><%= stockLabel %></span>
-                      <% } %>
+                    <% } %>
                     <% } %>
                     <span class="product-pill product-pill-muted">Zero Sugar</span>
                   </div>
