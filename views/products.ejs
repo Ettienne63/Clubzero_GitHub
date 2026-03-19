@@ -69,7 +69,7 @@
     <% const discountedPrice = hasDiscount ? Number(product.price) * (1 - discountPercent / 100) : Number(product.price); %>
     <% const websiteStock = Number(product.websiteStock || 0); %>
     <% const isOutOfStock = websiteStock <= 0; %>
-    <% const showStockOnCard = product.showStockOnCard !== false; %>
+    <% const showStockOnCard = product.showStockOnCard === true; %>
     <% const stockLabel = websiteStock === 1 ? "Only 1 case left" : `Only ${websiteStock} cases left`; %>
     <div class="col-12">
       <article class="card shadow-sm product-list-card">

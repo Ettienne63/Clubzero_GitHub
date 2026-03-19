@@ -3,21 +3,29 @@
   const forms = document.querySelectorAll("form");
   const toggleInput = document.getElementById("lowStockAlertsEnabled");
   const toggleForm = document.getElementById("lowStockAlertsForm");
+  const persistUiState = (form) => {
+    const modalEl = form?.closest(".modal");
+    const state = {
+      scrollY: window.scrollY || 0,
+      modalId: modalEl ? modalEl.id : null,
+    };
+    window.sessionStorage.setItem(stateKey, JSON.stringify(state));
+  };
 
   if (toggleInput && toggleForm) {
     toggleInput.addEventListener("change", () => {
+      persistUiState(toggleForm);
+      if (typeof toggleForm.requestSubmit === "function") {
+        toggleForm.requestSubmit();
+        return;
+      }
       toggleForm.submit();
     });
   }
 
   forms.forEach((form) => {
     form.addEventListener("submit", () => {
-      const modalEl = form.closest(".modal");
-      const state = {
-        scrollY: window.scrollY || 0,
-        modalId: modalEl ? modalEl.id : null,
-      };
-      window.sessionStorage.setItem(stateKey, JSON.stringify(state));
+      persistUiState(form);
     });
   });
 
@@ -56,6 +64,16 @@
     toggle.addEventListener("change", () => {
       const form = toggle.closest("form");
       if (form) {
+        const modalEl = form.closest(".modal");
+        const state = {
+          scrollY: window.scrollY || 0,
+          modalId: modalEl ? modalEl.id : null,
+        };
+        window.sessionStorage.setItem("adminInventoryUiState", JSON.stringify(state));
+        if (typeof form.requestSubmit === "function") {
+          form.requestSubmit();
+          return;
+        }
         form.submit();
       }
     });

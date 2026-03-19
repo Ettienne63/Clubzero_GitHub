@@ -5,6 +5,7 @@
     const forms = document.querySelectorAll(formSelector);
     const autoSubmitToggleId = <%- JSON.stringify(typeof autoSubmitToggleId === "string" ? autoSubmitToggleId : null) %>;
     const autoSubmitFormId = <%- JSON.stringify(typeof autoSubmitFormId === "string" ? autoSubmitFormId : null) %>;
+    const skipModalRestoreOnSuccess = <%- JSON.stringify(typeof skipModalRestoreOnSuccess !== "undefined" ? Boolean(skipModalRestoreOnSuccess) : false) %>;
 
     if (autoSubmitToggleId && autoSubmitFormId) {
       const toggleInput = document.getElementById(autoSubmitToggleId);
@@ -44,6 +45,13 @@
 
       if (Number.isFinite(state?.scrollY)) {
         window.scrollTo(0, state.scrollY);
+      }
+
+      if (skipModalRestoreOnSuccess) {
+        const params = new URLSearchParams(window.location.search || "");
+        if (params.has("success")) {
+          return;
+        }
       }
 
       if (state?.modalId && window.bootstrap?.Modal) {

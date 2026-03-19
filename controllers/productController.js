@@ -708,7 +708,12 @@ exports.createProduct = async (req, res) => {
   }
 
   try {
-    await prisma.product.create({ data: parsed.data });
+    await prisma.product.create({
+      data: {
+        ...parsed.data,
+        showStockOnCard: false,
+      },
+    });
     return res.redirect("/admin?success=Product+created");
   } catch (error) {
     const products = await getProducts();

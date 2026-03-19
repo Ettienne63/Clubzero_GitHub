@@ -84,7 +84,7 @@
                       id="showStockOnCard-<%= product.id %>"
                       name="showStockOnCard"
                       data-auto-submit="stock-visibility"
-                      <%= product.showStockOnCard !== false ? "checked" : "" %>
+                      <%= product.showStockOnCard === true ? "checked" : "" %>
                     />
                   </div>
                 </form>

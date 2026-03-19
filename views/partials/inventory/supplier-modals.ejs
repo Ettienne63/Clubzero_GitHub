@@ -420,7 +420,7 @@
                 role="switch"
                 id="showStockOnCard-mobile-<%= product.id %>"
                 name="showStockOnCard"
-                <%= product.showStockOnCard !== false ? "checked" : "" %>
+                <%= product.showStockOnCard === true ? "checked" : "" %>
               />
             </div>
             <button type="submit" class="btn btn-outline-secondary btn-sm">Save Display</button>
