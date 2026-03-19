@@ -1,4 +1,4 @@
-<%- include("partials/header",{title: "About"}) %>
+<%- include("partials/header",{title: "About", preloadImageUrl: "/images/Mango,Grape,tropical flavours with desription.jpeg"}) %>
 <%- include("partials/navbar") %>
 <main class="cz-banded">
   <section class="cz-band cz-band--custom about-intro-section cz-section">
@@ -28,8 +28,10 @@
               src="/images/Mango,Grape,tropical flavours with desription.jpeg"
               alt="Club Zero product"
               class="about-intro-image"
-              loading="lazy"
-              decoding="async"
+              width="1024"
+              height="1024"
+              loading="eager"
+              fetchpriority="high"
             />
           </div>
         </div>

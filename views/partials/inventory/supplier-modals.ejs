@@ -1,15 +1,24 @@
-<div class="modal fade" id="addSupplierModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="addPrivateSupplierModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 class="modal-title fs-5">Add Supplier</h2>
+        <h2 class="modal-title fs-5">Add Private Seller (No Store Location)</h2>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
+        <p class="small text-muted mb-3">
+          Use this form for privately owned sellers who do not operate from a fixed store location.
+        </p>
         <form action="/admin/inventory/suppliers" method="POST" class="row g-3">
+          <input type="hidden" name="supplierType" value="PRIVATE_NO_LOCATION" />
           <div class="col-md-6">
-            <label class="form-label">Supplier Name</label>
-            <input name="name" class="form-control" required />
+            <label class="form-label">Seller Name</label>
+            <input
+              name="name"
+              class="form-control"
+              required
+              placeholder="e.g. Jane Smith"
+            />
           </div>
           <div class="col-md-6">
             <label class="form-label">Contact Name</label>
@@ -25,10 +34,14 @@
           </div>
           <div class="col-12">
             <label class="form-label">Notes</label>
-            <input name="notes" class="form-control" />
+            <input
+              name="notes"
+              class="form-control"
+              placeholder="Optional details, for example delivery area or schedule."
+            />
           </div>
           <div class="col-12 d-flex justify-content-end">
-            <button type="submit" class="btn btn-success">Create Supplier</button>
+            <button type="submit" class="btn btn-success">Create Private Seller</button>
           </div>
         </form>
       </div>

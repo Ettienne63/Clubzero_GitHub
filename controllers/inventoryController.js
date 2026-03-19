@@ -141,6 +141,14 @@ exports.createSupplier = async (req, res) => {
   const contactEmail = toSafeText(req.body.contactEmail, 254);
   const contactPhone = toSafeText(req.body.contactPhone, 40);
   const notes = toSafeText(req.body.notes, 2000);
+  const supplierType = String(req.body.supplierType || "")
+    .trim()
+    .toUpperCase();
+  const notesPrefix =
+    supplierType === "PRIVATE_NO_LOCATION"
+      ? "[Private seller - no store location]"
+      : "";
+  const normalizedNotes = [notesPrefix, notes].filter(Boolean).join(" ");
 
   if (!name) {
     return redirectInventoryError(res, "Supplier name is required.");
@@ -153,7 +161,7 @@ exports.createSupplier = async (req, res) => {
         contactName,
         contactEmail,
         contactPhone,
-        notes,
+        notes: normalizedNotes,
       },
     });
     return redirectInventorySuccess(res, "Supplier created.");
@@ -175,6 +183,7 @@ exports.updateSupplier = async (req, res) => {
   const contactEmail = toSafeText(req.body.contactEmail, 254);
   const contactPhone = toSafeText(req.body.contactPhone, 40);
   const notes = toSafeText(req.body.notes, 2000);
+  const privateSellerTag = "[Private seller - no store location]";
 
   if (!Number.isInteger(supplierId)) {
     return redirectInventoryError(res, "Invalid supplier id.");
@@ -185,6 +194,19 @@ exports.updateSupplier = async (req, res) => {
   }
 
   try {
+    const existingSupplier = await prisma.supplier.findUnique({
+      where: { id: supplierId },
+      select: { notes: true },
+    });
+    const shouldKeepPrivateTag = String(existingSupplier?.notes || "")
+      .toLowerCase()
+      .includes(privateSellerTag.toLowerCase());
+    const normalizedNotes =
+      shouldKeepPrivateTag &&
+      !String(notes || "").toLowerCase().includes(privateSellerTag.toLowerCase())
+        ? [privateSellerTag, notes].filter(Boolean).join(" ")
+        : notes;
+
     await prisma.supplier.update({
       where: { id: supplierId },
       data: {
@@ -192,7 +214,7 @@ exports.updateSupplier = async (req, res) => {
         contactName,
         contactEmail,
         contactPhone,
-        notes,
+        notes: normalizedNotes,
       },
     });
     return redirectInventorySuccess(res, "Supplier updated.");
@@ -434,6 +456,7 @@ exports.createSupplierCustomProduct = async (req, res) => {
     await maybeSendLowStockAlert({
       scope: "SUPPLIER_CUSTOM",
       entityId: product.id,
+      supplierId,
       supplierName: supplier?.name || null,
       itemName: product.name,
       quantity: product.quantity,
@@ -554,6 +577,7 @@ exports.importSupplierCustomProductsFromWebsite = async (req, res) => {
         await maybeSendLowStockAlert({
           scope: "SUPPLIER_CUSTOM",
           entityId: createdProduct.id,
+          supplierId,
           supplierName: supplier.name,
           itemName: createdProduct.name,
           quantity: createdProduct.quantity,
@@ -719,6 +743,7 @@ exports.updateSupplierCustomProduct = async (req, res) => {
     await maybeSendLowStockAlert({
       scope: "SUPPLIER_CUSTOM",
       entityId: customProduct.id,
+      supplierId,
       supplierName: supplier?.name || null,
       itemName: customProduct.name,
       quantity: customProduct.quantity,
@@ -873,6 +898,7 @@ exports.updateSupplierCustomLowStockThreshold = async (req, res) => {
     await maybeSendLowStockAlert({
       scope: "SUPPLIER_CUSTOM",
       entityId: customProduct.id,
+      supplierId,
       supplierName: supplier?.name || null,
       itemName: customProduct.name,
       quantity: customProduct.quantity,

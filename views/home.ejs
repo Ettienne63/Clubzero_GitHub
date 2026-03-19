@@ -1,4 +1,4 @@
-<%- include("partials/header", { title: "Home" }) %>
+<%- include("partials/header", { title: "Home", preloadImageUrl: homeHero?.imageUrl }) %>
 <%- include("partials/navbar") %>
 <main class="home-page cz-banded">
   <section class="cz-band cz-band--custom hero hero-clean about-intro-section cz-section">
@@ -51,8 +51,10 @@
               src="<%= homeHero.imageUrl %>"
               alt="<%= homeHero.title || 'Club Zero' %>"
               class="about-intro-image"
-              loading="lazy"
-              decoding="async"
+              width="1024"
+              height="1024"
+              loading="eager"
+              fetchpriority="high"
             />
           </div>
           <% } else { %>

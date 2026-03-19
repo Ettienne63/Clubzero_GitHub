@@ -40,6 +40,9 @@ const homeController = require("./controllers/homeController");
 const { getPromoSettings } = require("./lib/promoSettings");
 const { getHomeHeroSettings } = require("./lib/homeHeroSettings");
 const { startAbandonedCartScheduler } = require("./lib/abandonedCart");
+const {
+  startDailyOutOfStockSummaryScheduler,
+} = require("./lib/outOfStockSummary");
 const { readStoreLocations } = require("./lib/storeLocations");
 const { prisma } = require("./prisma/lib/prisma");
 const APPROVED_AFFILIATE_STATUS = "APPROVED";
@@ -604,6 +607,7 @@ sessionStore.ready
       });
     });
     startAbandonedCartScheduler();
+    startDailyOutOfStockSummaryScheduler();
   })
   .catch((error) => {
     logger.error("session_store_boot_failed", {
