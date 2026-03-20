@@ -8,10 +8,10 @@
           <% if (homeHero && homeHero.badge && homeHero.badge.trim().toLowerCase() !== "club zero") { %>
           <span class="about-kicker"><%= homeHero.badge %></span>
           <% } %>
-          <h1 class="display-4 fw-bold mb-3">
+          <h1 class="display-4 fw-bold mb-3 home-hero-title">
             <%= homeHero?.title || "Refresh Your Day" %>
           </h1>
-          <p class="lead text-secondary mb-4">
+          <p class="lead text-secondary mb-4 home-hero-subtitle">
             <%= homeHero?.subtitle || "Zero sugar. Low calories. Big flavor energy." %>
           </p>
           <div class="d-flex flex-wrap gap-2 mb-4">
@@ -61,6 +61,17 @@
           <div class="hero-image-placeholder"></div>
           <% } %>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cz-band cz-band--custom cz-section home-meet-section">
+    <div class="container">
+      <div class="home-meet-card text-center">
+        <p class="home-meet-kicker mb-2"><%= homeText?.meetKicker || "Meet Club Zero" %></p>
+        <h2 class="home-meet-title mb-0">
+          <%= homeText?.meetTitle || "A better way to hydrate - without the sugar, without the compromise." %>
+        </h2>
       </div>
     </div>
   </section>
@@ -126,112 +137,40 @@
 
   <section class="cz-band cz-section">
     <div class="container">
-      <div class="row g-4 align-items-center">
-        <div class="col-lg-6">
-          <h2 class="h3 fw-bold mb-3">Clean refreshment, built for everyday</h2>
-          <p class="text-secondary mb-3">
-            Club Zero is a sparkling hydration drink crafted for people who want
-            bright flavor without the sugar crash.
-          </p>
-          <div class="row g-3">
-            <div class="col-sm-6">
-              <div class="home-feature-card h-100">
-                <span class="home-feature-icon">0 Sugar</span>
-                <h3 class="h6 fw-bold mt-2">Zero added sugar</h3>
-                <p class="text-secondary mb-0">
-                  Built to keep your day light without sacrificing taste.
-                </p>
-              </div>
-            </div>
-            <div class="col-sm-6">
-              <div class="home-feature-card h-100">
-                <span class="home-feature-icon">Low Cal</span>
-                <h3 class="h6 fw-bold mt-2">Low calorie refresh</h3>
-                <p class="text-secondary mb-0">
-                  A crisp option that fits workouts, workdays, and weekends.
-                </p>
-              </div>
-            </div>
-            <div class="col-sm-6">
-              <div class="home-feature-card h-100">
-                <span class="home-feature-icon">Real Taste</span>
-                <h3 class="h6 fw-bold mt-2">Bold flavor profiles</h3>
-                <p class="text-secondary mb-0">
-                  Bright, fruit-forward flavors that stay vibrant to the last
-                  sip.
-                </p>
-              </div>
-            </div>
-            <div class="col-sm-6">
-              <div class="home-feature-card h-100">
-                <span class="home-feature-icon">Anytime</span>
-                <h3 class="h6 fw-bold mt-2">All-day friendly</h3>
-                <p class="text-secondary mb-0">
-                  Hydration you can enjoy at any time of day.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-lg-6">
-          <div class="home-feature-card h-100">
-            <span class="home-feature-icon">Inside</span>
-            <h3 class="h5 fw-bold mt-2">What makes Club Zero different</h3>
-            <p class="text-secondary mb-3">
-              We focus on clean refreshment with bold flavor and a smoother
-              finish.
-            </p>
-            <ul class="list-unstyled mb-0 text-secondary">
-              <li class="d-flex gap-2 mb-2">
-                <span class="fw-semibold text-dark">Sparkling base</span>
-                <span>for a crisp, uplifting texture.</span>
-              </li>
-              <li class="d-flex gap-2 mb-2">
-                <span class="fw-semibold text-dark">Balanced sweetness</span>
-                <span>so flavor stays bright, never heavy.</span>
-              </li>
-              <li class="d-flex gap-2">
-                <span class="fw-semibold text-dark">Flavor-forward</span>
-                <span>tropical and citrus profiles that stand out.</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="cz-band cz-section">
-    <div class="container">
       <div class="text-center mb-4">
-        <h2 class="h3 fw-bold mb-2">Why People Choose Club Zero</h2>
+        <h2 class="h3 fw-bold mb-2"><%= homeText?.chooseTitle || "Why People Choose Club Zero" %></h2>
+        <p class="text-secondary mb-2">
+          <%= homeText?.chooseIntroLine1 || "Tired of plain water but don't want the sugar and guilt that comes with soft drinks?" %>
+        </p>
+        <p class="text-secondary mb-0">
+          <%= homeText?.chooseIntroLine2 || "Club Zero gives you the best of both worlds:" %>
+        </p>
       </div>
       <div class="row g-4">
         <div class="col-md-4">
           <div class="home-feature-card h-100">
-            <span class="home-feature-icon">Flavor</span>
-            <h3 class="h5 fw-bold mt-2">Big Taste</h3>
+            <span class="home-feature-icon"><%= homeText?.chooseCard1Icon || "Flavor" %></span>
+            <h3 class="h5 fw-bold mt-2"><%= homeText?.chooseCard1Title || "Big Taste" %></h3>
             <p class="text-secondary mb-0">
-              Crisp, refreshing flavor profiles made to keep every sip
-              interesting.
+              <%= homeText?.chooseCard1Body || "Crisp, refreshing flavor profiles made to keep every sip interesting." %>
             </p>
           </div>
         </div>
         <div class="col-md-4">
           <div class="home-feature-card h-100">
-            <span class="home-feature-icon">Clean</span>
-            <h3 class="h5 fw-bold mt-2">Less Sugar</h3>
+            <span class="home-feature-icon"><%= homeText?.chooseCard2Icon || "Clean" %></span>
+            <h3 class="h5 fw-bold mt-2"><%= homeText?.chooseCard2Title || "Less Sugar" %></h3>
             <p class="text-secondary mb-0">
-              Built around cleaner choices so you can enjoy more, guilt-free.
+              <%= homeText?.chooseCard2Body || "Built around cleaner choices so you can enjoy more, guilt-free." %>
             </p>
           </div>
         </div>
         <div class="col-md-4">
           <div class="home-feature-card h-100">
-            <span class="home-feature-icon">Daily</span>
-            <h3 class="h5 fw-bold mt-2">Everyday Fit</h3>
+            <span class="home-feature-icon"><%= homeText?.chooseCard3Icon || "Daily" %></span>
+            <h3 class="h5 fw-bold mt-2"><%= homeText?.chooseCard3Title || "Everyday Fit" %></h3>
             <p class="text-secondary mb-0">
-              Easy to pair with your routine from workouts to late-day refresh.
+              <%= homeText?.chooseCard3Body || "Easy to pair with your routine from workouts to late-day refresh." %>
             </p>
           </div>
         </div>
@@ -239,18 +178,102 @@
     </div>
   </section>
 
-  <section class="cz-band cz-band--custom cz-section bg-light">
+  <section class="cz-band cz-band--custom cz-section home-benefit-section home-benefit-section--1">
+    <div class="container">
+      <div class="text-center mb-4">
+        <p class="home-benefit-kicker mb-2">Why Club Zero</p>
+        <h2 class="h3 fw-bold mb-0">Built For Real Life</h2>
+      </div>
+      <article class="home-benefit-showcard home-benefit-showcard--1 home-benefit-showcard--solo home-benefit-smart-layout">
+        <div class="home-benefit-showcard-head">
+          <span class="home-benefit-badge">Everyday Fit</span>
+          <span class="home-benefit-number">01</span>
+        </div>
+        <div class="home-benefit-smart-grid">
+          <div class="home-benefit-smart-lead">
+            <h3 class="h3 fw-bold mb-2"><%= homeText?.benefit1Title || "Feel good, every day" %></h3>
+            <p class="text-secondary mb-0">
+              <%= homeText?.benefit1Body || "Whether you're at work, at the gym, or on the go, Club Zero is made to fit into your everyday life." %>
+            </p>
+          </div>
+          <div class="home-benefit-smart-points">
+            <div class="home-benefit-smart-item home-benefit-smart-item--label"><%= (homeText?.benefit1Lead && homeText.benefit1Lead.trim().toLowerCase() !== "it's:") ? homeText.benefit1Lead : "Highlights" %></div>
+            <div class="home-benefit-smart-item"><%= homeText?.benefit1Bullet1 || "Light and refreshing" %></div>
+            <div class="home-benefit-smart-item"><%= homeText?.benefit1Bullet2 || "Full of flavour" %></div>
+            <div class="home-benefit-smart-item"><%= homeText?.benefit1Bullet3 || "Easy to enjoy anytime" %></div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="cz-band cz-band--custom cz-section home-benefit-section home-benefit-section--2">
+    <div class="container">
+      <article class="home-benefit-showcard home-benefit-showcard--2 home-benefit-showcard--solo home-benefit-smart-layout">
+        <div class="home-benefit-showcard-head">
+          <span class="home-benefit-badge">Proudly Local</span>
+          <span class="home-benefit-number">02</span>
+        </div>
+        <div class="home-benefit-smart-grid">
+          <div class="home-benefit-smart-lead">
+            <h3 class="h3 fw-bold mb-2"><%= homeText?.benefit2Title || "Premium quality, made for South Africans" %></h3>
+          </div>
+          <div class="home-benefit-smart-points home-benefit-smart-points--copy">
+            <p class="home-benefit-copy-line mb-2"><%= homeText?.benefit2Body1 || "Proudly born and bottled in South Africa, Club Zero is designed for real people living real lives." %></p>
+            <p class="home-benefit-copy-line home-benefit-copy-line--strong mb-0"><%= homeText?.benefit2Body2 || "You get a premium product at a price that still feels good." %></p>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="cz-band cz-band--custom cz-section home-benefit-section home-benefit-section--3">
+    <div class="container">
+      <article class="home-benefit-showcard home-benefit-showcard--3 home-benefit-showcard--solo home-benefit-smart-layout">
+        <div class="home-benefit-showcard-head">
+          <span class="home-benefit-badge">Smart Choice</span>
+          <span class="home-benefit-number">03</span>
+        </div>
+        <div class="home-benefit-smart-grid">
+          <div class="home-benefit-smart-lead">
+            <h3 class="h3 fw-bold mb-2"><%= homeText?.benefit3Title || "The smarter choice" %></h3>
+            <p class="home-benefit-smart-subline mb-0">
+              Four reasons customers keep choosing Club Zero.
+            </p>
+          </div>
+          <div class="home-benefit-smart-points home-benefit-smart-points--focus">
+            <div class="home-benefit-smart-item"><%= homeText?.benefit3Line1 || "Great taste." %></div>
+            <div class="home-benefit-smart-item"><%= homeText?.benefit3Line2 || "No sugar." %></div>
+            <div class="home-benefit-smart-item"><%= homeText?.benefit3Line3 || "Better ingredients." %></div>
+            <div class="home-benefit-smart-item"><%= homeText?.benefit3Line4 || "Affordable." %></div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="cz-band cz-band--custom cz-section home-difference-section">
+    <div class="container">
+      <div class="home-difference-shell">
+        <p class="home-difference-text mb-0">
+          <%= homeText?.benefit3Footer || "That's the Club Zero difference." %>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="cz-band cz-band--custom cz-section bg-light home-reviews-section">
     <div class="container">
       <div
-        class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-4"
+        class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-4 home-reviews-head"
       >
         <div>
-          <p class="text-uppercase fw-semibold text-secondary small mb-2">
-            Reviews
+          <p class="home-reviews-kicker mb-2">
+            <%= homeText?.reviewsKicker || "Reviews" %>
           </p>
-          <h2 class="h3 fw-bold mb-0">What customers are saying</h2>
+          <h2 class="h3 fw-bold mb-0"><%= homeText?.reviewsTitle || "What customers are saying" %></h2>
         </div>
-        <span class="text-secondary small">
+        <span class="home-reviews-average">
           <%= typeof averageRating === "number" ? `${averageRating.toFixed(1)}
           average rating` : "Top rated by customers" %>
         </span>
@@ -258,7 +281,7 @@
 
       <% if (!testimonials || testimonials.length === 0) { %>
       <div class="alert alert-info mb-0">
-        Keep a look out for what people are saying about our products!
+        <%= homeText?.reviewsEmpty || "Keep a look out for what people are saying about our products!" %>
       </div>
       <% } else { %>
       <div
@@ -275,17 +298,17 @@
             <div class="row g-4">
               <% testimonials.slice(i, i + 3).forEach((review) => { %>
               <div class="col-lg-4">
-                <article class="testimonial-card h-100">
-                  <p class="testimonial-quote">"<%= review.comment %>"</p>
-                  <p class="mb-1 fw-semibold"><%= review.reviewer %></p>
+                <article class="testimonial-card home-testimonial-card h-100">
+                  <p class="testimonial-quote home-testimonial-quote">"<%= review.comment %>"</p>
+                  <div class="home-testimonial-meta">
+                    <p class="mb-0 fw-semibold home-testimonial-name"><%= review.reviewer %></p>
+                    <span class="home-testimonial-rating">Rated <%= Number(review.rating || 0).toFixed(1) %>/5</span>
+                  </div>
                   <% if (review.productName) { %>
-                  <div class="small text-muted mb-1">
+                  <div class="small home-testimonial-product mb-1">
                     Reviewed: <%= review.productName %>
                   </div>
                   <% } %>
-                  <div class="small text-muted">
-                    Rating: <%= review.rating %>/5
-                  </div>
                 </article>
               </div>
               <% }) %>
@@ -303,39 +326,38 @@
       <div class="row g-4 align-items-center">
         <div class="col-lg-7">
           <p class="text-uppercase fw-semibold text-secondary small mb-2">
-            Affiliate Program
+            <%= homeText?.affiliateKicker || "Affiliate Program" %>
           </p>
-          <h2 class="h3 fw-bold mb-3">Earn by sharing Club Zero</h2>
+          <h2 class="h3 fw-bold mb-3"><%= homeText?.affiliateTitle || "Earn by sharing Club Zero" %></h2>
           <p class="text-secondary mb-3">
-            Get your personal referral link instantly and earn commission on
-            every order your community places.
+            <%= homeText?.affiliateBody || "Get your personal referral link instantly and earn commission on every order your community places." %>
           </p>
           <div class="affiliate-chip-grid mb-4">
-            <span class="affiliate-chip">Instant access</span>
-            <span class="affiliate-chip">Track earnings</span>
-            <span class="affiliate-chip">Flexible payouts</span>
+            <span class="affiliate-chip"><%= homeText?.affiliateChip1 || "Instant access" %></span>
+            <span class="affiliate-chip"><%= homeText?.affiliateChip2 || "Track earnings" %></span>
+            <span class="affiliate-chip"><%= homeText?.affiliateChip3 || "Flexible payouts" %></span>
           </div>
           <a
             href="/auth/affiliate/join"
             class="btn btn-primary btn-lg px-4 fw-semibold"
           >
-            Become an Affiliate
+            <%= homeText?.affiliateCtaLabel || "Become an Affiliate" %>
           </a>
         </div>
         <div class="col-lg-5">
           <div class="affiliate-cta-card">
             <div class="d-flex flex-column gap-2">
               <div class="d-flex justify-content-between">
-                <span class="text-white-50">Referral link setup</span>
-                <span class="text-white fw-semibold">Instant</span>
+                <span class="affiliate-stat-label"><%= homeText?.affiliateStat1Label || "Referral link setup" %></span>
+                <span class="affiliate-stat-value"><%= homeText?.affiliateStat1Value || "Instant" %></span>
               </div>
               <div class="d-flex justify-content-between">
-                <span class="text-white-50">Commission rate</span>
-                <span class="text-white fw-semibold">5%</span>
+                <span class="affiliate-stat-label"><%= homeText?.affiliateStat2Label || "Commission rate" %></span>
+                <span class="affiliate-stat-value"><%= homeText?.affiliateStat2Value || "5%" %></span>
               </div>
               <div class="d-flex justify-content-between">
-                <span class="text-white-50">Tracking</span>
-                <span class="text-white fw-semibold">Live dashboard</span>
+                <span class="affiliate-stat-label"><%= homeText?.affiliateStat3Label || "Tracking" %></span>
+                <span class="affiliate-stat-value"><%= homeText?.affiliateStat3Value || "Live dashboard" %></span>
               </div>
             </div>
           </div>
@@ -346,12 +368,12 @@
 
   <section class="cz-band cz-band--custom cz-section home-cta-band text-white">
     <div class="container text-center">
-      <h2 class="h3 fw-bold mb-3">Ready for your next favorite drink?</h2>
+      <h2 class="h3 fw-bold mb-3"><%= homeText?.bottomCtaTitle || "Ready for your next favorite drink?" %></h2>
       <p class="mb-4 text-white-50">
-        Explore our latest flavors and refresh your routine.
+        <%= homeText?.bottomCtaBody || "Explore our latest flavors and refresh your routine." %>
       </p>
       <a href="/auth/products" class="btn btn-light btn-lg px-4 fw-semibold"
-        >Browse Products</a
+        ><%= homeText?.bottomCtaButtonLabel || "Browse Products" %></a
       >
     </div>
   </section>

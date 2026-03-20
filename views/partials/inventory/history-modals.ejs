@@ -6,7 +6,15 @@
       <div class="modal-content">
         <div class="modal-header">
           <h2 class="modal-title fs-5"><%= product.name %> History</h2>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <div class="d-flex align-items-center gap-2 ms-auto">
+            <a
+              href="/admin/inventory/history/export?scope=website&entityId=<%= product.id %>"
+              class="btn btn-outline-success btn-sm"
+            >
+              Export Excel
+            </a>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
         </div>
         <div class="modal-body">
           <% if (!productHistory.length) { %>
@@ -106,7 +114,15 @@
           <div class="modal-content">
             <div class="modal-header">
               <h2 class="modal-title fs-5"><%= customProduct.name %> History</h2>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              <div class="d-flex align-items-center gap-2 ms-auto">
+                <a
+                  href="/admin/inventory/history/export?scope=supplier-custom&entityId=<%= customProduct.id %>"
+                  class="btn btn-outline-success btn-sm"
+                >
+                  Export Excel
+                </a>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
             </div>
             <div class="modal-body">
               <% if (!customHistory.length) { %>

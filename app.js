@@ -37,8 +37,12 @@ const adminController = require("./controllers/adminController");
 const inventoryController = require("./controllers/inventoryController");
 const storeLocationController = require("./controllers/storeLocationController");
 const homeController = require("./controllers/homeController");
+const aboutController = require("./controllers/aboutController");
+const themeController = require("./controllers/themeController");
 const { getPromoSettings } = require("./lib/promoSettings");
 const { getHomeHeroSettings } = require("./lib/homeHeroSettings");
+const { getHomeTextSettings } = require("./lib/homeTextSettings");
+const { getSiteTheme } = require("./lib/themeSettings");
 const { startAbandonedCartScheduler } = require("./lib/abandonedCart");
 const {
   startDailyOutOfStockSummaryScheduler,
@@ -206,6 +210,13 @@ app.use(async (req, res, next) => {
   res.locals.currentPath = req.path;
   res.locals.user = req.session.user || null;
   res.locals.cartCount = 0;
+  res.locals.siteTheme = "sunset";
+
+  try {
+    res.locals.siteTheme = await getSiteTheme();
+  } catch (_error) {
+    res.locals.siteTheme = "sunset";
+  }
 
   if (res.locals.user) {
     const affiliateProgramStatus = String(
@@ -249,7 +260,7 @@ app.use(async (req, res, next) => {
 });
 
 app.get("/", async (_req, res) => {
-  const [rawReviews, promoSettings, homeHero] = await Promise.all([
+  const [rawReviews, promoSettings, homeHero, homeText] = await Promise.all([
     prisma.review.findMany({
     where: {
       rating: { gte: 4 },
@@ -264,6 +275,7 @@ app.get("/", async (_req, res) => {
     }),
     getPromoSettings(),
     getHomeHeroSettings(),
+    getHomeTextSettings(),
   ]);
 
   const testimonials = rawReviews.map((review) => ({
@@ -287,9 +299,10 @@ app.get("/", async (_req, res) => {
     averageRating,
     promoSettings,
     homeHero,
+    homeText,
   });
 });
-app.get("/about", (_req, res) => res.render("about"));
+app.get("/about", asyncHandler(aboutController.getAboutPage));
 app.get("/contact", contactController.getContact);
 app.get("/store-locator", (req, res) => {
   const query = (req.query.city || "").toString().trim();
@@ -379,15 +392,51 @@ app.get(
   asyncHandler(inventoryController.getAdminInventoryPage),
 );
 app.get(
+  "/admin/theme",
+  requireAdmin,
+  asyncHandler(themeController.getAdminThemePage),
+);
+app.post(
+  "/admin/theme",
+  requireAdmin,
+  asyncHandler(themeController.updateAdminTheme),
+);
+app.get(
+  "/admin/inventory/history/export",
+  requireAdmin,
+  asyncHandler(inventoryController.exportInventoryHistory),
+);
+app.get(
   "/admin/home-hero",
   requireAdmin,
   asyncHandler(homeController.getAdminHomeHero),
+);
+app.get(
+  "/admin/home-content",
+  requireAdmin,
+  asyncHandler(homeController.getAdminHomeContent),
+);
+app.get(
+  "/admin/about-content",
+  requireAdmin,
+  asyncHandler(aboutController.getAdminAboutContent),
 );
 app.post(
   "/admin/home-hero",
   requireAdmin,
   upload.single("heroImage"),
   asyncHandler(homeController.updateAdminHomeHero),
+);
+app.post(
+  "/admin/home-content",
+  requireAdmin,
+  upload.single("heroImage"),
+  asyncHandler(homeController.updateAdminHomeContent),
+);
+app.post(
+  "/admin/about-content",
+  requireAdmin,
+  asyncHandler(aboutController.updateAdminAboutContent),
 );
 app.get(
   "/admin/locations",

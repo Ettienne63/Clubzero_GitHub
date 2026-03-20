@@ -1,7 +1,7 @@
 <%- include("partials/header", { title: "Your Cart" }) %>
 <%- include("partials/navbar") %>
 
-<main class="cz-banded">
+<main class="cz-banded cart-page">
   <section class="cz-band">
     <div class="container cz-section">
       <div class="d-flex justify-content-between align-items-center mb-4">
@@ -11,7 +11,7 @@
           <span class="badge rounded-pill text-bg-primary"><%= Number(totalCases) %> case(s)</span>
           <% } %>
         </div>
-        <a href="/auth/products" class="btn btn-outline-secondary">Continue Shopping</a>
+        <a href="/auth/products" class="btn btn-outline-primary">Continue Shopping</a>
       </div>
 
       <% if (success) { %>
@@ -35,10 +35,10 @@
       <% } %>
       <div class="d-flex justify-content-end mb-3">
         <% if (!hasUnavailableItems) { %>
-        <a href="/auth/checkout" class="btn btn-success">Proceed to Checkout</a>
+        <a href="/auth/checkout" class="btn btn-primary">Proceed to Checkout</a>
         <% } %>
       </div>
-      <div class="table-responsive cz-panel cz-panel-tight">
+      <div class="table-responsive cz-panel cz-panel-tight cart-table-wrap">
         <table class="table align-middle mb-0">
       <thead>
         <tr>
@@ -62,7 +62,7 @@
               <img
                 src="<%= item.product.imageUrl %>"
                 alt="<%= item.product.name %>"
-                class="admin-image-frame rounded"
+                class="cart-product-thumb rounded"
                 style="width: 72px; height: 72px"
                 loading="lazy"
                 decoding="async"

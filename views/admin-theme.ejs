@@ -1,0 +1,78 @@
+<%- include("partials/header", { title: "Color Schemes" }) %>
+<%- include("partials/navbar") %>
+<%- include("partials/admin-nav") %>
+
+<main class="container py-5 admin-shell">
+  <% const themePalettes = {
+    sunset: { primary: "#f9c36e", accent: "#ffe09d", accent2: "#ffc1a4", soft: "#fffbf4" },
+    forest: { primary: "#1f8a5b", accent: "#2fbf71", accent2: "#9ed26a", soft: "#f4fbf7" },
+    mango: { primary: "#ff9800", accent: "#ffb74d", accent2: "#ffcc80", soft: "#fff8ef" },
+    grape: { primary: "#c53a4b", accent: "#de5665", accent2: "#b23f60", soft: "#fff2f7" },
+  }; %>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">Color Schemes</h1>
+      <p class="text-secondary mb-0">Choose one of 4 site-wide color schemes. Layout stays unchanged.</p>
+    </div>
+  </div>
+
+  <% if (success) { %>
+  <div class="alert alert-success" role="alert"><%= success %></div>
+  <% } %>
+
+  <% if (error) { %>
+  <div class="alert alert-danger" role="alert"><%= error %></div>
+  <% } %>
+
+  <form action="/admin/theme" method="POST" id="themeSwitchForm" class="row g-3">
+    <% (themeOptions || []).forEach((theme) => { %>
+    <div class="col-12 col-md-6 col-lg-4">
+      <label class="card h-100 theme-choice-card" for="theme-<%= theme.id %>">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <h2 class="h6 mb-1"><%= theme.name %></h2>
+              <p class="small text-muted mb-0"><%= theme.description %></p>
+            </div>
+            <input
+              class="form-check-input ms-2"
+              type="radio"
+              name="theme"
+              id="theme-<%= theme.id %>"
+              value="<%= theme.id %>"
+              <%= currentTheme === theme.id ? "checked" : "" %>
+            />
+          </div>
+          <% const palette = themePalettes[theme.id] || themePalettes.sunset; %>
+          <div class="theme-preview theme-preview-<%= theme.id %>"></div>
+          <div class="theme-preview-swatches mt-2" aria-hidden="true">
+            <span class="theme-swatch" style="background:<%= palette.primary %>"></span>
+            <span class="theme-swatch" style="background:<%= palette.accent %>"></span>
+            <span class="theme-swatch" style="background:<%= palette.accent2 %>"></span>
+            <span class="theme-swatch theme-swatch-soft" style="background:<%= palette.soft %>"></span>
+          </div>
+        </div>
+      </label>
+    </div>
+    <% }) %>
+  </form>
+
+  <p class="small text-muted mt-3 mb-0">Theme saves automatically when you select one.</p>
+</main>
+
+<script>
+  (() => {
+    const form = document.getElementById("themeSwitchForm");
+    if (!form) return;
+    const radios = form.querySelectorAll("input[name='theme']");
+    radios.forEach((radio) => {
+      radio.addEventListener("change", () => {
+        if (radio.checked) {
+          form.submit();
+        }
+      });
+    });
+  })();
+</script>
+
+<%- include("partials/footer") %>

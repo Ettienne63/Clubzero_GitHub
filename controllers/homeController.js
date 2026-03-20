@@ -1,6 +1,25 @@
-const { saveHomeHeroSettings, getHomeHeroSettings } = require("../lib/homeHeroSettings");
+const {
+  HERO_DEFAULTS,
+  saveHomeHeroSettings,
+  getHomeHeroSettings,
+} = require("../lib/homeHeroSettings");
+const {
+  HOME_TEXT_DEFAULTS,
+  getHomeTextSettings,
+  saveHomeTextSettings,
+} = require("../lib/homeTextSettings");
 
 const HERO_LIMITS = {
+  badge: 80,
+  title: 140,
+  subtitle: 240,
+  chipOne: 80,
+  chipTwo: 80,
+  chipThree: 80,
+  primaryLabel: 60,
+  primaryUrl: 260,
+  secondaryLabel: 60,
+  secondaryUrl: 260,
   imageUrl: 300,
 };
 
@@ -12,6 +31,16 @@ const enforceMaxLength = (value, max, label) => {
 };
 
 const parseHeroInput = (body, file, current = {}) => {
+  const badge = (body.badge || "").toString().trim();
+  const title = (body.title || "").toString().trim();
+  const subtitle = (body.subtitle || "").toString().trim();
+  const chipOne = (body.chipOne || "").toString().trim();
+  const chipTwo = (body.chipTwo || "").toString().trim();
+  const chipThree = (body.chipThree || "").toString().trim();
+  const primaryLabel = (body.primaryLabel || "").toString().trim();
+  const primaryUrl = (body.primaryUrl || "").toString().trim();
+  const secondaryLabel = (body.secondaryLabel || "").toString().trim();
+  const secondaryUrl = (body.secondaryUrl || "").toString().trim();
   const imageUrlInput = (body.heroImageUrl || "").toString().trim();
   const removeImage = body.heroImageRemove === "on";
   const imageUrl = file
@@ -21,6 +50,16 @@ const parseHeroInput = (body, file, current = {}) => {
       : imageUrlInput || current.imageUrl || "";
 
   const lengthChecks = [
+    enforceMaxLength(badge, HERO_LIMITS.badge, "Badge"),
+    enforceMaxLength(title, HERO_LIMITS.title, "Title"),
+    enforceMaxLength(subtitle, HERO_LIMITS.subtitle, "Subtitle"),
+    enforceMaxLength(chipOne, HERO_LIMITS.chipOne, "Chip 1"),
+    enforceMaxLength(chipTwo, HERO_LIMITS.chipTwo, "Chip 2"),
+    enforceMaxLength(chipThree, HERO_LIMITS.chipThree, "Chip 3"),
+    enforceMaxLength(primaryLabel, HERO_LIMITS.primaryLabel, "Primary button label"),
+    enforceMaxLength(primaryUrl, HERO_LIMITS.primaryUrl, "Primary button URL"),
+    enforceMaxLength(secondaryLabel, HERO_LIMITS.secondaryLabel, "Secondary button label"),
+    enforceMaxLength(secondaryUrl, HERO_LIMITS.secondaryUrl, "Secondary button URL"),
     enforceMaxLength(imageUrl, HERO_LIMITS.imageUrl, "Image URL"),
   ];
 
@@ -31,34 +70,77 @@ const parseHeroInput = (body, file, current = {}) => {
 
   return {
     data: {
+      badge: badge || current.badge || HERO_DEFAULTS.badge,
+      title: title || current.title || HERO_DEFAULTS.title,
+      subtitle: subtitle || current.subtitle || HERO_DEFAULTS.subtitle,
+      chipOne: chipOne || current.chipOne || HERO_DEFAULTS.chipOne,
+      chipTwo: chipTwo || current.chipTwo || HERO_DEFAULTS.chipTwo,
+      chipThree: chipThree || current.chipThree || HERO_DEFAULTS.chipThree,
+      primaryLabel:
+        primaryLabel || current.primaryLabel || HERO_DEFAULTS.primaryLabel,
+      primaryUrl: primaryUrl || current.primaryUrl || HERO_DEFAULTS.primaryUrl,
+      secondaryLabel:
+        secondaryLabel || current.secondaryLabel || HERO_DEFAULTS.secondaryLabel,
+      secondaryUrl:
+        secondaryUrl || current.secondaryUrl || HERO_DEFAULTS.secondaryUrl,
       imageUrl,
     },
   };
 };
 
 exports.getAdminHomeHero = async (req, res) => {
-  const hero = await getHomeHeroSettings();
+  return res.redirect("/admin/home-content");
+};
 
-  return res.render("admin-home-hero", {
+exports.updateAdminHomeHero = async (req, res) => {
+  return res.redirect("/admin/home-content");
+};
+
+const trimText = (value) => (value || "").toString().trim();
+
+const applyLengthLimit = (value, maxLength = 600) => value.slice(0, maxLength);
+
+exports.getAdminHomeContent = async (req, res) => {
+  const [content, hero] = await Promise.all([
+    getHomeTextSettings(),
+    getHomeHeroSettings(),
+  ]);
+  return res.render("admin-home-content", {
+    content,
     hero,
     success: req.query.success || null,
     error: req.query.error || null,
   });
 };
 
-exports.updateAdminHomeHero = async (req, res) => {
-  const current = await getHomeHeroSettings();
-  const parsed = parseHeroInput(req.body, req.file, current);
-
-  if (parsed.error) {
+exports.updateAdminHomeContent = async (req, res) => {
+  const [existing, existingHero] = await Promise.all([
+    getHomeTextSettings(),
+    getHomeHeroSettings(),
+  ]);
+  const parsedHero = parseHeroInput(req.body, req.file, existingHero);
+  if (parsedHero.error) {
     return res.redirect(
-      `/admin/home-hero?error=${encodeURIComponent(parsed.error)}`,
+      `/admin/home-content?error=${encodeURIComponent(parsedHero.error)}`,
     );
   }
 
-  await saveHomeHeroSettings({
-    ...current,
-    ...parsed.data,
-  });
-  return res.redirect("/admin/home-hero?success=Homepage+hero+updated");
+  const next = Object.keys(HOME_TEXT_DEFAULTS).reduce((acc, field) => {
+    const incoming =
+      Object.prototype.hasOwnProperty.call(req.body, field)
+        ? trimText(req.body[field])
+        : existing[field];
+    acc[field] = applyLengthLimit(incoming, 600);
+    return acc;
+  }, {});
+
+  await Promise.all([
+    saveHomeTextSettings(next),
+    saveHomeHeroSettings({
+      ...existingHero,
+      ...parsedHero.data,
+    }),
+  ]);
+
+  return res.redirect("/admin/home-content?success=Homepage+content+updated");
 };

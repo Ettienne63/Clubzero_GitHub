@@ -25,6 +25,25 @@ const redirectInventoryError = (res, message) =>
 const redirectInventorySuccess = (res, message) =>
   res.redirect(`/admin/inventory?success=${encodeURIComponent(message)}`);
 
+const escapeCsvCell = (value) => {
+  const text = value === null || typeof value === "undefined" ? "" : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
+};
+
+const toCsv = (headers, rows) => {
+  const headerLine = headers.map(escapeCsvCell).join(",");
+  const rowLines = rows.map((row) => row.map(escapeCsvCell).join(","));
+  return [headerLine, ...rowLines].join("\n");
+};
+
+const toSafeFilenamePart = (value) =>
+  (value || "")
+    .toString()
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "item";
+
 
 exports.getAdminInventoryPage = async (req, res) => {
   try {
@@ -86,6 +105,94 @@ exports.getAdminInventoryPage = async (req, res) => {
     success: req.query.success || null,
     error: req.query.error || null,
   });
+};
+
+exports.exportInventoryHistory = async (req, res) => {
+  const scopeRaw = (req.query.scope || "").toString().trim().toLowerCase();
+  const entityId = Number.parseInt(req.query.entityId, 10);
+
+  if (!Number.isInteger(entityId) || entityId <= 0) {
+    return redirectInventoryError(res, "Invalid history export request.");
+  }
+
+  const scopeConfig =
+    scopeRaw === "website"
+      ? {
+          scope: INVENTORY_HISTORY_SCOPE.WEBSITE_PRODUCT,
+          scopeLabel: "Website",
+          loader: () =>
+            prisma.product.findUnique({
+              where: { id: entityId },
+              select: { name: true },
+            }),
+        }
+      : scopeRaw === "supplier-custom"
+        ? {
+            scope: INVENTORY_HISTORY_SCOPE.SUPPLIER_CUSTOM_PRODUCT,
+            scopeLabel: "Supplier Product",
+            loader: () =>
+              prisma.supplierCustomProduct.findUnique({
+                where: { id: entityId },
+                select: {
+                  name: true,
+                  supplier: { select: { name: true } },
+                },
+              }),
+          }
+        : null;
+
+  if (!scopeConfig) {
+    return redirectInventoryError(res, "Invalid history export scope.");
+  }
+
+  const targetEntity = await scopeConfig.loader();
+  if (!targetEntity) {
+    return redirectInventoryError(res, "History export item not found.");
+  }
+
+  const historyRows = await prisma.inventoryHistory.findMany({
+    where: {
+      scope: scopeConfig.scope,
+      entityId,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 5000,
+  });
+
+  const csvHeaders = [
+    "Date",
+    "Scope",
+    "Item Name",
+    "Supplier",
+    "Action",
+    "Reason",
+    "Previous Quantity",
+    "Change Quantity",
+    "New Quantity",
+    "User",
+  ];
+
+  const csvRows = historyRows.map((entry) => [
+    new Date(entry.createdAt).toISOString(),
+    scopeConfig.scopeLabel,
+    entry.itemName || "",
+    entry.supplierName || (targetEntity?.supplier?.name || ""),
+    (entry.action || "").toString().replace(/_/g, " "),
+    entry.reason ? String(entry.reason).replace(/_/g, " ") : "",
+    entry.previousQuantity ?? "",
+    entry.changeQuantity ?? "",
+    entry.newQuantity ?? "",
+    entry.actorEmail || "",
+  ]);
+
+  const csv = toCsv(csvHeaders, csvRows);
+  const itemName = targetEntity?.name || "history";
+  const dateTag = new Date().toISOString().slice(0, 10);
+  const filename = `inventory-history-${scopeRaw}-${toSafeFilenamePart(itemName)}-${dateTag}.csv`;
+
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename=\"${filename}\"`);
+  return res.send(`\uFEFF${csv}`);
 };
 
 exports.updateLowStockAlertsSetting = async (req, res) => {

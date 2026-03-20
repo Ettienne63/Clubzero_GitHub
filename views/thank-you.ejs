@@ -25,15 +25,17 @@
               <% if (order.invoice) { %>
               <p class="mb-4">
                 <strong>Invoice:</strong> <%= order.invoice.invoiceNumber %>
-                <span class="badge text-bg-secondary ms-2"><%= order.invoice.status %></span>
+                <span
+                  class="badge <%= String(order.invoice.status || '').toUpperCase() === 'PAID' ? 'text-bg-success' : 'text-bg-secondary' %> ms-2"
+                ><%= order.invoice.status %></span>
               </p>
               <div class="d-flex justify-content-center gap-2 flex-wrap mb-4">
-                <a href="/auth/orders/<%= order.id %>/invoice" class="btn btn-outline-primary">
+                <a href="/auth/orders/<%= order.id %>/invoice" class="btn btn-primary">
                   View Invoice
                 </a>
                 <a
                   href="/auth/orders/<%= order.id %>/invoice?download=1"
-                  class="btn btn-outline-secondary"
+                  class="btn btn-primary"
                 >
                   Download Invoice
                 </a>
@@ -41,16 +43,18 @@
               <% } %>
 
               <div class="alert alert-info text-start mb-4" role="alert">
-                <h2 class="h6 mb-2">Enjoyed your order?</h2>
-                <p class="mb-2">
+                <h2 class="h6 mb-2 text-center">Enjoyed your order?</h2>
+                <p class="mb-2 text-center">
                   Do not forget to leave a review on the products you ordered.
                 </p>
-                <a href="/auth/products" class="btn btn-sm btn-outline-primary">
-                  Leave a Review
-                </a>
+                <div class="text-center mt-3">
+                  <a href="/auth/products" class="btn btn-sm btn-primary thank-you-dark-btn thank-you-review-btn">
+                    Leave a Review
+                  </a>
+                </div>
               </div>
 
-              <a href="/auth/orders" class="btn btn-primary">Go to Order History</a>
+              <a href="/auth/orders" class="btn btn-primary thank-you-dark-btn">Go to Order History</a>
             </div>
           </article>
         </div>

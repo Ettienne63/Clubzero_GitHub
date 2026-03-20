@@ -27,7 +27,7 @@
       class="card w-100 text-start border-2 border-dashed bg-light"
       data-bs-toggle="modal"
       data-bs-target="#addLocationModal"
-      style="border-style: dashed;"
+      style="border-style: dashed"
     >
       <div class="card-body d-flex justify-content-between align-items-center">
         <div>
@@ -42,7 +42,9 @@
   <section>
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h2 class="h5 mb-0">Manage Locations</h2>
-      <span class="badge text-bg-secondary"><%= locations ? locations.length : 0 %> total</span>
+      <span class="badge text-bg-secondary"
+        ><%= locations ? locations.length : 0 %> total</span
+      >
     </div>
 
     <% if (!locations || locations.length === 0) { %>
@@ -60,7 +62,8 @@
           <div class="card-body">
             <h3 class="h6 mb-1"><%= location.name %></h3>
             <p class="text-muted small mb-1">
-              <%= location.city %><% if (location.state) { %>, <%= location.state %><% } %>
+              <%= location.city %><% if (location.state) { %>, <%=
+              location.state %><% } %>
             </p>
             <p class="text-muted small mb-0"><%= location.addressLine1 %></p>
           </div>
@@ -77,12 +80,19 @@
     <div class="modal-content">
       <div class="modal-header">
         <h2 class="modal-title fs-5">Add New Location</h2>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
       </div>
       <div class="modal-body">
         <form action="/admin/locations" method="POST" class="row g-3">
           <div class="col-md-6">
-            <label for="createLocationName" class="form-label">Location Name</label>
+            <label for="createLocationName" class="form-label"
+              >Location Name</label
+            >
             <input
               id="createLocationName"
               name="name"
@@ -102,7 +112,9 @@
             />
           </div>
           <div class="col-12">
-            <label for="createAddressLine1" class="form-label">Address Line 1</label>
+            <label for="createAddressLine1" class="form-label"
+              >Address Line 1</label
+            >
             <input
               id="createAddressLine1"
               name="addressLine1"
@@ -112,7 +124,9 @@
             />
           </div>
           <div class="col-12">
-            <label for="createAddressLine2" class="form-label">Address Line 2</label>
+            <label for="createAddressLine2" class="form-label"
+              >Address Line 2</label
+            >
             <input
               id="createAddressLine2"
               name="addressLine2"
@@ -168,105 +182,115 @@
 </div>
 
 <% if (locations && locations.length > 0) { %>
-  <% locations.forEach((location) => { %>
-  <div class="modal fade" id="locationModal-<%= location.id %>" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2 class="modal-title fs-5">Edit <%= location.name %></h2>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <form
-            action="/admin/locations/<%= location.id %>/edit"
-            method="POST"
-            class="row g-3"
-          >
-            <div class="col-md-6">
-              <label class="form-label">Location Name</label>
-              <input
-                name="name"
-                class="form-control"
-                value="<%= location.name %>"
-                required
-              />
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">City</label>
-              <input
-                name="city"
-                class="form-control"
-                value="<%= location.city %>"
-                required
-              />
-            </div>
-            <div class="col-12">
-              <label class="form-label">Address Line 1</label>
-              <input
-                name="addressLine1"
-                class="form-control"
-                value="<%= location.addressLine1 %>"
-                required
-              />
-            </div>
-            <div class="col-12">
-              <label class="form-label">Address Line 2</label>
-              <input
-                name="addressLine2"
-                class="form-control"
-                value="<%= location.addressLine2 || '' %>"
-              />
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">State / Province</label>
-              <input
-                name="state"
-                class="form-control"
-                value="<%= location.state || '' %>"
-              />
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Hours</label>
-              <input
-                name="hours"
-                class="form-control"
-                value="<%= location.hours || '' %>"
-              />
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Phone</label>
-              <input
-                name="phone"
-                class="form-control"
-                value="<%= location.phone || '' %>"
-              />
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Map URL</label>
-              <input
-                name="mapUrl"
-                class="form-control"
-                value="<%= location.mapUrl || '' %>"
-              />
-            </div>
-            <div class="col-12 d-flex justify-content-end gap-2">
-              <button
-                type="submit"
-                formaction="/admin/locations/<%= location.id %>/delete"
-                formmethod="POST"
-                class="btn btn-outline-danger"
-                onclick="return confirm('Remove this location?');"
-              >
-                Delete
-              </button>
-              <button type="submit" class="btn btn-success">Save Changes</button>
-            </div>
-          </form>
-        </div>
+<% locations.forEach((location) => { %>
+<div
+  class="modal fade"
+  id="locationModal-<%= location.id %>"
+  tabindex="-1"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title fs-5">Edit <%= location.name %></h2>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <form
+          action="/admin/locations/<%= location.id %>/edit"
+          method="POST"
+          class="row g-3"
+        >
+          <div class="col-md-6">
+            <label class="form-label">Location Name</label>
+            <input
+              name="name"
+              class="form-control"
+              value="<%= location.name %>"
+              required
+            />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">City</label>
+            <input
+              name="city"
+              class="form-control"
+              value="<%= location.city %>"
+              required
+            />
+          </div>
+          <div class="col-12">
+            <label class="form-label">Address Line 1</label>
+            <input
+              name="addressLine1"
+              class="form-control"
+              value="<%= location.addressLine1 %>"
+              required
+            />
+          </div>
+          <div class="col-12">
+            <label class="form-label">Address Line 2</label>
+            <input
+              name="addressLine2"
+              class="form-control"
+              value="<%= location.addressLine2 || '' %>"
+            />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">State / Province</label>
+            <input
+              name="state"
+              class="form-control"
+              value="<%= location.state || '' %>"
+            />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Hours</label>
+            <input
+              name="hours"
+              class="form-control"
+              value="<%= location.hours || '' %>"
+            />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Phone</label>
+            <input
+              name="phone"
+              class="form-control"
+              value="<%= location.phone || '' %>"
+            />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Map URL</label>
+            <input
+              name="mapUrl"
+              class="form-control"
+              value="<%= location.mapUrl || '' %>"
+            />
+          </div>
+          <div class="col-12 d-flex justify-content-end gap-2">
+            <button
+              type="submit"
+              formaction="/admin/locations/<%= location.id %>/delete"
+              formmethod="POST"
+              class="btn btn-outline-danger"
+              onclick="return confirm('Remove this location?');"
+            >
+              Delete
+            </button>
+            <button type="submit" class="btn btn-success">Save Changes</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
-  <% }) %>
+</div>
+<% }); %>
 <% } %>
 
 <%- include("partials/admin-modal-state-script", { stateKey: "adminLocationsUiState" }) %>

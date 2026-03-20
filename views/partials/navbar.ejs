@@ -24,7 +24,7 @@
     <div class="collapse navbar-collapse" id="collapsibleNavId">
       <ul class="navbar-nav me-auto mt-3 mt-lg-0 cz-nav-main">
         <li class="nav-item">
-          <a class="nav-link cz-nav-link" href="/about">About</a>
+          <a class="nav-link cz-nav-link" href="/about">About Us</a>
         </li>
         <li class="nav-item">
           <a class="nav-link cz-nav-link" href="/contact">Contact</a>
@@ -33,7 +33,9 @@
           <a class="nav-link cz-nav-link" href="/auth/products">Products</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link cz-nav-link" href="/store-locator">Store Locations</a>
+          <a class="nav-link cz-nav-link" href="/store-locator"
+            >Store Locations</a
+          >
         </li>
       </ul>
       <form
@@ -48,7 +50,7 @@
           placeholder="Search products"
           value="<%= typeof searchQuery !== 'undefined' ? searchQuery : '' %>"
         />
-        <button class="btn btn-outline-primary my-2 my-sm-0" type="submit">
+        <button class="btn my-2 my-sm-0 cz-search-btn" type="submit">
           Search
         </button>
       </form>

@@ -1,0 +1,249 @@
+<%- include("partials/header", { title: "Aboutpage Text" }) %>
+<%- include("partials/navbar") %>
+<%- include("partials/admin-nav") %>
+
+<main class="container py-5 admin-shell">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">Aboutpage Text</h1>
+      <p class="text-secondary mb-0">Edit About page copy only. Layout and structure stay fixed.</p>
+    </div>
+  </div>
+
+  <% if (success) { %>
+  <div class="alert alert-success" role="alert"><%= success %></div>
+  <% } %>
+
+  <% if (error) { %>
+  <div class="alert alert-danger" role="alert"><%= error %></div>
+  <% } %>
+
+  <form
+    action="/admin/about-content"
+    method="POST"
+    class="vstack gap-3"
+    data-enter-submit="true"
+  >
+    <details class="admin-compact-details">
+      <summary>Intro</summary>
+      <div class="card card-body border-0 pt-2">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Kicker</label>
+            <input class="form-control" name="introKicker" value="<%= content.introKicker %>" />
+          </div>
+          <div class="col-md-8">
+            <label class="form-label">Title</label>
+            <input class="form-control" name="introTitle" value="<%= content.introTitle %>" />
+          </div>
+          <div class="col-12">
+            <label class="form-label">Lead Text</label>
+            <textarea class="form-control" name="introLead" rows="2"><%= content.introLead %></textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Intro Body</label>
+            <textarea class="form-control" name="introBody" rows="3"><%= content.introBody %></textarea>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Chip 1</label>
+            <input class="form-control" name="introChip1" value="<%= content.introChip1 %>" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Chip 2</label>
+            <input class="form-control" name="introChip2" value="<%= content.introChip2 %>" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Chip 3</label>
+            <input class="form-control" name="introChip3" value="<%= content.introChip3 %>" />
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details class="admin-compact-details">
+      <summary>Story + Mission</summary>
+      <div class="card card-body border-0 pt-2">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">Story Title</label>
+            <input class="form-control" name="storyTitle" value="<%= content.storyTitle %>" />
+          </div>
+          <div class="col-12">
+            <label class="form-label">Story Paragraph 1</label>
+            <textarea class="form-control" name="storyBody1" rows="3"><%= content.storyBody1 %></textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Story Paragraph 2</label>
+            <textarea class="form-control" name="storyBody2" rows="3"><%= content.storyBody2 %></textarea>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Mission Title</label>
+            <input class="form-control" name="missionTitle" value="<%= content.missionTitle %>" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Vision Title</label>
+            <input class="form-control" name="visionTitle" value="<%= content.visionTitle %>" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Mission Body</label>
+            <textarea class="form-control" name="missionBody" rows="3"><%= content.missionBody %></textarea>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Vision Body</label>
+            <textarea class="form-control" name="visionBody" rows="3"><%= content.visionBody %></textarea>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details class="admin-compact-details">
+      <summary>Promise + Values + CTA</summary>
+      <div class="card card-body border-0 pt-2">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Promise Kicker</label>
+            <input class="form-control" name="promiseKicker" value="<%= content.promiseKicker %>" />
+          </div>
+          <div class="col-md-8">
+            <label class="form-label">Promise Title</label>
+            <input class="form-control" name="promiseTitle" value="<%= content.promiseTitle %>" />
+          </div>
+          <% [1,2,3].forEach((n) => { %>
+          <div class="col-md-2">
+            <label class="form-label">Promise <%= n %> Icon</label>
+            <input class="form-control" name="promiseCard<%= n %>Icon" value="<%= content[`promiseCard${n}Icon`] %>" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Promise <%= n %> Title</label>
+            <input class="form-control" name="promiseCard<%= n %>Title" value="<%= content[`promiseCard${n}Title`] %>" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Promise <%= n %> Body</label>
+            <textarea class="form-control" name="promiseCard<%= n %>Body" rows="2"><%= content[`promiseCard${n}Body`] %></textarea>
+          </div>
+          <% }) %>
+          <div class="col-md-6">
+            <label class="form-label">Values Title</label>
+            <input class="form-control" name="valuesTitle" value="<%= content.valuesTitle %>" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Values Subtitle</label>
+            <input class="form-control" name="valuesSubtitle" value="<%= content.valuesSubtitle %>" />
+          </div>
+          <% [1,2,3].forEach((n) => { %>
+          <div class="col-md-2">
+            <label class="form-label">Value <%= n %> Tag</label>
+            <input class="form-control" name="value<%= n %>Tag" value="<%= content[`value${n}Tag`] %>" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Value <%= n %> Title</label>
+            <input class="form-control" name="value<%= n %>Title" value="<%= content[`value${n}Title`] %>" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Value <%= n %> Body</label>
+            <textarea class="form-control" name="value<%= n %>Body" rows="2"><%= content[`value${n}Body`] %></textarea>
+          </div>
+          <% }) %>
+          <div class="col-md-6">
+            <label class="form-label">CTA Title</label>
+            <input class="form-control" name="ctaTitle" value="<%= content.ctaTitle %>" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">CTA Body</label>
+            <textarea class="form-control" name="ctaBody" rows="2"><%= content.ctaBody %></textarea>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">CTA Primary Label</label>
+            <input class="form-control" name="ctaPrimaryLabel" value="<%= content.ctaPrimaryLabel %>" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">CTA Secondary Label</label>
+            <input class="form-control" name="ctaSecondaryLabel" value="<%= content.ctaSecondaryLabel %>" />
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <div class="d-flex justify-content-end">
+      <button type="submit" class="btn btn-primary">Save Aboutpage Text</button>
+    </div>
+  </form>
+</main>
+
+<script>
+  (() => {
+    const form = document.querySelector('form[data-enter-submit="true"]');
+    if (!form) return;
+    const scrollKey = "admin-about-content-scroll-y";
+    const detailsStateKey = "admin-about-content-details-state";
+    const detailsList = Array.from(
+      form.querySelectorAll("details.admin-compact-details"),
+    );
+
+    const restoreDetailsState = () => {
+      const raw = sessionStorage.getItem(detailsStateKey);
+      if (!raw) return;
+      try {
+        const openStates = JSON.parse(raw);
+        detailsList.forEach((detail, index) => {
+          detail.open = Boolean(openStates[index]);
+        });
+      } catch (_) {
+        sessionStorage.removeItem(detailsStateKey);
+      }
+    };
+
+    const rememberDetailsState = () => {
+      const openStates = detailsList.map((detail) => Boolean(detail.open));
+      sessionStorage.setItem(detailsStateKey, JSON.stringify(openStates));
+    };
+
+    restoreDetailsState();
+    detailsList.forEach((detail) => {
+      detail.addEventListener("toggle", rememberDetailsState);
+    });
+
+    const savedScroll = sessionStorage.getItem(scrollKey);
+    if (savedScroll !== null) {
+      sessionStorage.removeItem(scrollKey);
+      const scrollY = Number.parseInt(savedScroll, 10);
+      if (Number.isFinite(scrollY)) {
+        window.scrollTo({ top: scrollY, behavior: "auto" });
+      }
+    }
+
+    const rememberScroll = () => {
+      sessionStorage.setItem(scrollKey, String(window.scrollY || 0));
+    };
+
+    let isSubmitting = false;
+    form.addEventListener("submit", () => {
+      rememberDetailsState();
+      rememberScroll();
+    });
+
+    form.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" || event.isComposing) return;
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+
+      const tagName = target.tagName.toLowerCase();
+      if (tagName === "button") return;
+
+      if (tagName === "textarea" && event.shiftKey) {
+        return;
+      }
+
+      event.preventDefault();
+      if (isSubmitting) return;
+      isSubmitting = true;
+      rememberDetailsState();
+      rememberScroll();
+      form.requestSubmit();
+    });
+  })();
+</script>
+
+<%- include("partials/footer") %>
