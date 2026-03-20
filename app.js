@@ -436,6 +436,7 @@ app.post(
 app.post(
   "/admin/about-content",
   requireAdmin,
+  upload.single("aboutIntroImage"),
   asyncHandler(aboutController.updateAdminAboutContent),
 );
 app.get(

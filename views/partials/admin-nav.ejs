@@ -8,9 +8,9 @@
   "/admin/affiliate/stats": "Affiliates",
   "/admin/stockists": "Stockist Requests",
   "/admin/theme": "Color Schemes",
-  "/admin/home-hero": "Homepage Text",
-  "/admin/home-content": "Homepage Text",
-  "/admin/about-content": "Aboutpage Text",
+  "/admin/home-hero": "Edit Home",
+  "/admin/home-content": "Edit Home",
+  "/admin/about-content": "Edit About",
   "/admin/team": "Team"
 }; %>
 <% const currentAdminSection = adminSectionTitles[currentPath] || "Control Center"; %>
@@ -75,13 +75,13 @@
         href="/admin/home-content"
         class="admin-nav-link <%= (currentPath === '/admin/home-content' || currentPath === '/admin/home-hero') ? 'is-active' : '' %>"
       >
-        Homepage Text
+        Edit Home
       </a>
       <a
         href="/admin/about-content"
         class="admin-nav-link <%= currentPath === '/admin/about-content' ? 'is-active' : '' %>"
       >
-        Aboutpage Text
+        Edit About
       </a>
       <% if (user.isOwner) { %>
       <a

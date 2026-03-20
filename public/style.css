@@ -1500,7 +1500,7 @@ main {
 
 .product-list-image {
   width: 100%;
-  height: 170px;
+  height: 230px;
   display: block;
   object-fit: contain;
   object-position: center;
@@ -1654,7 +1654,7 @@ main {
 
 .product-details-image {
   width: 100%;
-  height: 150px;
+  height: 210px;
   display: block;
   object-fit: contain;
   object-position: center;
@@ -1928,11 +1928,11 @@ main {
   }
 
   .product-list-image {
-    height: 150px;
+    height: 200px;
   }
 
   .product-details-image {
-    height: 130px;
+    height: 180px;
   }
 
   .recently-viewed-image {
@@ -1951,6 +1951,14 @@ main {
     height: auto;
     max-height: 70vh;
     object-fit: contain;
+  }
+
+  .product-list-image {
+    height: 190px;
+  }
+
+  .product-details-image {
+    height: 170px;
   }
 }
 
