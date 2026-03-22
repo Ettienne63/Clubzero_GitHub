@@ -1,99 +1,146 @@
 const {
-  readStoreLocations,
-  writeStoreLocations,
   normalizeStoreLocation,
 } = require("../lib/storeLocations");
 const { prisma } = require("../prisma/lib/prisma");
 
-const sortLocations = (locations) =>
-  [...locations].sort((a, b) => {
-    const cityCompare = (a.city || "").localeCompare(b.city || "", undefined, {
-      sensitivity: "base",
-    });
-    if (cityCompare !== 0) {
-      return cityCompare;
-    }
-    return (a.name || "").localeCompare(b.name || "", undefined, {
-      sensitivity: "base",
-    });
+const mapDbLocationToView = (location) => ({
+  id: location.id,
+  name: location.name,
+  addressLine1: location.addressLine1,
+  addressLine2: location.addressLine2,
+  city: location.city,
+  state: location.state,
+  hours: location.hours,
+  phone: location.phone,
+  mapUrl: location.mapUrl,
+});
+
+const mapNormalizedLocationToDb = (location) => ({
+  id: location.id,
+  name: location.name,
+  addressLine1: location.addressLine1,
+  addressLine2: location.addressLine2,
+  city: location.city,
+  state: location.state,
+  hours: location.hours,
+  phone: location.phone,
+  mapUrl: location.mapUrl,
+});
+
+const findLocationByName = async (name, excludeId = null) => {
+  const normalizedName = (name || "").toString().trim();
+  if (!normalizedName) {
+    return null;
+  }
+
+  return prisma.storeLocation.findFirst({
+    where: {
+      name: {
+        equals: normalizedName,
+        mode: "insensitive",
+      },
+      ...(excludeId ? { id: { not: excludeId } } : {}),
+    },
+    select: { id: true, name: true },
   });
+};
 
 const syncSupplierFromLocation = async (location) => {
+  const locationId = (location?.id || "").toString().trim();
   const supplierName = (location?.name || "").trim();
-  if (!supplierName) {
+  if (!locationId || !supplierName) {
     return;
   }
 
-  await prisma.supplier.upsert({
+  const normalizedPhone = location.phone || null;
+  const normalizedNotes =
+    [location.city, location.state].filter(Boolean).join(", ") || null;
+
+  const existingByLocation = await prisma.supplier.findUnique({
+    where: { storeLocationId: locationId },
+    select: { id: true },
+  });
+
+  if (existingByLocation) {
+    await prisma.supplier.update({
+      where: { id: existingByLocation.id },
+      data: {
+        name: supplierName,
+        isActive: true,
+        contactPhone: normalizedPhone,
+        notes: normalizedNotes,
+      },
+    });
+    return;
+  }
+
+  const existingByName = await prisma.supplier.findUnique({
     where: { name: supplierName },
-    create: {
+    select: { id: true },
+  });
+
+  if (existingByName) {
+    await prisma.supplier.update({
+      where: { id: existingByName.id },
+      data: {
+        storeLocationId: locationId,
+        isActive: true,
+        contactPhone: normalizedPhone,
+        notes: normalizedNotes,
+      },
+    });
+    return;
+  }
+
+  await prisma.supplier.create({
+    data: {
       name: supplierName,
-      contactPhone: location.phone || null,
-      notes: [location.city, location.state].filter(Boolean).join(", ") || null,
-    },
-    update: {
-      contactPhone: location.phone || null,
-      notes: [location.city, location.state].filter(Boolean).join(", ") || null,
+      storeLocationId: locationId,
+      isActive: true,
+      contactPhone: normalizedPhone,
+      notes: normalizedNotes,
     },
   });
 };
 
 const removeSupplierIfOrphanedLocationName = async ({
-  locationName,
-  locations,
+  locationId,
 }) => {
-  const trimmedName = (locationName || "").trim();
-  if (!trimmedName) {
+  const trimmedLocationId = (locationId || "").trim();
+  if (!trimmedLocationId) {
     return;
   }
 
-  const stillUsedByLocation = locations.some(
-    (location) => (location?.name || "").trim() === trimmedName,
-  );
-  if (stillUsedByLocation) {
+  const stillExistingLocation = await prisma.storeLocation.count({
+    where: { id: trimmedLocationId },
+  });
+  if (stillExistingLocation > 0) {
     return;
   }
 
   const supplier = await prisma.supplier.findUnique({
-    where: { name: trimmedName },
-    select: {
-      id: true,
-      _count: { select: { customProducts: true, stocks: true } },
-    },
+    where: { storeLocationId: trimmedLocationId },
+    select: { id: true },
   });
 
   if (!supplier) {
     return;
   }
 
-  // Only auto-remove orphan suppliers that have no linked inventory records.
-  if (
-    Number(supplier?._count?.customProducts || 0) > 0 ||
-    Number(supplier?._count?.stocks || 0) > 0
-  ) {
-    return;
-  }
-
-  await prisma.supplier.delete({ where: { id: supplier.id } });
+  await prisma.supplier.update({
+    where: { id: supplier.id },
+    data: {
+      isActive: false,
+      storeLocationId: null,
+    },
+  });
 };
 
 exports.getAdminLocationsPage = async (req, res) => {
-  let locations = readStoreLocations();
-  let needsWrite = false;
-
-  locations = locations.map((location) => {
-    if (!location || !location.id) {
-      needsWrite = true;
-      return normalizeStoreLocation(location || {});
-    }
-    return normalizeStoreLocation(location, { id: location.id });
+  const dbLocations = await prisma.storeLocation.findMany({
+    orderBy: [{ city: "asc" }, { name: "asc" }],
   });
-
-  if (needsWrite) {
-    writeStoreLocations(locations);
-  }
-
-  locations = sortLocations(locations);
+  const locations = dbLocations.map(mapDbLocationToView);
 
   return res.render("admin-store-locations", {
     locations,
@@ -113,10 +160,19 @@ exports.getAdminLocationsPage = async (req, res) => {
 };
 
 exports.createLocation = async (req, res) => {
-  const locations = readStoreLocations();
-  const location = normalizeStoreLocation(req.body);
-  locations.push(location);
-  writeStoreLocations(locations);
+  const location = normalizeStoreLocation(req.body || {});
+  const duplicateByName = await findLocationByName(location.name);
+  if (duplicateByName) {
+    return res.redirect(
+      `/admin/locations?error=${encodeURIComponent(
+        "A store location with this name already exists.",
+      )}`,
+    );
+  }
+
+  await prisma.storeLocation.create({
+    data: mapNormalizedLocationToDb(location),
+  });
 
   try {
     await syncSupplierFromLocation(location);
@@ -129,10 +185,11 @@ exports.createLocation = async (req, res) => {
 
 exports.updateLocation = async (req, res) => {
   const locationId = (req.params.id || "").toString();
-  const locations = readStoreLocations();
-  const index = locations.findIndex((location) => location.id === locationId);
+  const existing = await prisma.storeLocation.findUnique({
+    where: { id: locationId },
+  });
 
-  if (index === -1) {
+  if (!existing) {
     return res.redirect(
       `/admin/locations?error=${encodeURIComponent(
         "Location not found. Please refresh and try again.",
@@ -140,16 +197,26 @@ exports.updateLocation = async (req, res) => {
     );
   }
 
-  const existing = locations[index];
-  locations[index] = normalizeStoreLocation(req.body, { id: existing.id });
-  writeStoreLocations(locations);
+  const next = normalizeStoreLocation(req.body || {}, { id: existing.id });
+  const duplicateByName = await findLocationByName(next.name, existing.id);
+  if (duplicateByName) {
+    return res.redirect(
+      `/admin/locations?error=${encodeURIComponent(
+        "A store location with this name already exists.",
+      )}`,
+    );
+  }
+
+  await prisma.storeLocation.update({
+    where: { id: existing.id },
+    data: mapNormalizedLocationToDb(next),
+  });
 
   try {
-    await syncSupplierFromLocation(locations[index]);
-    if ((existing?.name || "").trim() !== (locations[index]?.name || "").trim()) {
+    await syncSupplierFromLocation(next);
+    if ((existing?.name || "").trim() !== (next?.name || "").trim()) {
       await removeSupplierIfOrphanedLocationName({
-        locationName: existing?.name,
-        locations,
+        locationId: existing?.id,
       });
     }
   } catch (_error) {
@@ -161,11 +228,11 @@ exports.updateLocation = async (req, res) => {
 
 exports.deleteLocation = async (req, res) => {
   const locationId = (req.params.id || "").toString();
-  const locations = readStoreLocations();
-  const deletedLocation = locations.find((location) => location.id === locationId);
-  const nextLocations = locations.filter((location) => location.id !== locationId);
+  const deletedLocation = await prisma.storeLocation.findUnique({
+    where: { id: locationId },
+  });
 
-  if (nextLocations.length === locations.length) {
+  if (!deletedLocation) {
     return res.redirect(
       `/admin/locations?error=${encodeURIComponent(
         "Location not found. Please refresh and try again.",
@@ -173,12 +240,11 @@ exports.deleteLocation = async (req, res) => {
     );
   }
 
-  writeStoreLocations(nextLocations);
+  await prisma.storeLocation.delete({ where: { id: locationId } });
 
   try {
     await removeSupplierIfOrphanedLocationName({
-      locationName: deletedLocation?.name,
-      locations: nextLocations,
+      locationId: deletedLocation?.id,
     });
   } catch (_error) {
     // Keep location delete successful even if supplier sync fails.

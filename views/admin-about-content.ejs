@@ -10,13 +10,7 @@
     </div>
   </div>
 
-  <% if (success) { %>
-  <div class="alert alert-success" role="alert"><%= success %></div>
-  <% } %>
-
-  <% if (error) { %>
-  <div class="alert alert-danger" role="alert"><%= error %></div>
-  <% } %>
+  <%- include("partials/admin-floating-alert", { success, error }) %>
 
   <form
     action="/admin/about-content"

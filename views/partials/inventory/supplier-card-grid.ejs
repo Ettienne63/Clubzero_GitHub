@@ -27,12 +27,14 @@
   <section>
     <% const privateSellerTag = "[private seller - no store location]"; %>
     <% const allSuppliers = suppliers || []; %>
-    <% const privateSuppliers = allSuppliers.filter((supplier) => String(supplier.notes || "").toLowerCase().includes(privateSellerTag)); %>
-    <% const storeSuppliers = allSuppliers.filter((supplier) => !String(supplier.notes || "").toLowerCase().includes(privateSellerTag)); %>
+    <% const activeSuppliers = allSuppliers.filter((supplier) => supplier.isActive !== false); %>
+    <% const inactiveSuppliers = allSuppliers.filter((supplier) => supplier.isActive === false); %>
+    <% const privateSuppliers = activeSuppliers.filter((supplier) => String(supplier.notes || "").toLowerCase().includes(privateSellerTag)); %>
+    <% const storeSuppliers = activeSuppliers.filter((supplier) => !String(supplier.notes || "").toLowerCase().includes(privateSellerTag)); %>
     <div class="d-flex justify-content-between align-items-center mb-3 gap-3 flex-wrap">
       <h2 class="h5 mb-0">Supplier Stock Sections</h2>
       <div class="d-flex align-items-center gap-2 ms-auto inventory-supplier-search-wrap">
-        <span class="badge text-bg-secondary"><%= allSuppliers.length %> suppliers</span>
+        <span class="badge text-bg-secondary"><%= activeSuppliers.length %> active suppliers</span>
         <input
           id="supplierSearchInput"
           type="search"
@@ -43,7 +45,7 @@
       </div>
     </div>
 
-    <% if (allSuppliers.length === 0) { %>
+    <% if (activeSuppliers.length === 0) { %>
     <p class="text-muted">No suppliers added yet. Add store-based suppliers in Store Locations or add a private seller above.</p>
     <% } else { %>
     <div class="mb-4">
@@ -151,6 +153,36 @@
     <p class="text-muted mt-3 d-none" id="supplierSearchEmptyState">
       No suppliers match your search.
     </p>
+    <% if (inactiveSuppliers.length > 0) { %>
+    <div class="mt-4">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <h3 class="h6 mb-0">Not Used (Inactive)</h3>
+        <span class="badge text-bg-light border"><%= inactiveSuppliers.length %></span>
+      </div>
+      <div class="row g-3">
+        <% inactiveSuppliers.forEach((supplier) => { %>
+        <div class="col-12 col-md-6 col-lg-4">
+          <div class="card h-100 border-secondary-subtle">
+            <div class="card-body">
+              <h4 class="h6 mb-1"><%= supplier.name %></h4>
+              <p class="text-muted small mb-2">
+                <%= supplier.contactName || 'No contact name' %>
+              </p>
+              <p class="text-muted small mb-3">
+                Supplier-only products: <%= supplier.customProducts ? supplier.customProducts.length : 0 %>
+              </p>
+              <form action="/admin/inventory/suppliers/<%= supplier.id %>/restore" method="POST">
+                <button type="submit" class="btn btn-outline-primary btn-sm">
+                  Restore Supplier
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+        <% }) %>
+      </div>
+    </div>
+    <% } %>
     <% } %>
   </section>
 </main>

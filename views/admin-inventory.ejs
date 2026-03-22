@@ -7,13 +7,7 @@
     <h1 class="h3 mb-0">Inventory Tracking</h1>
   </div>
 
-  <% if (success) { %>
-  <div class="alert alert-success" role="alert"><%= success %></div>
-  <% } %>
-
-  <% if (error) { %>
-  <div class="alert alert-danger" role="alert"><%= error %></div>
-  <% } %>
+  <%- include("partials/admin-floating-alert", { success, error }) %>
 
   <section class="card mb-3">
     <div class="card-body py-2">

@@ -47,7 +47,6 @@ const { startAbandonedCartScheduler } = require("./lib/abandonedCart");
 const {
   startDailyOutOfStockSummaryScheduler,
 } = require("./lib/outOfStockSummary");
-const { readStoreLocations } = require("./lib/storeLocations");
 const { prisma } = require("./prisma/lib/prisma");
 const APPROVED_AFFILIATE_STATUS = "APPROVED";
 
@@ -211,11 +210,19 @@ app.use(async (req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.cartCount = 0;
   res.locals.siteTheme = "sunset";
+  res.locals.navbarLogoUrl = "";
 
   try {
     res.locals.siteTheme = await getSiteTheme();
   } catch (_error) {
     res.locals.siteTheme = "sunset";
+  }
+
+  try {
+    const homeHero = await getHomeHeroSettings();
+    res.locals.navbarLogoUrl = String(homeHero?.logoUrl || "").trim();
+  } catch (_error) {
+    res.locals.navbarLogoUrl = "";
   }
 
   if (res.locals.user) {
@@ -304,24 +311,36 @@ app.get("/", async (_req, res) => {
 });
 app.get("/about", asyncHandler(aboutController.getAboutPage));
 app.get("/contact", contactController.getContact);
-app.get("/store-locator", (req, res) => {
+app.get("/store-locator", asyncHandler(async (req, res) => {
   const query = (req.query.city || "").toString().trim();
-  const storeLocations = readStoreLocations();
-  const filteredLocations = query
-    ? storeLocations.filter((location) => {
-        const haystack = [
-          location.name,
-          location.city,
-          location.state,
-          location.addressLine1,
-          location.addressLine2,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        return haystack.includes(query.toLowerCase());
-      })
-    : storeLocations;
+
+  const where = query
+    ? {
+        OR: [
+          { name: { contains: query, mode: "insensitive" } },
+          { city: { contains: query, mode: "insensitive" } },
+          { state: { contains: query, mode: "insensitive" } },
+          { addressLine1: { contains: query, mode: "insensitive" } },
+          { addressLine2: { contains: query, mode: "insensitive" } },
+        ],
+      }
+    : {};
+
+  const filteredLocations = await prisma.storeLocation.findMany({
+    where,
+    orderBy: [{ city: "asc" }, { name: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      addressLine1: true,
+      addressLine2: true,
+      city: true,
+      state: true,
+      hours: true,
+      phone: true,
+      mapUrl: true,
+    },
+  });
 
   return res.render("store-locator", {
     storeLocations: filteredLocations,
@@ -330,7 +349,7 @@ app.get("/store-locator", (req, res) => {
     success: req.query.success || null,
     error: req.query.error || null,
   });
-});
+}));
 app.post(
   "/contact",
   contactRateLimit,
@@ -417,6 +436,11 @@ app.get(
   asyncHandler(homeController.getAdminHomeContent),
 );
 app.get(
+  "/admin/nav-edit",
+  requireAdmin,
+  asyncHandler(homeController.getAdminNavEdit),
+);
+app.get(
   "/admin/about-content",
   requireAdmin,
   asyncHandler(aboutController.getAdminAboutContent),
@@ -432,6 +456,12 @@ app.post(
   requireAdmin,
   upload.single("heroImage"),
   asyncHandler(homeController.updateAdminHomeContent),
+);
+app.post(
+  "/admin/nav-edit",
+  requireAdmin,
+  upload.single("heroLogo"),
+  asyncHandler(homeController.updateAdminNavEdit),
 );
 app.post(
   "/admin/about-content",
@@ -510,6 +540,11 @@ app.post(
   "/admin/inventory/suppliers/:id/delete",
   requireAdmin,
   asyncHandler(inventoryController.deleteSupplier),
+);
+app.post(
+  "/admin/inventory/suppliers/:id/restore",
+  requireAdmin,
+  asyncHandler(inventoryController.restoreSupplier),
 );
 app.post(
   "/admin/inventory/suppliers/:id/custom-products",

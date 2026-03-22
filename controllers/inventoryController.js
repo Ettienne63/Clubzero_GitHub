@@ -14,7 +14,6 @@ const {
   getActorEmail,
   recordInventoryHistory,
   maybeSendLowStockAlert,
-  syncSuppliersFromLocations,
   buildNormalizedInventoryData,
   fetchInventoryHistoryMaps,
 } = require("../lib/inventoryService");
@@ -46,12 +45,6 @@ const toSafeFilenamePart = (value) =>
 
 
 exports.getAdminInventoryPage = async (req, res) => {
-  try {
-    await syncSuppliersFromLocations();
-  } catch (_error) {
-    // Do not block page rendering if sync fails.
-  }
-
   const [products, suppliers, lowStockEmailsEnabled] = await Promise.all([
     prisma.product.findMany({
       select: {
@@ -262,9 +255,32 @@ exports.createSupplier = async (req, res) => {
   }
 
   try {
+    const existing = await prisma.supplier.findUnique({
+      where: { name },
+      select: { id: true, isActive: true },
+    });
+
+    if (existing) {
+      await prisma.supplier.update({
+        where: { id: existing.id },
+        data: {
+          isActive: true,
+          contactName,
+          contactEmail,
+          contactPhone,
+          notes: normalizedNotes,
+        },
+      });
+      return redirectInventorySuccess(
+        res,
+        existing.isActive ? "Supplier updated." : "Supplier restored.",
+      );
+    }
+
     await prisma.supplier.create({
       data: {
         name,
+        isActive: true,
         contactName,
         contactEmail,
         contactPhone,
@@ -273,12 +289,6 @@ exports.createSupplier = async (req, res) => {
     });
     return redirectInventorySuccess(res, "Supplier created.");
   } catch (error) {
-    if (error.code === "P2002") {
-      return redirectInventoryError(
-        res,
-        "A supplier with this name already exists.",
-      );
-    }
     return redirectInventoryError(res, "Unable to create supplier.");
   }
 };
@@ -303,7 +313,7 @@ exports.updateSupplier = async (req, res) => {
   try {
     const existingSupplier = await prisma.supplier.findUnique({
       where: { id: supplierId },
-      select: { notes: true },
+      select: { notes: true, storeLocationId: true },
     });
     const shouldKeepPrivateTag = String(existingSupplier?.notes || "")
       .toLowerCase()
@@ -318,12 +328,24 @@ exports.updateSupplier = async (req, res) => {
       where: { id: supplierId },
       data: {
         name,
+        isActive: true,
         contactName,
         contactEmail,
         contactPhone,
         notes: normalizedNotes,
       },
     });
+
+    if (existingSupplier?.storeLocationId) {
+      await prisma.storeLocation.updateMany({
+        where: { id: existingSupplier.storeLocationId },
+        data: {
+          name,
+          phone: contactPhone,
+        },
+      });
+    }
+
     return redirectInventorySuccess(res, "Supplier updated.");
   } catch (error) {
     if (error.code === "P2002") {
@@ -347,30 +369,41 @@ exports.deleteSupplier = async (req, res) => {
   }
 
   try {
-    const supplierCustomProducts = await prisma.supplierCustomProduct.findMany({
-      where: { supplierId },
-      select: { id: true },
+    await prisma.supplier.update({
+      where: { id: supplierId },
+      data: {
+        isActive: false,
+        storeLocationId: null,
+      },
     });
 
-    await prisma.supplier.delete({ where: { id: supplierId } });
-
-    const keysToDelete = [
-      ...supplierCustomProducts.map((product) =>
-        getAlertSettingKey("SUPPLIER_CUSTOM", product.id),
-      ),
-    ];
-    if (keysToDelete.length) {
-      await prisma.appSetting.deleteMany({
-        where: { key: { in: keysToDelete } },
-      });
-    }
-
-    return redirectInventorySuccess(res, "Supplier removed.");
+    return redirectInventorySuccess(res, "Supplier marked as not used.");
   } catch (error) {
     if (error.code === "P2025") {
       return redirectInventoryError(res, "Supplier not found.");
     }
     return redirectInventoryError(res, "Unable to remove supplier.");
+  }
+};
+
+exports.restoreSupplier = async (req, res) => {
+  const supplierId = Number.parseInt(req.params.id, 10);
+
+  if (!Number.isInteger(supplierId)) {
+    return redirectInventoryError(res, "Invalid supplier id.");
+  }
+
+  try {
+    await prisma.supplier.update({
+      where: { id: supplierId },
+      data: { isActive: true },
+    });
+    return redirectInventorySuccess(res, "Supplier restored.");
+  } catch (error) {
+    if (error.code === "P2025") {
+      return redirectInventoryError(res, "Supplier not found.");
+    }
+    return redirectInventoryError(res, "Unable to restore supplier.");
   }
 };
 

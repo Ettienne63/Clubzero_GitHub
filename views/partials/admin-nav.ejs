@@ -10,10 +10,30 @@
   "/admin/theme": "Color Schemes",
   "/admin/home-hero": "Edit Home",
   "/admin/home-content": "Edit Home",
+  "/admin/nav-edit": "Edit Nav",
   "/admin/about-content": "Edit About",
   "/admin/team": "Team"
 }; %>
 <% const currentAdminSection = adminSectionTitles[currentPath] || "Control Center"; %>
+<% const managementPaths = [
+  "/admin",
+  "/admin/locations",
+  "/admin/inventory",
+  "/admin/promo",
+  "/admin/payments",
+  "/admin/affiliate/stats",
+  "/admin/stockists",
+  "/admin/team"
+]; %>
+<% const contentPaths = [
+  "/admin/home-content",
+  "/admin/home-hero",
+  "/admin/about-content",
+  "/admin/nav-edit",
+  "/admin/theme"
+]; %>
+<% const isManagementActive = managementPaths.includes(currentPath); %>
+<% const isContentActive = contentPaths.includes(currentPath); %>
 <div class="admin-nav-wrap">
   <div class="container">
     <div class="admin-nav-header">
@@ -22,76 +42,93 @@
         <h2 class="admin-nav-title mb-0"><%= currentAdminSection %></h2>
       </div>
     </div>
-    <nav class="admin-nav">
-      <a
-        href="/admin"
-        class="admin-nav-link <%= currentPath === '/admin' ? 'is-active' : '' %>"
-      >
-        Products
-      </a>
-      <a
-        href="/admin/locations"
-        class="admin-nav-link <%= currentPath === '/admin/locations' ? 'is-active' : '' %>"
-      >
-        Store Locations
-      </a>
-      <a
-        href="/admin/inventory"
-        class="admin-nav-link <%= currentPath === '/admin/inventory' ? 'is-active' : '' %>"
-      >
-        Inventory
-      </a>
-      <a
-        href="/admin/promo"
-        class="admin-nav-link <%= currentPath === '/admin/promo' ? 'is-active' : '' %>"
-      >
-        Promotions
-      </a>
-      <a
-        href="/admin/payments"
-        class="admin-nav-link <%= currentPath === '/admin/payments' ? 'is-active' : '' %>"
-      >
-        Payments
-      </a>
-      <a
-        href="/admin/affiliate/stats"
-        class="admin-nav-link <%= currentPath === '/admin/affiliate/stats' ? 'is-active' : '' %>"
-      >
-        Affiliates
-      </a>
-      <a
-        href="/admin/stockists"
-        class="admin-nav-link <%= currentPath === '/admin/stockists' ? 'is-active' : '' %>"
-      >
-        Stockist Requests
-      </a>
-      <a
-        href="/admin/theme"
-        class="admin-nav-link <%= currentPath === '/admin/theme' ? 'is-active' : '' %>"
-      >
-        Color Schemes
-      </a>
-      <a
-        href="/admin/home-content"
-        class="admin-nav-link <%= (currentPath === '/admin/home-content' || currentPath === '/admin/home-hero') ? 'is-active' : '' %>"
-      >
-        Edit Home
-      </a>
-      <a
-        href="/admin/about-content"
-        class="admin-nav-link <%= currentPath === '/admin/about-content' ? 'is-active' : '' %>"
-      >
-        Edit About
-      </a>
-      <% if (user.isOwner) { %>
-      <a
-        href="/admin/team"
-        class="admin-nav-link <%= currentPath === '/admin/team' ? 'is-active' : '' %>"
-      >
-        Team
-      </a>
-      <% } %>
-    </nav>
+    <div class="admin-nav-grid">
+      <section class="admin-nav-group admin-nav-group--management <%= isManagementActive ? 'is-active' : '' %>">
+        <p class="admin-nav-group-title mb-2">Management</p>
+        <nav class="admin-nav">
+          <a
+            href="/admin"
+            class="admin-nav-link <%= currentPath === '/admin' ? 'is-active' : '' %>"
+          >
+            Products
+          </a>
+          <a
+            href="/admin/locations"
+            class="admin-nav-link <%= currentPath === '/admin/locations' ? 'is-active' : '' %>"
+          >
+            Store Locations
+          </a>
+          <a
+            href="/admin/inventory"
+            class="admin-nav-link <%= currentPath === '/admin/inventory' ? 'is-active' : '' %>"
+          >
+            Inventory
+          </a>
+          <a
+            href="/admin/promo"
+            class="admin-nav-link <%= currentPath === '/admin/promo' ? 'is-active' : '' %>"
+          >
+            Promotions
+          </a>
+          <a
+            href="/admin/payments"
+            class="admin-nav-link <%= currentPath === '/admin/payments' ? 'is-active' : '' %>"
+          >
+            Payments
+          </a>
+          <a
+            href="/admin/affiliate/stats"
+            class="admin-nav-link <%= currentPath === '/admin/affiliate/stats' ? 'is-active' : '' %>"
+          >
+            Affiliates
+          </a>
+          <a
+            href="/admin/stockists"
+            class="admin-nav-link <%= currentPath === '/admin/stockists' ? 'is-active' : '' %>"
+          >
+            Stockist Requests
+          </a>
+          <% if (user.isOwner) { %>
+          <a
+            href="/admin/team"
+            class="admin-nav-link <%= currentPath === '/admin/team' ? 'is-active' : '' %>"
+          >
+            Team
+          </a>
+          <% } %>
+        </nav>
+      </section>
+
+      <section class="admin-nav-group admin-nav-group--content <%= isContentActive ? 'is-active' : '' %>">
+        <p class="admin-nav-group-title mb-2">Content Editing</p>
+        <nav class="admin-nav">
+          <a
+            href="/admin/home-content"
+            class="admin-nav-link <%= (currentPath === '/admin/home-content' || currentPath === '/admin/home-hero') ? 'is-active' : '' %>"
+          >
+            Edit Home
+          </a>
+          <a
+            href="/admin/about-content"
+            class="admin-nav-link <%= currentPath === '/admin/about-content' ? 'is-active' : '' %>"
+          >
+            Edit About
+          </a>
+          <a
+            href="/admin/nav-edit"
+            class="admin-nav-link <%= currentPath === '/admin/nav-edit' ? 'is-active' : '' %>"
+          >
+            Edit Nav
+          </a>
+          <a
+            href="/admin/theme"
+            class="admin-nav-link <%= currentPath === '/admin/theme' ? 'is-active' : '' %>"
+          >
+            Color Schemes
+          </a>
+        </nav>
+      </section>
+    </div>
   </div>
 </div>
 <% } %>

@@ -8,7 +8,17 @@
 >
   <div class="container">
     <a class="navbar-brand d-flex align-items-center gap-2 cz-brand" href="/">
+      <% if (navbarLogoUrl) { %>
+      <img
+        src="<%= navbarLogoUrl %>"
+        alt="Club Zero"
+        class="cz-brand-logo"
+        loading="eager"
+        decoding="async"
+      />
+      <% } else { %>
       <span class="cz-brand-text">Club Zero</span>
+      <% } %>
     </a>
     <button
       class="navbar-toggler d-lg-none"

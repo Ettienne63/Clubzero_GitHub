@@ -294,6 +294,8 @@ model AppSetting {
 model Supplier {
   id           Int                  @id @default(autoincrement())
   name         String               @unique
+  storeLocationId String?           @unique
+  isActive     Boolean              @default(true)
   contactName  String?
   contactEmail String?
   contactPhone String?
@@ -334,6 +336,22 @@ model InventoryHistory {
 
   @@index([scope, entityId, createdAt])
   @@index([createdAt])
+}
+
+model StoreLocation {
+  id           String   @id
+  name         String
+  addressLine1 String
+  addressLine2 String?
+  city         String
+  state        String?
+  hours        String?
+  phone        String?
+  mapUrl       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([city, name])
 }
 
 model user_sessions {

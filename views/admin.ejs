@@ -7,13 +7,7 @@
     <h1 class="h3 mb-0">Product Settings</h1>
   </div>
 
-  <% if (success) { %>
-  <div class="alert alert-success" role="alert"><%= success %></div>
-  <% } %>
-
-  <% if (error) { %>
-  <div class="alert alert-danger" role="alert"><%= error %></div>
-  <% } %>
+  <%- include("partials/admin-floating-alert", { success, error }) %>
 
   <section class="mb-4">
     <h2 class="h5 mb-3">Add Product</h2>

@@ -10,6 +10,7 @@ const {
 } = require("../lib/homeTextSettings");
 
 const HERO_LIMITS = {
+  logoUrl: 300,
   badge: 80,
   title: 140,
   subtitle: 240,
@@ -30,7 +31,11 @@ const enforceMaxLength = (value, max, label) => {
   return null;
 };
 
-const parseHeroInput = (body, file, current = {}) => {
+const parseHeroInput = (body, files, current = {}) => {
+  const heroImageFile = files?.heroImage?.[0] || null;
+  const heroLogoFile = files?.heroLogo?.[0] || null;
+  const logoUrlInput = (body.heroLogoUrl || "").toString().trim();
+  const removeLogo = body.heroLogoRemove === "on";
   const badge = (body.badge || "").toString().trim();
   const title = (body.title || "").toString().trim();
   const subtitle = (body.subtitle || "").toString().trim();
@@ -43,13 +48,19 @@ const parseHeroInput = (body, file, current = {}) => {
   const secondaryUrl = (body.secondaryUrl || "").toString().trim();
   const imageUrlInput = (body.heroImageUrl || "").toString().trim();
   const removeImage = body.heroImageRemove === "on";
-  const imageUrl = file
-    ? `/uploads/${file.filename}`
+  const imageUrl = heroImageFile
+    ? `/uploads/${heroImageFile.filename}`
     : removeImage
       ? ""
       : imageUrlInput || current.imageUrl || "";
+  const logoUrl = heroLogoFile
+    ? `/uploads/${heroLogoFile.filename}`
+    : removeLogo
+      ? ""
+      : logoUrlInput || current.logoUrl || "";
 
   const lengthChecks = [
+    enforceMaxLength(logoUrl, HERO_LIMITS.logoUrl, "Logo URL"),
     enforceMaxLength(badge, HERO_LIMITS.badge, "Badge"),
     enforceMaxLength(title, HERO_LIMITS.title, "Title"),
     enforceMaxLength(subtitle, HERO_LIMITS.subtitle, "Subtitle"),
@@ -83,6 +94,7 @@ const parseHeroInput = (body, file, current = {}) => {
         secondaryLabel || current.secondaryLabel || HERO_DEFAULTS.secondaryLabel,
       secondaryUrl:
         secondaryUrl || current.secondaryUrl || HERO_DEFAULTS.secondaryUrl,
+      logoUrl,
       imageUrl,
     },
   };
@@ -113,12 +125,51 @@ exports.getAdminHomeContent = async (req, res) => {
   });
 };
 
+exports.getAdminNavEdit = async (req, res) => {
+  const hero = await getHomeHeroSettings();
+  return res.render("admin-nav-edit", {
+    hero,
+    success: req.query.success || null,
+    error: req.query.error || null,
+  });
+};
+
+exports.updateAdminNavEdit = async (req, res) => {
+  const existingHero = await getHomeHeroSettings();
+  const logoUrlInput = (req.body.heroLogoUrl || "").toString().trim();
+  const removeLogo = req.body.heroLogoRemove === "on";
+  const uploadedLogo = req.file ? `/uploads/${req.file.filename}` : "";
+  const logoUrl = uploadedLogo
+    ? uploadedLogo
+    : removeLogo
+      ? ""
+      : logoUrlInput || existingHero.logoUrl || "";
+
+  const logoLengthError = enforceMaxLength(
+    logoUrl,
+    HERO_LIMITS.logoUrl,
+    "Logo URL",
+  );
+  if (logoLengthError) {
+    return res.redirect(
+      `/admin/nav-edit?error=${encodeURIComponent(logoLengthError)}`,
+    );
+  }
+
+  await saveHomeHeroSettings({
+    ...existingHero,
+    logoUrl,
+  });
+
+  return res.redirect("/admin/nav-edit?success=Navbar+logo+updated");
+};
+
 exports.updateAdminHomeContent = async (req, res) => {
   const [existing, existingHero] = await Promise.all([
     getHomeTextSettings(),
     getHomeHeroSettings(),
   ]);
-  const parsedHero = parseHeroInput(req.body, req.file, existingHero);
+  const parsedHero = parseHeroInput(req.body, req.files || {}, existingHero);
   if (parsedHero.error) {
     return res.redirect(
       `/admin/home-content?error=${encodeURIComponent(parsedHero.error)}`,
