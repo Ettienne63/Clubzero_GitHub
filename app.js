@@ -209,21 +209,16 @@ app.use(async (req, res, next) => {
   res.locals.currentPath = req.path;
   res.locals.user = req.session.user || null;
   res.locals.cartCount = 0;
-  res.locals.siteTheme = "sunset";
-  res.locals.navbarLogoUrl = "";
-
-  try {
-    res.locals.siteTheme = await getSiteTheme();
-  } catch (_error) {
-    res.locals.siteTheme = "sunset";
-  }
-
-  try {
-    const homeHero = await getHomeHeroSettings();
-    res.locals.navbarLogoUrl = String(homeHero?.logoUrl || "").trim();
-  } catch (_error) {
-    res.locals.navbarLogoUrl = "";
-  }
+  const [siteThemeResult, homeHeroResult] = await Promise.allSettled([
+    getSiteTheme(),
+    getHomeHeroSettings(),
+  ]);
+  res.locals.siteTheme =
+    siteThemeResult.status === "fulfilled" ? siteThemeResult.value : "sunset";
+  res.locals.navbarLogoUrl =
+    homeHeroResult.status === "fulfilled"
+      ? String(homeHeroResult.value?.logoUrl || "").trim()
+      : "";
 
   if (res.locals.user) {
     const affiliateProgramStatus = String(

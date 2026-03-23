@@ -20,7 +20,15 @@ const toOptionalText = (value) => {
   return trimmed ? trimmed : null;
 };
 
-const productWithReviewsInclude = {
+const productWithReviewRatingsInclude = {
+  reviews: {
+    select: {
+      rating: true,
+    },
+  },
+};
+
+const productWithReviewDetailsInclude = {
   reviews: {
     include: {
       user: {
@@ -255,7 +263,7 @@ const parsePromoInput = (body, file, current = {}) => {
 };
 
 const getProducts = (search = "", options = {}) => {
-  const { includeInactive = false } = options;
+  const { includeInactive = false, includeReviewRatings = false } = options;
   const trimmedSearch = search.trim();
   const where = {
     ...(includeInactive ? {} : { isActive: true }),
@@ -271,7 +279,7 @@ const getProducts = (search = "", options = {}) => {
 
   return prisma.product.findMany({
     where,
-    include: productWithReviewsInclude,
+    ...(includeReviewRatings ? { include: productWithReviewRatingsInclude } : {}),
     orderBy: { id: "desc" },
   });
 };
@@ -280,10 +288,10 @@ exports.listProducts = async (req, res) => {
   const searchQuery = (req.query.search || "").toString();
   const userId = Number.parseInt(req.session?.user?.id, 10);
   const [products, recentlyViewedProductsRaw, promoSettings] = await Promise.all([
-    getProducts(searchQuery),
+    getProducts(searchQuery, { includeReviewRatings: true }),
     prisma.product.findMany({
       where: { id: { in: getRecentlyViewedProductIds(req) }, isActive: true },
-      include: productWithReviewsInclude,
+      include: productWithReviewRatingsInclude,
     }),
     getPromoSettings(),
   ]);
@@ -352,7 +360,7 @@ exports.getProductDetails = async (req, res) => {
         id: productId,
         ...(isAdmin ? {} : { isActive: true }),
       },
-      include: productWithReviewsInclude,
+      include: productWithReviewDetailsInclude,
     }),
     getPromoSettings(),
   ]);
