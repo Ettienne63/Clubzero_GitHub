@@ -119,11 +119,22 @@ main {
 }
 
 .cz-cart-btn {
-  border-radius: 999px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.4rem;
-  box-shadow: 0 10px 18px rgba(13, 110, 253, 0.15);
+}
+
+.cz-navbar .cz-cart-btn {
+  border: 1px solid transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.cz-navbar .cz-cart-btn:hover,
+.cz-navbar .cz-cart-btn:focus {
+  background: #eef6ff;
+  color: #0d6efd;
 }
 
 .cart-qty-stack {
@@ -152,6 +163,12 @@ main {
   color: #b54708;
   min-height: 1rem;
   line-height: 1.15;
+}
+
+@media (max-width: 575.98px) {
+  .cart-page .cart-top-header {
+    padding-inline: 0.45rem;
+  }
 }
 
 .cz-navbar .dropdown-menu {
@@ -3123,6 +3140,20 @@ body[data-site-theme] .btn-primary.active {
   border-color: rgba(var(--theme-primary-rgb), 0.76) !important;
   transform: translateY(1px);
   box-shadow: 0 8px 16px rgba(var(--theme-primary-rgb), 0.24) !important;
+}
+
+/* Keep navbar cart aligned with regular nav links */
+body[data-site-theme] .cz-navbar .cz-cart-btn {
+  background: transparent !important;
+  color: var(--theme-nav-link) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+body[data-site-theme] .cz-navbar .cz-cart-btn:hover,
+body[data-site-theme] .cz-navbar .cz-cart-btn:focus {
+  background: var(--theme-nav-link-hover-bg) !important;
+  color: var(--theme-nav-link-hover) !important;
 }
 
 body[data-site-theme] .btn-outline-primary,
