@@ -8,6 +8,7 @@ const {
   getHomeTextSettings,
   saveHomeTextSettings,
 } = require("../lib/homeTextSettings");
+const { logger } = require("../lib/logger");
 
 const HERO_LIMITS = {
   logoUrl: 300,
@@ -169,7 +170,13 @@ exports.updateAdminHomeContent = async (req, res) => {
     getHomeTextSettings(),
     getHomeHeroSettings(),
   ]);
-  const parsedHero = parseHeroInput(req.body, req.files || {}, existingHero);
+  const fileMap =
+    req.files && typeof req.files === "object" ? { ...req.files } : {};
+  if (req.file) {
+    fileMap.heroImage = [req.file];
+  }
+
+  const parsedHero = parseHeroInput(req.body, fileMap, existingHero);
   if (parsedHero.error) {
     return res.redirect(
       `/admin/home-content?error=${encodeURIComponent(parsedHero.error)}`,
@@ -185,13 +192,43 @@ exports.updateAdminHomeContent = async (req, res) => {
     return acc;
   }, {});
 
-  await Promise.all([
+  const [textSaveResult, heroSaveResult] = await Promise.allSettled([
     saveHomeTextSettings(next),
     saveHomeHeroSettings({
       ...existingHero,
       ...parsedHero.data,
     }),
   ]);
+  const textSaved = textSaveResult.status === "fulfilled";
+  const heroSaved = heroSaveResult.status === "fulfilled";
+
+  if (!textSaved) {
+    logger.warn("admin_home_content_text_save_failed", {
+      error: textSaveResult.reason?.message || "unknown_error",
+    });
+  }
+
+  if (!heroSaved) {
+    logger.warn("admin_home_content_hero_save_failed", {
+      error: heroSaveResult.reason?.message || "unknown_error",
+    });
+  }
+
+  if (!textSaved && !heroSaved) {
+    return res.redirect(
+      `/admin/home-content?error=${encodeURIComponent(
+        "Unable to save homepage content right now. Please try again.",
+      )}`,
+    );
+  }
+
+  if (!textSaved || !heroSaved) {
+    return res.redirect(
+      `/admin/home-content?success=${encodeURIComponent(
+        "Changes were saved, but some sections may need another save.",
+      )}`,
+    );
+  }
 
   return res.redirect("/admin/home-content?success=Homepage+content+updated");
 };

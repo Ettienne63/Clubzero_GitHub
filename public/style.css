@@ -2164,6 +2164,10 @@ main {
   color: rgba(255, 255, 255, 0.92) !important;
 }
 
+.admin-shell .affiliate-earnings-card .card-body {
+  background: transparent;
+}
+
 .affiliate-join-page {
   max-width: 980px;
 }
@@ -3321,6 +3325,7 @@ body[data-site-theme] .about-page .about-value-tag {
 
 /* Deterministic per-theme override for About key chips/tags */
 body[data-site-theme="ocean"] .about-page .about-kicker,
+body[data-site-theme="ocean"] .home-page .about-kicker,
 body[data-site-theme="ocean"] .contact-page .about-kicker,
 body[data-site-theme="ocean"] .about-page .about-stat-chip,
 body[data-site-theme="ocean"] .about-page .about-promise-icon,
@@ -3331,6 +3336,7 @@ body[data-site-theme="ocean"] .about-page .about-value-tag {
 }
 
 body[data-site-theme="sunset"] .about-page .about-kicker,
+body[data-site-theme="sunset"] .home-page .about-kicker,
 body[data-site-theme="sunset"] .contact-page .about-kicker,
 body[data-site-theme="sunset"] .about-page .about-stat-chip,
 body[data-site-theme="sunset"] .about-page .about-promise-icon,
@@ -3341,6 +3347,7 @@ body[data-site-theme="sunset"] .about-page .about-value-tag {
 }
 
 body[data-site-theme="forest"] .about-page .about-kicker,
+body[data-site-theme="forest"] .home-page .about-kicker,
 body[data-site-theme="forest"] .contact-page .about-kicker,
 body[data-site-theme="forest"] .about-page .about-stat-chip,
 body[data-site-theme="forest"] .about-page .about-promise-icon,
@@ -3351,6 +3358,7 @@ body[data-site-theme="forest"] .about-page .about-value-tag {
 }
 
 body[data-site-theme="mango"] .about-page .about-kicker,
+body[data-site-theme="mango"] .home-page .about-kicker,
 body[data-site-theme="mango"] .contact-page .about-kicker,
 body[data-site-theme="mango"] .about-page .about-stat-chip,
 body[data-site-theme="mango"] .about-page .about-promise-icon,
@@ -3361,6 +3369,7 @@ body[data-site-theme="mango"] .about-page .about-value-tag {
 }
 
 body[data-site-theme="grape"] .about-page .about-kicker,
+body[data-site-theme="grape"] .home-page .about-kicker,
 body[data-site-theme="grape"] .contact-page .about-kicker,
 body[data-site-theme="grape"] .about-page .about-stat-chip,
 body[data-site-theme="grape"] .about-page .about-promise-icon,
@@ -3684,6 +3693,12 @@ body[data-site-theme] .home-page .home-benefit-kicker {
   border-color: var(--theme-pill-border) !important;
 }
 
+body[data-site-theme] .home-page .home-reviews-kicker {
+  color: var(--theme-pill-text) !important;
+  background: var(--theme-pill-bg) !important;
+  border-color: var(--theme-pill-border) !important;
+}
+
 /* Deterministic per-theme Why Club Zero kicker */
 body[data-site-theme="sunset"] .home-page .home-benefit-kicker {
   color: #f7b94f !important;
@@ -3704,6 +3719,31 @@ body[data-site-theme="mango"] .home-page .home-benefit-kicker {
 }
 
 body[data-site-theme="grape"] .home-page .home-benefit-kicker {
+  color: #c53a4b !important;
+  background: rgba(197, 58, 75, 0.16) !important;
+  border-color: rgba(197, 58, 75, 0.38) !important;
+}
+
+/* Deterministic per-theme Reviews kicker */
+body[data-site-theme="sunset"] .home-page .home-reviews-kicker {
+  color: #f7b94f !important;
+  background: rgba(247, 185, 79, 0.16) !important;
+  border-color: rgba(247, 185, 79, 0.38) !important;
+}
+
+body[data-site-theme="forest"] .home-page .home-reviews-kicker {
+  color: #1f8a5b !important;
+  background: rgba(31, 138, 91, 0.16) !important;
+  border-color: rgba(31, 138, 91, 0.38) !important;
+}
+
+body[data-site-theme="mango"] .home-page .home-reviews-kicker {
+  color: #ff9800 !important;
+  background: rgba(255, 152, 0, 0.16) !important;
+  border-color: rgba(255, 152, 0, 0.38) !important;
+}
+
+body[data-site-theme="grape"] .home-page .home-reviews-kicker {
   color: #c53a4b !important;
   background: rgba(197, 58, 75, 0.16) !important;
   border-color: rgba(197, 58, 75, 0.38) !important;

@@ -5,7 +5,7 @@
     <div class="container">
       <div class="row g-4 align-items-center">
         <div class="col-lg-6">
-          <% if (homeHero && homeHero.badge && homeHero.badge.trim().toLowerCase() !== "club zero") { %>
+          <% if (homeHero && homeHero.badge && homeHero.badge.trim()) { %>
           <span class="about-kicker"><%= homeHero.badge %></span>
           <% } %>
           <h1 class="display-4 fw-bold mb-3 home-hero-title">

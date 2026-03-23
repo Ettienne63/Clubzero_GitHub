@@ -112,11 +112,11 @@
       </article>
     </div>
     <div class="col-12 col-md-6 col-xl-3">
-      <article class="card h-100 affiliate-earnings-card">
+      <article class="card h-100 affiliate-stat-card">
         <div class="card-body">
-          <p class="small text-uppercase fw-semibold mb-2">Paid</p>
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Paid</p>
           <p class="h4 mb-0"><%= summary.paidCount %></p>
-          <p class="small mb-0">R<%= Number(summary.paidCommission).toFixed(2) %></p>
+          <p class="small text-muted mb-0">R<%= Number(summary.paidCommission).toFixed(2) %></p>
         </div>
       </article>
     </div>
