@@ -2,13 +2,14 @@
 <% const adminSectionTitles = {
   "/admin": "Product Settings",
   "/admin/inventory": "Inventory Tracking",
-  "/admin/promo": "Promotions",
+  "/admin/promo": "Promotion Discounts",
+  "/admin/promo-content": "Edit Promotion",
   "/admin/locations": "Store Locations",
   "/admin/payments": "Payments",
+  "/admin/analytics": "Analytics",
   "/admin/affiliate/stats": "Affiliates",
   "/admin/stockists": "Stockist Requests",
   "/admin/theme": "Color Schemes",
-  "/admin/home-hero": "Edit Home",
   "/admin/home-content": "Edit Home",
   "/admin/nav-edit": "Edit Nav",
   "/admin/about-content": "Edit About",
@@ -20,6 +21,7 @@
   "/admin/locations",
   "/admin/inventory",
   "/admin/promo",
+  "/admin/analytics",
   "/admin/payments",
   "/admin/affiliate/stats",
   "/admin/stockists",
@@ -27,7 +29,7 @@
 ]; %>
 <% const contentPaths = [
   "/admin/home-content",
-  "/admin/home-hero",
+  "/admin/promo-content",
   "/admin/about-content",
   "/admin/nav-edit",
   "/admin/theme"
@@ -71,6 +73,12 @@
             Promotions
           </a>
           <a
+            href="/admin/analytics"
+            class="admin-nav-link <%= currentPath === '/admin/analytics' ? 'is-active' : '' %>"
+          >
+            Analytics
+          </a>
+          <a
             href="/admin/payments"
             class="admin-nav-link <%= currentPath === '/admin/payments' ? 'is-active' : '' %>"
           >
@@ -104,9 +112,15 @@
         <nav class="admin-nav">
           <a
             href="/admin/home-content"
-            class="admin-nav-link <%= (currentPath === '/admin/home-content' || currentPath === '/admin/home-hero') ? 'is-active' : '' %>"
+            class="admin-nav-link <%= currentPath === '/admin/home-content' ? 'is-active' : '' %>"
           >
             Edit Home
+          </a>
+          <a
+            href="/admin/promo-content"
+            class="admin-nav-link <%= currentPath === '/admin/promo-content' ? 'is-active' : '' %>"
+          >
+            Edit Promo
           </a>
           <a
             href="/admin/about-content"

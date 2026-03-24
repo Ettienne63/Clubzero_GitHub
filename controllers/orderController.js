@@ -1653,10 +1653,131 @@ exports.getOrderInvoice = async (req, res) => {
 exports.redirectAdminInvoicesToPayments = async (_req, res) =>
   res.redirect("/admin/payments");
 
+exports.getAdminAnalyticsPage = async (req, res) => {
+  const allowedRanges = new Set(["7", "30", "90", "all"]);
+  const rangeParam = String(req.query.days || "30").toLowerCase();
+  const rangeKey = allowedRanges.has(rangeParam) ? rangeParam : "30";
+  const now = new Date();
+  let rangeStart = null;
+
+  if (rangeKey !== "all") {
+    const days = Number.parseInt(rangeKey, 10);
+    rangeStart = new Date(now);
+    rangeStart.setDate(now.getDate() - days);
+  }
+
+  const orders = await prisma.order.findMany({
+    where: rangeStart ? { createdAt: { gte: rangeStart } } : undefined,
+    select: {
+      id: true,
+      userId: true,
+      status: true,
+      total: true,
+      createdAt: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      orderItems: {
+        select: {
+          productId: true,
+          productName: true,
+          quantity: true,
+          subtotal: true,
+        },
+      },
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+  });
+
+  const paidOrders = orders.filter(
+    (order) => String(order.status || "").toUpperCase() === "PAID",
+  );
+  const totalOrders = orders.length;
+  const paidOrdersCount = paidOrders.length;
+  const revenue = paidOrders.reduce(
+    (sum, order) => sum + Number(order.total || 0),
+    0,
+  );
+  const paymentConversionRate =
+    totalOrders > 0 ? (paidOrdersCount / totalOrders) * 100 : 0;
+
+  const productMap = new Map();
+  paidOrders.forEach((order) => {
+    order.orderItems.forEach((item) => {
+      const key = `${item.productId}:${item.productName}`;
+      const current = productMap.get(key) || {
+        productId: item.productId,
+        productName: item.productName || "Product",
+        unitsSold: 0,
+        revenue: 0,
+      };
+      current.unitsSold += Number(item.quantity || 0);
+      current.revenue += Number(item.subtotal || 0);
+      productMap.set(key, current);
+    });
+  });
+
+  const topProducts = Array.from(productMap.values())
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 10);
+
+  const customerMap = new Map();
+  paidOrders.forEach((order) => {
+    const key = Number(order.userId);
+    if (!Number.isInteger(key)) {
+      return;
+    }
+    const current = customerMap.get(key) || {
+      userId: key,
+      name: order.user?.name || "Customer",
+      email: order.user?.email || "",
+      ordersCount: 0,
+      spent: 0,
+      lastOrderAt: null,
+    };
+    current.ordersCount += 1;
+    current.spent += Number(order.total || 0);
+    if (!current.lastOrderAt || new Date(order.createdAt) > new Date(current.lastOrderAt)) {
+      current.lastOrderAt = order.createdAt;
+    }
+    customerMap.set(key, current);
+  });
+
+  const customerStats = Array.from(customerMap.values());
+  const totalCustomers = customerStats.length;
+  const repeatCustomers = customerStats.filter((customer) => customer.ordersCount >= 2);
+  const repeatCustomersCount = repeatCustomers.length;
+  const repeatCustomerRate =
+    totalCustomers > 0 ? (repeatCustomersCount / totalCustomers) * 100 : 0;
+  const topRepeatCustomers = repeatCustomers
+    .sort((a, b) => b.ordersCount - a.ordersCount || b.spent - a.spent)
+    .slice(0, 10);
+
+  return res.render("admin-analytics", {
+    rangeKey,
+    summary: {
+      revenue,
+      totalOrders,
+      paidOrdersCount,
+      paymentConversionRate,
+      totalCustomers,
+      repeatCustomersCount,
+      repeatCustomerRate,
+    },
+    topProducts,
+    topRepeatCustomers,
+    success: req.query.success || null,
+    error: req.query.error || null,
+  });
+};
+
 exports.getAdminPaymentsPage = async (req, res) => {
   const statusFilter = (req.query.status || "paid").toString().toUpperCase();
   const allowedStatuses = new Set([
-    "PAID",
     "PAID",
     "PENDING_PAYMENT",
   ]);

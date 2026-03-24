@@ -23,6 +23,7 @@ const PROFILE_FEATURE_ERROR_QUERY =
   "error=Please+run+Prisma+migration+and+generate+to+enable+address+book";
 
 const hasAddressBookModel = () => Boolean(prisma.addressBookEntry);
+const PROFILE_ADDRESS_PAGE_SIZE = 8;
 
 const redirectProfileFeatureUnavailable = (res) =>
   res.redirect(`/auth/profile?${PROFILE_FEATURE_ERROR_QUERY}`);
@@ -78,23 +79,48 @@ exports.getProfilePage = async (req, res) => {
     return res.redirect("/auth/login");
   }
 
-  const [profile, addressBookEntries] = await Promise.all([
+  const requestedPage = Number.parseInt(req.query.page, 10);
+  const currentPage =
+    Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  const skip = (currentPage - 1) * PROFILE_ADDRESS_PAGE_SIZE;
+
+  const [profile, addressBookEntries, totalAddressCount] = await Promise.all([
     getUserProfileById(userId),
     hasAddressBookModel()
       ? prisma.addressBookEntry.findMany({
           where: { userId },
           orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+          skip,
+          take: PROFILE_ADDRESS_PAGE_SIZE,
         })
       : [],
+    hasAddressBookModel()
+      ? prisma.addressBookEntry.count({
+          where: { userId },
+        })
+      : 0,
   ]);
 
   if (!profile) {
     return res.redirect("/auth/logout");
   }
 
+  const totalAddressPages = Math.max(
+    1,
+    Math.ceil(totalAddressCount / PROFILE_ADDRESS_PAGE_SIZE),
+  );
+  const safeCurrentPage = Math.min(currentPage, totalAddressPages);
+
+  if (safeCurrentPage !== currentPage) {
+    return res.redirect(`/auth/profile?page=${safeCurrentPage}`);
+  }
+
   return res.render("auth/profile", {
     profile,
     addressBookEntries,
+    currentAddressPage: safeCurrentPage,
+    totalAddressPages,
+    totalAddressCount,
     success: req.query.success || null,
     error: req.query.error || null,
   });

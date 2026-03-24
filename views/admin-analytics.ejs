@@ -1,0 +1,149 @@
+<%- include("partials/header", { title: "Admin Analytics" }) %>
+<%- include("partials/navbar") %>
+<%- include("partials/admin-nav") %>
+
+<main class="container py-5 admin-shell">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+      <h1 class="h3 mb-1">Admin Analytics</h1>
+      <p class="text-muted mb-0">
+        Revenue, orders, payment conversion, top products, and repeat customers.
+      </p>
+    </div>
+  </div>
+
+  <%- include("partials/admin-floating-alert", { success, error }) %>
+
+  <section class="card shadow-sm mb-4">
+    <div class="card-body d-flex flex-wrap align-items-center gap-2">
+      <span class="fw-semibold me-2">Range:</span>
+      <% [["7", "7 days"], ["30", "30 days"], ["90", "90 days"], ["all", "All"]].forEach(([value, label]) => { %>
+      <a
+        href="/admin/analytics?days=<%= value %>"
+        class="btn btn-sm <%= rangeKey === value ? 'btn-primary' : 'btn-outline-primary' %>"
+      >
+        <%= label %>
+      </a>
+      <% }) %>
+    </div>
+  </section>
+
+  <section class="row g-3 mb-4">
+    <div class="col-12 col-md-6 col-xl-2">
+      <article class="card h-100">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Revenue</p>
+          <p class="h4 mb-0">R<%= Number(summary.revenue).toFixed(2) %></p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-md-6 col-xl-2">
+      <article class="card h-100">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Orders</p>
+          <p class="h4 mb-0"><%= summary.totalOrders %></p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-md-6 col-xl-2">
+      <article class="card h-100">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Paid Orders</p>
+          <p class="h4 mb-0"><%= summary.paidOrdersCount %></p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <article class="card h-100">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Payment Conversion</p>
+          <p class="h4 mb-0"><%= Number(summary.paymentConversionRate).toFixed(1) %>%</p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <article class="card h-100">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Repeat Customers</p>
+          <p class="h4 mb-0">
+            <%= summary.repeatCustomersCount %>
+            <span class="fs-6 text-muted">/ <%= summary.totalCustomers %> (<%= Number(summary.repeatCustomerRate).toFixed(1) %>%)</span>
+          </p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="row g-4">
+    <div class="col-12 col-xl-6">
+      <article class="card shadow-sm h-100">
+        <div class="card-body">
+          <h2 class="h5 mb-3">Top Products</h2>
+          <% if (!topProducts || topProducts.length === 0) { %>
+          <div class="alert alert-info mb-0">No paid product sales in this range.</div>
+          <% } else { %>
+          <div class="table-responsive">
+            <table class="table align-middle mb-0">
+              <thead>
+                <tr>
+                  <th scope="col">Product</th>
+                  <th scope="col">Units</th>
+                  <th scope="col" class="text-end">Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% topProducts.forEach((product) => { %>
+                <tr>
+                  <td><%= product.productName %></td>
+                  <td><%= product.unitsSold %></td>
+                  <td class="text-end">R<%= Number(product.revenue).toFixed(2) %></td>
+                </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+          <% } %>
+        </div>
+      </article>
+    </div>
+
+    <div class="col-12 col-xl-6">
+      <article class="card shadow-sm h-100">
+        <div class="card-body">
+          <h2 class="h5 mb-3">Repeat Customers</h2>
+          <% if (!topRepeatCustomers || topRepeatCustomers.length === 0) { %>
+          <div class="alert alert-info mb-0">No repeat customers in this range yet.</div>
+          <% } else { %>
+          <div class="table-responsive">
+            <table class="table align-middle mb-0">
+              <thead>
+                <tr>
+                  <th scope="col">Customer</th>
+                  <th scope="col">Paid Orders</th>
+                  <th scope="col">Last Order</th>
+                  <th scope="col" class="text-end">Spent</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% topRepeatCustomers.forEach((customer) => { %>
+                <tr>
+                  <td>
+                    <div class="fw-semibold"><%= customer.name || "Customer" %></div>
+                    <div class="small text-muted"><%= customer.email || "" %></div>
+                  </td>
+                  <td><%= customer.ordersCount %></td>
+                  <td><%= customer.lastOrderAt ? new Date(customer.lastOrderAt).toLocaleDateString() : "-" %></td>
+                  <td class="text-end">R<%= Number(customer.spent).toFixed(2) %></td>
+                </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+          <% } %>
+        </div>
+      </article>
+    </div>
+  </section>
+</main>
+
+<%- include("partials/footer") %>

@@ -13,6 +13,7 @@ const PROMO_LIMITS = {
   secondaryUrl: 220,
   imageUrl: 300,
   finePrint: 140,
+  countdownPrefix: 32,
 };
 
 const toOptionalText = (value) => {
@@ -172,6 +173,9 @@ const parsePromoInput = (body, file, current = {}) => {
   const secondaryLabel = (body.promoSecondaryLabel || "").trim();
   const secondaryUrlRaw = (body.promoSecondaryUrl || "").trim();
   const finePrint = (body.promoFinePrint || "").trim();
+  const countdownEnabled = body.promoCountdownEnabled === "on";
+  const countdownPrefix = (body.promoCountdownPrefix || "").trim();
+  const countdownEndDateRaw = (body.promoCountdownEndDate || "").trim();
   const imageUrlInput = (body.promoImageUrl || "").trim();
   const removeImage = body.promoImageRemove === "on";
   const imageUrl = file
@@ -211,6 +215,11 @@ const parsePromoInput = (body, file, current = {}) => {
     ),
     enforceMaxLength(imageUrl, PROMO_LIMITS.imageUrl, "Image URL"),
     enforceMaxLength(finePrint, PROMO_LIMITS.finePrint, "Fine print"),
+    enforceMaxLength(
+      countdownPrefix,
+      PROMO_LIMITS.countdownPrefix,
+      "Countdown prefix",
+    ),
   ];
 
   const lengthError = lengthChecks.find(Boolean);
@@ -245,6 +254,14 @@ const parsePromoInput = (body, file, current = {}) => {
     };
   }
 
+  const countdownEndDate = countdownEndDateRaw;
+  if (countdownEndDate) {
+    const parsedDate = new Date(`${countdownEndDate}T00:00:00.000Z`);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return { error: "Countdown end date must be a valid date." };
+    }
+  }
+
   return {
     data: {
       enabled,
@@ -258,6 +275,9 @@ const parsePromoInput = (body, file, current = {}) => {
       secondaryUrl: secondaryUrlValidation.value,
       imageUrl,
       finePrint,
+      countdownEnabled,
+      countdownPrefix,
+      countdownEndDate,
     },
   };
 };
@@ -479,6 +499,69 @@ exports.getAdminPromoPage = async (req, res) => {
   });
 };
 
+exports.getAdminPromoContentPage = async (req, res) => {
+  const promoSettings = await getPromoSettings();
+
+  return res.render("admin-promo-content", {
+    promoSettings,
+    success: req.query.success || null,
+    error: req.query.error || null,
+  });
+};
+
+exports.updatePromoEnabled = async (req, res) => {
+  const current = await getPromoSettings();
+  const enabled = req.body?.promoEnabled === "on";
+
+  await savePromoSettings({
+    ...current,
+    enabled,
+    discountsEnabled: enabled ? current.discountsEnabled !== false : false,
+    countdownEnabled: enabled ? current.countdownEnabled === true : false,
+  });
+
+  return res.redirect(
+    `/admin/promo?success=${encodeURIComponent(
+      enabled
+        ? "Promotion is now visible on the homepage."
+        : "Promotion has been hidden from the homepage.",
+    )}`,
+  );
+};
+
+exports.updatePromoCountdown = async (req, res) => {
+  const current = await getPromoSettings();
+  const countdownEnabled =
+    current?.enabled && req.body?.promoCountdownEnabled === "on";
+  const countdownPrefix = (req.body?.promoCountdownPrefix || "Ends in")
+    .toString()
+    .trim()
+    .slice(0, PROMO_LIMITS.countdownPrefix);
+  const countdownEndDate = (req.body?.promoCountdownEndDate || "")
+    .toString()
+    .trim();
+
+  if (countdownEndDate) {
+    const parsedDate = new Date(`${countdownEndDate}T00:00:00.000Z`);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return res.redirect(
+        `/admin/promo?error=${encodeURIComponent(
+          "Countdown end date must be a valid date.",
+        )}`,
+      );
+    }
+  }
+
+  await savePromoSettings({
+    ...current,
+    countdownEnabled,
+    countdownPrefix,
+    countdownEndDate,
+  });
+
+  return res.redirect("/admin/promo?success=Countdown+updated");
+};
+
 exports.updateProductDiscounts = async (req, res) => {
   const wantsJson =
     req.xhr || (req.get("Accept") || "").includes("application/json");
@@ -684,11 +767,16 @@ exports.updateProductDiscounts = async (req, res) => {
 };
 
 exports.updatePromoSettings = async (req, res) => {
+  const requestedReturnTo = (req.body?.promoReturnTo || "").toString().trim();
+  const allowedReturnTo = new Set(["/admin/promo", "/admin/promo-content"]);
+  const returnTo = allowedReturnTo.has(requestedReturnTo)
+    ? requestedReturnTo
+    : "/admin/promo-content";
   const current = await getPromoSettings();
   const parsed = parsePromoInput(req.body, req.file, current);
 
   if (parsed.error) {
-    return res.redirect(`/admin?error=${encodeURIComponent(parsed.error)}`);
+    return res.redirect(`${returnTo}?error=${encodeURIComponent(parsed.error)}`);
   }
 
   const nextSettings = {
@@ -699,7 +787,7 @@ exports.updatePromoSettings = async (req, res) => {
   };
 
   await savePromoSettings(nextSettings);
-  return res.redirect("/admin/promo?success=Promotion+updated");
+  return res.redirect(`${returnTo}?success=Promotion+updated`);
 };
 
 exports.createProduct = async (req, res) => {

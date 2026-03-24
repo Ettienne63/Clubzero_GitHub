@@ -82,9 +82,40 @@
       <div class="home-promo-card">
         <div class="row g-4 align-items-center">
           <div class="col-lg-6">
-            <% if (promoSettings.badge) { %>
-            <span class="home-promo-badge"><%= promoSettings.badge %></span>
-            <% } %>
+            <% 
+              const countdownPrefix = (promoSettings?.countdownPrefix || "Ends in").trim() || "Ends in";
+              const countdownDateValue = (promoSettings?.countdownEndDate || "").trim();
+              let countdownText = "";
+              if (promoSettings?.countdownEnabled && countdownDateValue) {
+                const endDate = new Date(`${countdownDateValue}T23:59:59.999Z`);
+                if (!Number.isNaN(endDate.getTime())) {
+                  const now = new Date();
+                  const diffMs = endDate.getTime() - now.getTime();
+                  const totalHours = Math.ceil(diffMs / (1000 * 60 * 60));
+                  if (totalHours > 24) {
+                    const days = Math.floor(totalHours / 24);
+                    const hours = totalHours % 24;
+                    const dayPart = `${days} day${days === 1 ? "" : "s"}`;
+                    const hourPart = hours
+                      ? ` ${hours} hour${hours === 1 ? "" : "s"}`
+                      : "";
+                    countdownText = `${countdownPrefix} ${dayPart}${hourPart}`;
+                  } else if (totalHours > 0) {
+                    countdownText = `${countdownPrefix} ${totalHours} hour${totalHours === 1 ? "" : "s"}`;
+                  } else {
+                    countdownText = "Ends today";
+                  }
+                }
+              }
+            %>
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+              <% if (promoSettings.badge) { %>
+              <span class="home-promo-badge mb-0"><%= promoSettings.badge %></span>
+              <% } %>
+              <% if (countdownText) { %>
+              <span class="home-promo-countdown"><%= countdownText %></span>
+              <% } %>
+            </div>
             <% if (promoSettings.title) { %>
             <h2 class="h2 fw-bold mb-3"><%= promoSettings.title %></h2>
             <% } %>

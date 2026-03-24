@@ -366,6 +366,11 @@ app.get(
   asyncHandler(productController.getAdminPromoPage),
 );
 app.get(
+  "/admin/promo-content",
+  requireAdmin,
+  asyncHandler(productController.getAdminPromoContentPage),
+);
+app.get(
   "/admin/affiliate",
   requireAdmin,
   asyncHandler(orderController.getAdminAffiliatePage),
@@ -379,6 +384,11 @@ app.get(
   "/admin/affiliate/stats",
   requireAdmin,
   asyncHandler(orderController.getAdminAffiliateStatsPage),
+);
+app.get(
+  "/admin/analytics",
+  requireAdmin,
+  asyncHandler(orderController.getAdminAnalyticsPage),
 );
 app.get(
   "/admin/invoices",
@@ -421,11 +431,6 @@ app.get(
   asyncHandler(inventoryController.exportInventoryHistory),
 );
 app.get(
-  "/admin/home-hero",
-  requireAdmin,
-  asyncHandler(homeController.getAdminHomeHero),
-);
-app.get(
   "/admin/home-content",
   requireAdmin,
   asyncHandler(homeController.getAdminHomeContent),
@@ -439,12 +444,6 @@ app.get(
   "/admin/about-content",
   requireAdmin,
   asyncHandler(aboutController.getAdminAboutContent),
-);
-app.post(
-  "/admin/home-hero",
-  requireAdmin,
-  upload.single("heroImage"),
-  asyncHandler(homeController.updateAdminHomeHero),
 );
 app.post(
   "/admin/home-content",
@@ -624,6 +623,16 @@ app.post(
   asyncHandler(productController.updatePromoSettings),
 );
 app.post(
+  "/admin/promo/toggle",
+  requireAdmin,
+  asyncHandler(productController.updatePromoEnabled),
+);
+app.post(
+  "/admin/promo/countdown",
+  requireAdmin,
+  asyncHandler(productController.updatePromoCountdown),
+);
+app.post(
   "/admin/promo/discounts",
   requireAdmin,
   asyncHandler(productController.updateProductDiscounts),
@@ -646,7 +655,7 @@ app.use((error, _req, res, next) => {
   return next(error);
 });
 
-app.use((error, _req, res, _next) => {
+app.use((error, req, res, _next) => {
   logger.error("request_failed", {
     requestId: res.locals.requestId || null,
     error: error.message,
@@ -656,7 +665,32 @@ app.use((error, _req, res, _next) => {
     requestId: res.locals.requestId || null,
     error: error.message,
   });
-  return res.status(500).send("Something went wrong. Please try again.");
+
+  const contentRouteErrorMap = {
+    "/admin/home-content":
+      "We couldn't process Home content right now. Please try again.",
+    "/admin/about-content":
+      "We couldn't process About content right now. Please try again.",
+    "/admin/nav-edit":
+      "We couldn't process Nav content right now. Please try again.",
+  };
+  const mappedMessage = contentRouteErrorMap[req.path];
+
+  if (mappedMessage) {
+    if (req.method.toUpperCase() === "POST") {
+      return res.redirect(
+        `${req.path}?error=${encodeURIComponent(
+          `${mappedMessage} Your form inputs were kept.`,
+        )}`,
+      );
+    }
+
+    return res.status(500).send(mappedMessage);
+  }
+
+  return res
+    .status(500)
+    .send("We hit an unexpected error on this page. Please refresh and try again.");
 });
 
 process.on("unhandledRejection", (error) => {

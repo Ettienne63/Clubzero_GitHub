@@ -144,6 +144,7 @@
                 <% if (user) { %>
                 <form action="/auth/cart/add" method="POST" class="d-flex gap-2">
                   <input type="hidden" name="productId" value="<%= product.id %>" />
+                  <input type="hidden" name="returnTo" value="<%= currentPath || '/auth/products' %>" />
                   <input
                     type="number"
                     name="quantity"
@@ -224,5 +225,25 @@
     </div>
   </section>
 </main>
+<script>
+  (() => {
+    const scrollKey = "addToCartScrollY";
+    const saved = window.sessionStorage.getItem(scrollKey);
+    if (saved) {
+      window.sessionStorage.removeItem(scrollKey);
+      const y = Number.parseInt(saved, 10);
+      if (Number.isFinite(y)) {
+        window.scrollTo(0, y);
+      }
+    }
+
+    const forms = document.querySelectorAll('form[action="/auth/cart/add"]');
+    forms.forEach((form) => {
+      form.addEventListener("submit", () => {
+        window.sessionStorage.setItem(scrollKey, String(window.scrollY || 0));
+      });
+    });
+  })();
+</script>
 <%- include("partials/footer") %>
 

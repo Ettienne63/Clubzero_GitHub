@@ -14,6 +14,33 @@ const formatCaseCount = (count) => {
   const label = normalized === 1 ? "case" : "cases";
   return `${normalized} ${label}`;
 };
+const appendQueryParam = (path, key, value) => {
+  const separator = path.includes("?") ? "&" : "?";
+  return `${path}${separator}${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+};
+const getSafeReturnTo = (req) => {
+  const raw = (req.body?.returnTo || req.get("referer") || "")
+    .toString()
+    .trim();
+
+  if (!raw) {
+    return "/auth/products";
+  }
+
+  try {
+    const parsed = new URL(raw, "http://local");
+    const path = `${parsed.pathname || ""}${parsed.search || ""}`;
+    if (path.startsWith("/auth") && !path.startsWith("//")) {
+      return path;
+    }
+  } catch (error) {
+    if (raw.startsWith("/auth") && !raw.startsWith("//")) {
+      return raw;
+    }
+  }
+
+  return "/auth/products";
+};
 const touchCartActivity = async (userId) => {
   if (!Number.isInteger(userId)) {
     return;
@@ -75,6 +102,7 @@ exports.addToCart = async (req, res) => {
   const userId = getUserId(req);
   const productId = Number.parseInt(req.body.productId, 10);
   const quantity = Math.max(1, Number.parseInt(req.body.quantity, 10) || 1);
+  const returnTo = getSafeReturnTo(req);
 
   if (!Number.isInteger(userId)) {
     return res.redirect("/auth/login");
@@ -91,9 +119,11 @@ exports.addToCart = async (req, res) => {
 
   if (!product) {
     return res.redirect(
-      `/auth/products?error=${encodeURIComponent(
+      appendQueryParam(
+        returnTo,
+        "error",
         "This product is no longer available.",
-      )}`,
+      ),
     );
   }
 
@@ -111,9 +141,11 @@ exports.addToCart = async (req, res) => {
 
   if (websiteStock <= 0) {
     return res.redirect(
-      `/auth/products?error=${encodeURIComponent(
+      appendQueryParam(
+        returnTo,
+        "error",
         `Only ${formatCaseCount(websiteStock)} left right now. Please reduce your quantity or check back soon.`,
-      )}`,
+      ),
     );
   }
 
@@ -122,9 +154,11 @@ exports.addToCart = async (req, res) => {
 
   if (quantityToAdd <= 0) {
     return res.redirect(
-      `/auth/products?error=${encodeURIComponent(
+      appendQueryParam(
+        returnTo,
+        "error",
         `Only ${formatCaseCount(websiteStock)} left right now. Please reduce your quantity or check back soon.`,
-      )}`,
+      ),
     );
   }
 
@@ -151,9 +185,7 @@ exports.addToCart = async (req, res) => {
       ? `Added ${formatCaseCount(quantityToAdd)} to your cart. Only ${formatCaseCount(websiteStock)} available right now.`
       : `Added ${formatCaseCount(quantityToAdd)} to your cart.`;
 
-  return res.redirect(
-    `/auth/cart?success=${encodeURIComponent(successMessage)}`,
-  );
+  return res.redirect(appendQueryParam(returnTo, "success", successMessage));
 };
 
 exports.updateCartItem = async (req, res) => {
