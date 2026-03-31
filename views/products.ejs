@@ -17,6 +17,154 @@
         </div>
       </section>
 
+      <% if (user && products && products.length > 0) { %>
+      <% const mixLabHasFixedPrice = Boolean(mixLabSettings?.hasFixedPrice); %>
+      <% const mixLabBaseCasePrice = Number(mixLabSettings?.baseCasePrice || 0); %>
+      <% const mixLabDiscountedCasePrice = Number(mixLabSettings?.discountedCasePrice || 0); %>
+      <section class="custom-pack-spotlight mb-4" id="mix-lab">
+        <div class="custom-pack-spotlight__inner">
+          <div class="custom-pack-spotlight__head mb-0">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+              <div class="d-flex flex-wrap align-items-center gap-2">
+                <p class="custom-pack-spotlight__kicker mb-0">Mix Lab</p>
+                <span class="custom-pack-spotlight__tag">Special Build</span>
+              </div>
+              <button
+                type="button"
+                class="btn btn-light btn-sm custom-pack-toggle"
+                id="custom-pack-toggle"
+                data-open-label="Open Mix Lab"
+                data-close-label="Close Mix Lab"
+                aria-expanded="false"
+                aria-controls="custom-pack-body"
+              >
+                Open Mix Lab
+              </button>
+            </div>
+            <h2 class="h4 mb-2 mt-2">Create Your Own 12-Pack</h2>
+            <p class="mb-2 custom-pack-spotlight__sub">
+              Hand-pick your flavour lineup and add your custom case in one click.
+            </p>
+            <div class="custom-pack-steps">
+              <span class="custom-pack-step"><strong>1</strong> Pick flavours</span>
+              <span class="custom-pack-step"><strong>2</strong> Set quantity</span>
+              <span class="custom-pack-step"><strong>3</strong> Add your mix</span>
+            </div>
+          </div>
+
+          <div id="custom-pack-body" class="custom-pack-body d-none">
+            <form
+              action="/auth/cart/add-custom-pack"
+              method="POST"
+              data-save-scroll
+              data-mix-lab-fixed-price="<%= mixLabHasFixedPrice ? 'true' : 'false' %>"
+              data-mix-lab-base-price="<%= mixLabBaseCasePrice.toFixed(2) %>"
+              data-mix-lab-discounted-price="<%= mixLabDiscountedCasePrice.toFixed(2) %>"
+            >
+              <input type="hidden" name="returnTo" value="<%= currentPath || '/auth/products' %>" />
+              <div class="custom-pack-layout">
+                <div class="custom-pack-builder">
+                  <h3 class="h6 mb-2 custom-pack-panel-title">Choose Flavours</h3>
+                  <div class="custom-pack-grid">
+                    <% products.forEach((product) => { %>
+                    <% const availableBottleStock = (Number(product.websiteStock || 0) * 12) + Number(product.looseBottleStock || 0); %>
+                    <% if (availableBottleStock > 0) { %>
+                    <% const mixDiscountPercent = Number(product.discountPercent || 0); %>
+                    <% const mixHasDiscount = Boolean(discountsEnabled) && product.discountEnabled !== false && mixDiscountPercent > 0; %>
+                    <% const mixCasePrice = Number(product.price || 0); %>
+                    <% const mixDiscountedCasePrice = mixHasDiscount ? mixCasePrice * (1 - mixDiscountPercent / 100) : mixCasePrice; %>
+                    <label class="custom-pack-option">
+                      <input
+                        type="checkbox"
+                        name="productIds"
+                        value="<%= product.id %>"
+                        class="form-check-input custom-pack-checkbox"
+                        data-case-price="<%= mixCasePrice.toFixed(2) %>"
+                        data-discounted-case-price="<%= mixDiscountedCasePrice.toFixed(2) %>"
+                      />
+                      <span class="custom-pack-option__name"><%= product.name %></span>
+                      <span class="custom-pack-option__meta">
+                        <% if (mixLabHasFixedPrice) { %>
+                        Included in your Mix Lab build
+                        <% } else { %>
+                          <% if (mixHasDiscount) { %>
+                          Sale R<%= mixDiscountedCasePrice.toFixed(2) %>/case
+                          <span class="custom-pack-option__meta-original">
+                            (was R<%= mixCasePrice.toFixed(2) %>)
+                          </span>
+                          <% } else { %>
+                          R<%= mixCasePrice.toFixed(2) %>/case
+                          <% } %>
+                        <% } %>
+                      </span>
+                    </label>
+                    <% } %>
+                    <% }) %>
+                  </div>
+                </div>
+
+                <aside class="custom-pack-summary">
+                  <h3 class="h6 mb-2 custom-pack-panel-title">Your Mix Summary</h3>
+                  <p class="small mb-2 custom-pack-summary-count">
+                    Selected flavours:
+                    <strong id="custom-pack-selected-count">0</strong>
+                  </p>
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary btn-sm custom-pack-view-selected d-none"
+                    id="custom-pack-view-selected"
+                    data-open-label="View selected drinks"
+                    data-close-label="Hide selected drinks"
+                    aria-expanded="false"
+                    aria-controls="custom-pack-selected-shell"
+                  >
+                    View selected drinks
+                  </button>
+                  <p class="small mb-2 custom-pack-summary-empty" id="custom-pack-selected-empty">
+                    No flavours selected yet.
+                  </p>
+                  <div class="custom-pack-selected-shell d-none mb-3" id="custom-pack-selected-shell">
+                    <ul class="custom-pack-selected-list mb-0 d-none" id="custom-pack-selected-list"></ul>
+                  </div>
+
+                  <div class="custom-pack-actions custom-pack-actions--stack">
+                    <div class="custom-pack-actions__count">
+                      <label for="custom-pack-count" class="form-label mb-1">12-pack quantity</label>
+                      <input
+                        id="custom-pack-count"
+                        type="number"
+                        name="packCount"
+                        min="1"
+                        max="20"
+                        value="1"
+                        class="form-control"
+                      />
+                    </div>
+                    <div class="small" id="custom-pack-helper">
+                      Select flavours to see the equal split.
+                    </div>
+                    <div class="small custom-pack-pricing d-none" id="custom-pack-pricing">
+                      Estimated total:
+                      <strong id="custom-pack-estimated-total">R0.00</strong>
+                      <span class="custom-pack-estimated-original d-none" id="custom-pack-estimated-original"></span>
+                    </div>
+                    <div
+                      class="alert alert-warning py-2 px-3 small mb-0 d-none"
+                      id="custom-pack-split-alert"
+                      role="alert"
+                    ></div>
+                    <button type="submit" class="btn btn-light custom-pack-submit">
+                      Add Your Mix
+                    </button>
+                  </div>
+                </aside>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+      <% } %>
+
       <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">Products</h1>
         <% if (user && user.isAdmin) { %>
@@ -142,7 +290,7 @@
 
               <div class="d-flex flex-wrap gap-2 mt-3">
                 <% if (user) { %>
-                <form action="/auth/cart/add" method="POST" class="d-flex gap-2">
+                <form action="/auth/cart/add" method="POST" class="d-flex gap-2" data-save-scroll>
                   <input type="hidden" name="productId" value="<%= product.id %>" />
                   <input type="hidden" name="returnTo" value="<%= currentPath || '/auth/products' %>" />
                   <input
@@ -237,12 +385,269 @@
       }
     }
 
-    const forms = document.querySelectorAll('form[action="/auth/cart/add"]');
+    const forms = document.querySelectorAll("form[data-save-scroll]");
     forms.forEach((form) => {
       form.addEventListener("submit", () => {
         window.sessionStorage.setItem(scrollKey, String(window.scrollY || 0));
       });
     });
+
+    const toggleButton = document.getElementById("custom-pack-toggle");
+    const customPackBody = document.getElementById("custom-pack-body");
+    const helper = document.getElementById("custom-pack-helper");
+    const splitAlert = document.getElementById("custom-pack-split-alert");
+    const packCountInput = document.getElementById("custom-pack-count");
+    const selectedCountEl = document.getElementById("custom-pack-selected-count");
+    const selectedList = document.getElementById("custom-pack-selected-list");
+    const selectedEmpty = document.getElementById("custom-pack-selected-empty");
+    const viewSelectedButton = document.getElementById("custom-pack-view-selected");
+    const selectedShell = document.getElementById("custom-pack-selected-shell");
+    const pricingWrap = document.getElementById("custom-pack-pricing");
+    const estimatedTotalEl = document.getElementById("custom-pack-estimated-total");
+    const estimatedOriginalEl = document.getElementById(
+      "custom-pack-estimated-original",
+    );
+    const checkboxes = Array.from(
+      document.querySelectorAll(".custom-pack-checkbox"),
+    );
+    const customForm = document.querySelector(
+      'form[action="/auth/cart/add-custom-pack"]',
+    );
+
+    if (helper && customForm && checkboxes.length) {
+      const allowedCounts = new Set([1, 2, 3, 4, 6, 12]);
+      let isSelectedListOpen = false;
+      const formatCurrency = (value) => `R${Number(value || 0).toFixed(2)}`;
+      const hasFixedMixLabPrice =
+        customForm?.dataset?.mixLabFixedPrice === "true";
+      const fixedMixLabBasePrice =
+        Number.parseFloat(customForm?.dataset?.mixLabBasePrice || "0") || 0;
+      const fixedMixLabDiscountedPrice =
+        Number.parseFloat(customForm?.dataset?.mixLabDiscountedPrice || "0") ||
+        fixedMixLabBasePrice;
+      if (toggleButton && customPackBody) {
+        const openLabel =
+          toggleButton.getAttribute("data-open-label") || "Open Mix Lab";
+        const closeLabel =
+          toggleButton.getAttribute("data-close-label") || "Close Mix Lab";
+        let isOpen = false;
+        const updateToggle = () => {
+          customPackBody.classList.toggle("d-none", !isOpen);
+          toggleButton.setAttribute("aria-expanded", isOpen ? "true" : "false");
+          toggleButton.textContent = isOpen ? closeLabel : openLabel;
+        };
+        updateToggle();
+        toggleButton.addEventListener("click", () => {
+          isOpen = !isOpen;
+          updateToggle();
+        });
+      }
+
+      if (viewSelectedButton && selectedShell) {
+        const openLabel =
+          viewSelectedButton.getAttribute("data-open-label") || "View selected";
+        const closeLabel =
+          viewSelectedButton.getAttribute("data-close-label") || "Hide selected";
+        const syncSelectedToggle = (hasSelected) => {
+          viewSelectedButton.classList.toggle("d-none", !hasSelected);
+          if (!hasSelected) {
+            isSelectedListOpen = false;
+          }
+          selectedShell.classList.toggle("d-none", !hasSelected || !isSelectedListOpen);
+          viewSelectedButton.setAttribute(
+            "aria-expanded",
+            hasSelected && isSelectedListOpen ? "true" : "false",
+          );
+          viewSelectedButton.textContent =
+            hasSelected && isSelectedListOpen ? closeLabel : openLabel;
+        };
+        syncSelectedToggle(false);
+        viewSelectedButton.addEventListener("click", () => {
+          isSelectedListOpen = !isSelectedListOpen;
+          const hasSelected = checkboxes.some((box) => box.checked);
+          syncSelectedToggle(hasSelected);
+        });
+      }
+
+      const syncOptionStates = () => {
+        checkboxes.forEach((checkbox) => {
+          const option = checkbox.closest(".custom-pack-option");
+          if (!option) return;
+          option.classList.toggle("custom-pack-option--active", checkbox.checked);
+        });
+
+        if (selectedCountEl) {
+          const selectedCount = checkboxes.filter((box) => box.checked).length;
+          selectedCountEl.textContent = String(selectedCount);
+        }
+
+        if (selectedList && selectedEmpty) {
+          const selectedCount = checkboxes.filter((box) => box.checked).length;
+          const packCount = Math.max(
+            1,
+            Number.parseInt(packCountInput?.value || "1", 10) || 1,
+          );
+          const canSplit = allowedCounts.has(selectedCount) && selectedCount > 0;
+          const splitEach = canSplit ? (12 / selectedCount) * packCount : null;
+          const selected = checkboxes
+            .filter((box) => box.checked)
+            .map((box) =>
+              box
+                .closest(".custom-pack-option")
+                ?.querySelector(".custom-pack-option__name")
+                ?.textContent?.trim(),
+            )
+            .filter(Boolean);
+
+          selectedList.innerHTML = "";
+          selected.forEach((name) => {
+            const li = document.createElement("li");
+            li.textContent = canSplit
+              ? `${name} - ${splitEach} each`
+              : `${name} - split pending`;
+            selectedList.appendChild(li);
+          });
+
+          const hasSelected = selected.length > 0;
+          selectedEmpty.classList.toggle("d-none", hasSelected);
+          selectedList.classList.toggle("d-none", !hasSelected);
+
+          if (viewSelectedButton && selectedShell) {
+            if (!hasSelected) {
+              isSelectedListOpen = false;
+            }
+            selectedShell.classList.toggle(
+              "d-none",
+              !hasSelected || !isSelectedListOpen,
+            );
+            viewSelectedButton.classList.toggle("d-none", !hasSelected);
+            viewSelectedButton.setAttribute(
+              "aria-expanded",
+              hasSelected && isSelectedListOpen ? "true" : "false",
+            );
+            viewSelectedButton.textContent =
+              hasSelected && isSelectedListOpen
+                ? viewSelectedButton.getAttribute("data-close-label") || "Hide selected"
+                : viewSelectedButton.getAttribute("data-open-label") || "View selected";
+          }
+        }
+      };
+
+      const updateHelper = () => {
+        const selectedCount = checkboxes.filter((box) => box.checked).length;
+        const packCount = Math.max(
+          1,
+          Number.parseInt(packCountInput?.value || "1", 10) || 1,
+        );
+
+        const hideEstimatedPricing = () => {
+          if (!pricingWrap || !estimatedTotalEl || !estimatedOriginalEl) {
+            return;
+          }
+          pricingWrap.classList.add("d-none");
+          estimatedTotalEl.textContent = formatCurrency(0);
+          estimatedOriginalEl.classList.add("d-none");
+          estimatedOriginalEl.textContent = "";
+        };
+
+        const updateEstimatedPricing = () => {
+          if (!pricingWrap || !estimatedTotalEl || !estimatedOriginalEl) {
+            return;
+          }
+
+          const selected = checkboxes.filter((box) => box.checked);
+          if (!selected.length || !allowedCounts.has(selected.length)) {
+            hideEstimatedPricing();
+            return;
+          }
+
+          let perPackOriginal = 0;
+          let perPackDiscounted = 0;
+          if (hasFixedMixLabPrice && fixedMixLabBasePrice > 0) {
+            perPackOriginal = fixedMixLabBasePrice;
+            perPackDiscounted = fixedMixLabDiscountedPrice;
+          } else {
+            const splitSize = 12 / selected.length;
+            selected.forEach((box) => {
+              const casePrice =
+                Number.parseFloat(box.dataset.casePrice || "0") || 0;
+              const discountedCasePrice =
+                Number.parseFloat(box.dataset.discountedCasePrice || "0") ||
+                casePrice;
+              perPackOriginal += (casePrice / 12) * splitSize;
+              perPackDiscounted += (discountedCasePrice / 12) * splitSize;
+            });
+          }
+
+          const totalOriginal = perPackOriginal * packCount;
+          const totalDiscounted = perPackDiscounted * packCount;
+
+          pricingWrap.classList.remove("d-none");
+          estimatedTotalEl.textContent = formatCurrency(totalDiscounted);
+          if (totalDiscounted + 0.0001 < totalOriginal) {
+            estimatedOriginalEl.textContent = `(was ${formatCurrency(totalOriginal)})`;
+            estimatedOriginalEl.classList.remove("d-none");
+          } else {
+            estimatedOriginalEl.textContent = "";
+            estimatedOriginalEl.classList.add("d-none");
+          }
+        };
+
+        if (!selectedCount) {
+          helper.textContent = "Select flavours to see the equal split.";
+          helper.classList.remove("text-danger");
+          hideEstimatedPricing();
+          if (splitAlert) {
+            splitAlert.classList.add("d-none");
+            splitAlert.textContent = "";
+          }
+          return;
+        }
+
+        if (!allowedCounts.has(selectedCount)) {
+          helper.textContent = "";
+          helper.classList.remove("text-danger");
+          hideEstimatedPricing();
+          if (splitAlert) {
+            splitAlert.textContent =
+              "This selection cannot split a 12-pack equally. Pick 1, 2, 3, 4, 6, or 12 flavours.";
+            splitAlert.classList.remove("d-none");
+          }
+          return;
+        }
+
+        helper.textContent = `${selectedCount} flavour(s) selected. Split equally across ${packCount} custom pack(s).`;
+        helper.classList.remove("text-danger");
+        updateEstimatedPricing();
+        if (splitAlert) {
+          splitAlert.classList.add("d-none");
+          splitAlert.textContent = "";
+        }
+      };
+
+      customForm.addEventListener("submit", (event) => {
+        const selectedCount = checkboxes.filter((box) => box.checked).length;
+        if (!allowedCounts.has(selectedCount)) {
+          event.preventDefault();
+          updateHelper();
+        }
+      });
+
+      checkboxes.forEach((checkbox) => {
+        checkbox.addEventListener("change", () => {
+          syncOptionStates();
+          updateHelper();
+        });
+      });
+      if (packCountInput) {
+        packCountInput.addEventListener("input", () => {
+          syncOptionStates();
+          updateHelper();
+        });
+      }
+      syncOptionStates();
+      updateHelper();
+    }
   })();
 </script>
 <%- include("partials/footer") %>

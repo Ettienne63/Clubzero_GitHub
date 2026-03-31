@@ -211,6 +211,80 @@
             </tbody>
           </table>
         </div>
+        <hr class="my-4" />
+        <div
+          class="rounded border p-3"
+          data-mix-lab-row
+          data-price="<%= Number(mixLabSettings?.baseCasePrice || 0) %>"
+          data-has-fixed-price="<%= mixLabSettings?.hasFixedPrice ? 'true' : 'false' %>"
+        >
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h3 class="h6 mb-0">Mix Lab Discount</h3>
+            <span class="text-muted small">Build Your Own 12-Pack</span>
+          </div>
+          <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+              <label class="form-label mb-1">Current Price</label>
+              <div class="fw-semibold" data-mix-lab-current-price>
+                <% if (mixLabSettings?.hasFixedPrice) { %>
+                R<%= Number(mixLabSettings.baseCasePrice || 0).toFixed(2) %>
+                <% } else { %>
+                Not set in Product Settings
+                <% } %>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label mb-1">Discounted Price</label>
+              <div
+                class="<%= mixLabSettings?.discountActive && Number(mixLabSettings?.discountPercent || 0) > 0 ? 'price-discounted fw-semibold' : 'fw-semibold' %>"
+                data-mix-lab-discounted-price
+              >
+                <% if (mixLabSettings?.hasFixedPrice) { %>
+                R<%= Number(mixLabSettings?.discountedCasePrice || 0).toFixed(2) %>
+                <% } else { %>
+                Set Mix Lab price first
+                <% } %>
+              </div>
+              <div class="small text-muted" data-mix-lab-discount-status>
+                <%= mixLabSettings?.discountActive ? "" : "Disabled" %>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <label for="mixLabDiscountPercent" class="form-label mb-1">Discount %</label>
+              <input
+                id="mixLabDiscountPercent"
+                name="mixLabDiscountPercent"
+                type="number"
+                min="0"
+                max="90"
+                step="0.1"
+                class="form-control"
+                value="<%= Number(mixLabSettings?.discountPercent || 0) %>"
+              />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label mb-1 d-block">Enabled</label>
+              <div class="form-check form-switch">
+                <input type="hidden" name="mixLabDiscountEnabled" value="off" />
+                <input
+                  id="mixLabDiscountEnabled"
+                  name="mixLabDiscountEnabled"
+                  class="form-check-input"
+                  type="checkbox"
+                  value="on"
+                  <%= mixLabSettings?.discountEnabled !== false ? "checked" : "" %>
+                  <%= promoSettings?.enabled && promoSettings?.discountsEnabled ? "" : "disabled" %>
+                />
+                <label class="form-check-label" for="mixLabDiscountEnabled">
+                  Apply Mix Lab discount
+                </label>
+              </div>
+            </div>
+          </div>
+          <p class="small text-muted mb-0 mt-2">
+            Mix Lab base price is managed in Product Settings.
+          </p>
+        </div>
       </form>
       <% } %>
     </div>
@@ -413,15 +487,23 @@
         const productToggles = form.querySelectorAll(
           'input[type="checkbox"][id^="discountEnabled_"]',
         );
+        const mixLabToggle = document.getElementById("mixLabDiscountEnabled");
         if (!globalToggle.checked) {
           productToggles.forEach((toggle) => {
             toggle.checked = false;
             toggle.disabled = true;
           });
+          if (mixLabToggle) {
+            mixLabToggle.checked = false;
+            mixLabToggle.disabled = true;
+          }
         } else {
           productToggles.forEach((toggle) => {
             toggle.disabled = false;
           });
+          if (mixLabToggle) {
+            mixLabToggle.disabled = false;
+          }
         }
         submitDiscounts();
         updateDiscountTable();
@@ -432,6 +514,7 @@
       const globalToggle = document.getElementById("discountsEnabled");
       const globalOn = Boolean(globalToggle?.checked);
       const rows = form.querySelectorAll("[data-product-row]");
+      const mixLabRow = form.querySelector("[data-mix-lab-row]");
 
       rows.forEach((row) => {
         const price = Number(row.getAttribute("data-price") || 0);
@@ -460,6 +543,43 @@
           statusEl.textContent = enabled ? "" : "Disabled";
         }
       });
+
+      if (mixLabRow) {
+        const hasFixedPrice =
+          mixLabRow.getAttribute("data-has-fixed-price") === "true";
+        const price = Number(mixLabRow.getAttribute("data-price") || 0);
+        const percentInput = document.getElementById("mixLabDiscountPercent");
+        const enabledToggle = document.getElementById("mixLabDiscountEnabled");
+        const discountedEl = mixLabRow.querySelector(
+          "[data-mix-lab-discounted-price]",
+        );
+        const statusEl = mixLabRow.querySelector("[data-mix-lab-discount-status]");
+
+        const percent = Math.max(
+          0,
+          Math.min(90, Number(percentInput?.value || 0)),
+        );
+        const enabled = globalOn && Boolean(enabledToggle?.checked);
+        const discounted =
+          enabled && percent > 0 ? price * (1 - percent / 100) : price;
+
+        if (discountedEl) {
+          if (!hasFixedPrice || !Number.isFinite(price) || price <= 0) {
+            discountedEl.textContent = "Set Mix Lab price first";
+            discountedEl.classList.remove("price-discounted");
+          } else {
+            discountedEl.textContent = `R${discounted.toFixed(2)}`;
+            discountedEl.classList.toggle(
+              "price-discounted",
+              enabled && percent > 0,
+            );
+          }
+        }
+
+        if (statusEl) {
+          statusEl.textContent = enabled ? "" : "Disabled";
+        }
+      }
     };
 
     updateDiscountTable();

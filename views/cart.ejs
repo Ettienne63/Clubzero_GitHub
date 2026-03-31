@@ -51,28 +51,40 @@
       </thead>
       <tbody>
         <% cartItems.forEach((item) => { %>
-        <% const discountPercent = Number(item.product.discountPercent || 0); %>
-        <% const hasDiscount = Boolean(discountsEnabled) && item.product.discountEnabled !== false && discountPercent > 0; %>
-        <% const discountedPrice = hasDiscount ? Number(item.product.price) * (1 - discountPercent / 100) : Number(item.product.price); %>
-        <% const availableStock = Number(item.product.websiteStock || 0); %>
-        <% const canIncreaseQuantity = availableStock > Number(item.quantity || 0); %>
+        <% const isCustomPack = item.isCustomPack === true; %>
+        <% const discountPercent = !isCustomPack ? Number(item.product?.discountPercent || 0) : 0; %>
+        <% const hasDiscount = !isCustomPack && Boolean(discountsEnabled) && item.product?.discountEnabled !== false && discountPercent > 0; %>
+        <% const discountedPrice = !isCustomPack ? (hasDiscount ? Number(item.product?.price || 0) * (1 - discountPercent / 100) : Number(item.product?.price || 0)) : Number(item.unitPrice || 0); %>
+        <% const availableStock = !isCustomPack ? Number(item.availableCases || 0) : 999; %>
+        <% const canIncreaseQuantity = !isCustomPack ? (availableStock > Number(item.quantity || 0)) : true; %>
         <tr data-cart-item-row="<%= item.id %>">
           <td>
             <div class="d-flex align-items-center gap-3">
+              <% if (!isCustomPack) { %>
               <img
-                src="<%= item.product.imageUrl %>"
-                alt="<%= item.product.name %>"
+                src="<%= item.product?.imageUrl || '/images/6e2b972b-4a66-45ab-a9f6-a16e0d0d7b05.avif' %>"
+                alt="<%= item.product?.name || 'Product' %>"
                 class="cart-product-thumb rounded"
                 style="width: 72px; height: 72px"
                 loading="lazy"
                 decoding="async"
               />
+              <% } else { %>
+              <div class="cart-product-thumb rounded d-flex align-items-center justify-content-center bg-light border" style="width: 72px; height: 72px">
+                <span class="small fw-semibold text-center">Mix<br />12</span>
+              </div>
+              <% } %>
               <div>
-                <div class="fw-semibold"><%= item.product.name %></div>
+                <div class="fw-semibold"><%= item.displayName || item.product?.name || "Item" %></div>
+                <% if (!isCustomPack) { %>
+                <div class="text-muted small"><%= item.product?.description || "No description" %></div>
+                <% } %>
+                <% if (isCustomPack && Array.isArray(item.customPackEntries) && item.customPackEntries.length) { %>
                 <div class="text-muted small">
-                  <%= item.product.description || "No description" %>
+                  <%= item.customPackEntries.map((entry) => `${entry.productName} (${entry.bottlesPerPack})`).join(", ") %>
                 </div>
-                <% if (!item.product.isActive) { %>
+                <% } %>
+                <% if (item.isUnavailable) { %>
                 <div class="small text-danger">Unavailable</div>
                 <% } %>
               </div>
@@ -81,9 +93,9 @@
           <td>
             <% if (hasDiscount) { %>
             <span class="price-discounted">R<%= Number(discountedPrice).toFixed(2) %></span>
-            <span class="price-original ms-1">R<%= Number(item.product.price).toFixed(2) %></span>
+            <span class="price-original ms-1">R<%= Number(item.product?.price || 0).toFixed(2) %></span>
             <% } else { %>
-            R<%= Number(item.product.price).toFixed(2) %>
+            R<%= Number(item.product?.price || 0).toFixed(2) %>
             <% } %>
           </td>
           <td>
@@ -107,23 +119,25 @@
                 class="small text-muted cart-qty-meta"
                 data-bottles-count
               >
-                <%= item.quantity * 12 %> bottles
+                <%= item.bottles || (item.quantity * 12) %> bottles
               </div>
             </div>
           </td>
           <td data-subtotal-cell>
-            R<%= (Number(discountedPrice) * item.quantity).toFixed(2) %>
+            R<%= Number(item.subtotal || (Number(discountedPrice) * item.quantity)).toFixed(2) %>
           </td>
           <td>
             <form action="/auth/cart/<%= item.id %>/delete" method="POST">
               <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
             </form>
+            <% if (!isCustomPack) { %>
             <div
               class="small cart-stock-note mt-1 <%= canIncreaseQuantity ? 'invisible' : '' %>"
               data-max-stock-note
             >
               Stock limit reached
             </div>
+            <% } %>
           </td>
         </tr>
         <% }) %>

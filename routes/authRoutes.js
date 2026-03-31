@@ -16,6 +16,7 @@ const {
   reviewValidationRules,
   productIdParamValidationRules,
   cartAddValidationRules,
+  customPackAddValidationRules,
   cartUpdateValidationRules,
   cartDeleteValidationRules,
   profileValidationRules,
@@ -118,6 +119,13 @@ router.post(
   cartAddValidationRules,
   validateBadRequest,
   asyncHandler(cartController.addToCart),
+);
+router.post(
+  "/cart/add-custom-pack",
+  requireAuth,
+  customPackAddValidationRules,
+  validateRedirectToProducts,
+  asyncHandler(cartController.addCustomPackToCart),
 );
 router.post(
   "/cart/:id/update",

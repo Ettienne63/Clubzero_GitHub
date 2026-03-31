@@ -62,6 +62,7 @@ model Product {
   price           Float
   imageUrl        String
   websiteStock    Int         @default(0)
+  looseBottleStock Int        @default(0)
   lowStockThreshold Int       @default(5)
   createdAt       DateTime    @default(now())
   nutritionInfo   String?
@@ -80,10 +81,12 @@ model Product {
 model CartItem {
   id        Int      @id @default(autoincrement())
   userId    Int
-  productId Int
+  productId Int?
+  isCustomPack Boolean @default(false)
+  customPackConfig Json?
   quantity  Int      @default(1)
   createdAt DateTime @default(now())
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, productId])
@@ -125,14 +128,16 @@ model Order {
 model OrderItem {
   id           Int      @id @default(autoincrement())
   orderId      Int
-  productId    Int
+  productId    Int?
+  isCustomPack Boolean  @default(false)
+  customPackConfig Json?
   productName  String
   productPrice Float
   quantity     Int
   subtotal     Float
   createdAt    DateTime @default(now())
   order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product      Product  @relation(fields: [productId], references: [id])
+  product      Product? @relation(fields: [productId], references: [id])
 
   @@index([orderId])
   @@index([productId])

@@ -637,6 +637,11 @@ app.post(
   requireAdmin,
   asyncHandler(productController.updateProductDiscounts),
 );
+app.post(
+  "/admin/mix-lab/pricing",
+  requireAdmin,
+  asyncHandler(productController.updateMixLabPricing),
+);
 app.use("/auth/login", authRateLimit);
 app.use("/auth/signup", authRateLimit);
 app.use("/auth/forgot-password", authRateLimit);

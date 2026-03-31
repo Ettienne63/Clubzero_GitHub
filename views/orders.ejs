@@ -40,11 +40,16 @@
 
         <ul class="list-group list-group-flush">
           <% order.orderItems.forEach((item) => { %>
+          <% const customEntries = Array.isArray(item.customPackConfig) ? item.customPackConfig : []; %>
           <li class="list-group-item d-flex justify-content-between px-0">
             <span
               ><%= item.productName %>
               x
-              <%= item.quantity %> case<%= item.quantity === 1 ? "" : "s" %> (<%= item.quantity * 12 %> bottles)</span
+              <%= item.quantity %> case<%= item.quantity === 1 ? "" : "s" %> (<%= item.quantity * 12 %> bottles)
+              <% if (item.isCustomPack && customEntries.length) { %>
+              <span class="d-block small text-muted"><%= customEntries.map((entry) => `${entry.productName || "Flavour"} (${entry.bottlesPerPack})`).join(", ") %></span>
+              <% } %>
+            </span
             >
             <span>R<%= Number(item.subtotal).toFixed(2) %></span>
           </li>

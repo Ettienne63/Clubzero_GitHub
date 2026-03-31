@@ -51,6 +51,7 @@ exports.getAdminInventoryPage = async (req, res) => {
         id: true,
         name: true,
         websiteStock: true,
+        looseBottleStock: true,
         lowStockThreshold: true,
         showStockOnCard: true,
         isActive: true,

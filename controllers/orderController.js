@@ -9,6 +9,14 @@ const { logger } = require("../lib/logger");
 const { renderInvoicePdf } = require("../lib/invoicePdf");
 const { getDiscountedPrice } = require("../lib/pricing");
 const { getPromoSettings } = require("../lib/promoSettings");
+const {
+  BOTTLES_PER_CASE,
+  parseCustomPackConfig,
+  resolveCustomPack,
+  getProductAvailableBottles,
+  getProductAvailableCases,
+  getMixLabPricingFromSettings,
+} = require("../lib/customPack");
 const DEFAULT_AFFILIATE_RATE = 0.05;
 const AFFILIATE_RATE_SETTING_KEY = "affiliate_rate";
 const AFFILIATE_STATUS = {
@@ -93,22 +101,98 @@ const hasAllRequiredDeliveryFields = (formData) =>
       formData.deliveryCountry,
   );
 
-const getCartWithTotal = async (userId, discountsEnabled = false) => {
-  const cartItems = await prisma.cartItem.findMany({
+const getCartWithTotal = async (
+  userId,
+  discountsEnabled = false,
+  mixLabPricing = null,
+) => {
+  const cartItemsRaw = await prisma.cartItem.findMany({
     where: { userId },
     include: { product: true },
     orderBy: { id: "desc" },
   });
+  const customProductIds = new Set();
+  cartItemsRaw.forEach((item) => {
+    if (!item.isCustomPack) {
+      return;
+    }
+    parseCustomPackConfig(item.customPackConfig).forEach((entry) => {
+      customProductIds.add(entry.productId);
+    });
+  });
+  const customProducts = customProductIds.size
+    ? await prisma.product.findMany({
+        where: { id: { in: Array.from(customProductIds) } },
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          discountPercent: true,
+          discountEnabled: true,
+          websiteStock: true,
+          looseBottleStock: true,
+          isActive: true,
+        },
+      })
+    : [];
+  const productsById = new Map(customProducts.map((product) => [product.id, product]));
+
+  const cartItems = cartItemsRaw.map((item) => {
+    if (!item.isCustomPack) {
+      const unitPrice = getDiscountedPrice(
+        Number(item.product?.price || 0),
+        getEffectiveDiscountPercent(item.product, discountsEnabled),
+      );
+      return {
+        ...item,
+        lineType: "regular",
+        displayName: item.product?.name || "Product",
+        bottles: Number(item.quantity || 0) * BOTTLES_PER_CASE,
+        unitPrice,
+        subtotal: unitPrice * Number(item.quantity || 0),
+        customPackEntries: [],
+      };
+    }
+
+    const resolved = resolveCustomPack({
+      config: item.customPackConfig,
+      productsById,
+      quantity: item.quantity,
+      discountsEnabled,
+      mixLabPricing,
+    });
+
+    if (resolved.error) {
+      return {
+        ...item,
+        lineType: "custom",
+        displayName: "Custom 12-Pack",
+        bottles: Number(item.quantity || 0) * BOTTLES_PER_CASE,
+        unitPrice: 0,
+        subtotal: 0,
+        customPackEntries: [],
+        isUnavailable: true,
+        unavailableReason: resolved.error,
+      };
+    }
+
+    return {
+      ...item,
+      lineType: "custom",
+      displayName: resolved.label,
+      bottles: Number(item.quantity || 0) * BOTTLES_PER_CASE,
+      unitPrice: resolved.perPackPrice,
+      subtotal: resolved.totalPrice,
+      customPackEntries: resolved.entries,
+      isUnavailable: false,
+    };
+  });
 
   const total = cartItems.reduce((sum, item) => {
-    const unitPrice = getDiscountedPrice(
-      item.product.price,
-      getEffectiveDiscountPercent(item.product, discountsEnabled),
-    );
-    return sum + unitPrice * item.quantity;
+    return sum + Number(item.subtotal || 0);
   }, 0);
 
-  return { cartItems, total };
+  return { cartItems, total, productsById };
 };
 
 const addDays = (date, days) => {
@@ -299,6 +383,23 @@ const sendInvoiceForOrder = async ({ invoice, order, req }) => {
   }
 };
 
+const getOrderItemBreakdownLabel = (item) => {
+  if (!item?.isCustomPack) {
+    return "";
+  }
+  const parts = parseCustomPackConfig(item.customPackConfig).map(
+    (entry) => `${entry.productName || "Flavour"} ${entry.bottlesPerPack}`,
+  );
+  return parts.length ? ` (${parts.join(", ")})` : "";
+};
+
+const getOrderItemQuantityLabel = (item) => {
+  const quantity = Number(item?.quantity || 0);
+  const caseLabel = `${quantity} case${quantity === 1 ? "" : "s"}`;
+  const bottlesLabel = `${quantity * BOTTLES_PER_CASE} bottles`;
+  return `${caseLabel} (${bottlesLabel})`;
+};
+
 const buildOrderConfirmationText = (order) => {
   const lines = [
     `Hi ${order.deliveryName || order.user?.name || "there"},`,
@@ -310,9 +411,9 @@ const buildOrderConfirmationText = (order) => {
 
   order.orderItems.forEach((item) => {
     lines.push(
-      `- ${item.productName} x ${item.quantity} case${
-        item.quantity === 1 ? "" : "s"
-      } (R${Number(item.subtotal).toFixed(2)})`,
+      `- ${item.productName}${getOrderItemBreakdownLabel(item)} x ${getOrderItemQuantityLabel(item)} (R${Number(
+        item.subtotal,
+      ).toFixed(2)})`,
     );
   });
 
@@ -340,7 +441,10 @@ const buildOrderConfirmationHtml = (order) => {
     .map(
       (item) => `
         <tr>
-          <td style="padding:6px 0;">${item.productName}</td>
+          <td style="padding:6px 0;">
+            ${item.productName}
+            <div style="font-size:12px;color:#666;">${getOrderItemQuantityLabel(item)}${getOrderItemBreakdownLabel(item)}</div>
+          </td>
           <td style="padding:6px 0; text-align:right;">${item.quantity}</td>
           <td style="padding:6px 0; text-align:right;">R${Number(
             item.subtotal,
@@ -394,9 +498,9 @@ const buildInternalOrderText = (order) => {
 
   order.orderItems.forEach((item) => {
     lines.push(
-      `- ${item.productName} x ${item.quantity} case${
-        item.quantity === 1 ? "" : "s"
-      } (R${Number(item.subtotal).toFixed(2)})`,
+      `- ${item.productName}${getOrderItemBreakdownLabel(item)} x ${getOrderItemQuantityLabel(item)} (R${Number(
+        item.subtotal,
+      ).toFixed(2)})`,
     );
   });
 
@@ -422,7 +526,10 @@ const buildInternalOrderHtml = (order) => {
     .map(
       (item) => `
         <tr>
-          <td style="padding:6px 0;">${item.productName}</td>
+          <td style="padding:6px 0;">
+            ${item.productName}
+            <div style="font-size:12px;color:#666;">${getOrderItemQuantityLabel(item)}${getOrderItemBreakdownLabel(item)}</div>
+          </td>
           <td style="padding:6px 0; text-align:right;">${item.quantity}</td>
           <td style="padding:6px 0; text-align:right;">R${Number(
             item.subtotal,
@@ -535,12 +642,57 @@ const getInvoiceStatusBadge = (invoice) =>
   String(invoice?.status || INVOICE_STATUS.DRAFT).toUpperCase();
 
 const hasUnavailableItems = (cartItems) =>
-  cartItems.some((item) => !item.product?.isActive);
+  cartItems.some((item) => {
+    if (item.isCustomPack) {
+      return Boolean(item.isUnavailable);
+    }
+    return !item.product?.isActive;
+  });
 
-const getInsufficientStockItem = (cartItems) =>
-  cartItems.find(
-    (item) => Number(item.quantity || 0) > Number(item.product?.websiteStock || 0),
-  );
+const getInsufficientStockItem = (cartItems) => {
+  const demandByProduct = new Map();
+  const availabilityByProduct = new Map();
+  const labelByProduct = new Map();
+
+  (cartItems || []).forEach((item) => {
+    if (item.isCustomPack) {
+      (item.customPackEntries || []).forEach((entry) => {
+        const productId = Number(entry.productId);
+        const demand =
+          Number(entry.bottlesPerPack || 0) * Number(item.quantity || 0);
+        if (!Number.isInteger(productId) || demand <= 0) {
+          return;
+        }
+        demandByProduct.set(productId, (demandByProduct.get(productId) || 0) + demand);
+        availabilityByProduct.set(
+          productId,
+          Number(entry.availableBottles || 0),
+        );
+        labelByProduct.set(productId, entry.productName || "Custom pack flavour");
+      });
+      return;
+    }
+
+    const productId = Number(item.productId);
+    const demand = Number(item.quantity || 0) * BOTTLES_PER_CASE;
+    if (!Number.isInteger(productId) || demand <= 0) {
+      return;
+    }
+    demandByProduct.set(productId, (demandByProduct.get(productId) || 0) + demand);
+    availabilityByProduct.set(productId, getProductAvailableBottles(item.product));
+    labelByProduct.set(productId, item.product?.name || "Product");
+  });
+
+  for (const [productId, demand] of demandByProduct.entries()) {
+    const available = Number(availabilityByProduct.get(productId) || 0);
+    if (demand > available) {
+      return {
+        productName: labelByProduct.get(productId) || "An item",
+      };
+    }
+  }
+  return null;
+};
 
 const getAddressBookEntries = async (userId) => {
   if (!hasAddressBookModel()) {
@@ -624,6 +776,83 @@ const generateUniqueAffiliateCode = async (seed) => {
   return `${prefix}-${Date.now().toString(36).slice(-5).toUpperCase()}`;
 };
 
+const addBottleDemand = (map, productId, bottles) => {
+  if (!Number.isInteger(productId) || !Number.isFinite(bottles) || bottles <= 0) {
+    return;
+  }
+  map.set(productId, (map.get(productId) || 0) + bottles);
+};
+
+const buildBottleDemandFromOrderItems = (orderItems) => {
+  const demand = new Map();
+  (orderItems || []).forEach((item) => {
+    if (!item) {
+      return;
+    }
+    if (item.isCustomPack) {
+      parseCustomPackConfig(item.customPackConfig).forEach((entry) => {
+        addBottleDemand(
+          demand,
+          entry.productId,
+          Number(entry.bottlesPerPack || 0) * Number(item.quantity || 0),
+        );
+      });
+      return;
+    }
+    addBottleDemand(
+      demand,
+      Number(item.productId),
+      Number(item.quantity || 0) * BOTTLES_PER_CASE,
+    );
+  });
+  return demand;
+};
+
+const decrementProductBottles = async (tx, productId, bottlesToDeduct, label) => {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const current = await tx.product.findUnique({
+      where: { id: productId },
+      select: { id: true, websiteStock: true, looseBottleStock: true },
+    });
+
+    if (!current) {
+      const stockError = new Error(`${label || "A product"} is unavailable.`);
+      stockError.code = "INSUFFICIENT_STOCK";
+      throw stockError;
+    }
+
+    const availableBottles = getProductAvailableBottles(current);
+    if (availableBottles < bottlesToDeduct) {
+      const stockError = new Error(`${label || "A product"} is out of stock for this order.`);
+      stockError.code = "INSUFFICIENT_STOCK";
+      throw stockError;
+    }
+
+    const remainingBottles = availableBottles - bottlesToDeduct;
+    const nextWebsiteStock = Math.floor(remainingBottles / BOTTLES_PER_CASE);
+    const nextLooseBottleStock = remainingBottles % BOTTLES_PER_CASE;
+    const updated = await tx.product.updateMany({
+      where: {
+        id: productId,
+        websiteStock: Number(current.websiteStock || 0),
+        looseBottleStock: Number(current.looseBottleStock || 0),
+      },
+      data: {
+        websiteStock: nextWebsiteStock,
+        looseBottleStock: nextLooseBottleStock,
+      },
+    });
+
+    if (updated.count > 0) {
+      return;
+    }
+  }
+
+  const stockError = new Error(`${label || "A product"} could not reserve stock right now.`);
+  stockError.code = "INSUFFICIENT_STOCK";
+  throw stockError;
+};
+
 const finalizePaidOrder = async ({
   orderId,
   paidAt = new Date(),
@@ -653,24 +882,27 @@ const finalizePaidOrder = async ({
     const alreadyPaid = order.status === "PAID";
 
     if (!alreadyPaid) {
-      for (const item of order.orderItems) {
-        const updated = await tx.product.updateMany({
-          where: {
-            id: item.productId,
-            websiteStock: { gte: item.quantity },
-          },
-          data: {
-            websiteStock: { decrement: item.quantity },
-          },
-        });
-
-        if (!updated.count) {
-          const stockError = new Error(
-            `${item.productName} is out of stock for this order.`,
-          );
-          stockError.code = "INSUFFICIENT_STOCK";
-          throw stockError;
+      const bottleDemandByProduct = buildBottleDemandFromOrderItems(order.orderItems);
+      const labelsByProduct = new Map();
+      order.orderItems.forEach((item) => {
+        if (item.isCustomPack) {
+          parseCustomPackConfig(item.customPackConfig).forEach((entry) => {
+            if (!labelsByProduct.has(entry.productId)) {
+              labelsByProduct.set(entry.productId, entry.productName || "Custom pack flavour");
+            }
+          });
+        } else if (Number.isInteger(item.productId) && !labelsByProduct.has(item.productId)) {
+          labelsByProduct.set(item.productId, item.productName || "Product");
         }
+      });
+
+      for (const [productId, bottles] of bottleDemandByProduct.entries()) {
+        await decrementProductBottles(
+          tx,
+          productId,
+          bottles,
+          labelsByProduct.get(productId) || "Product",
+        );
       }
 
       await tx.order.update({
@@ -779,9 +1011,14 @@ exports.getCheckout = async (req, res) => {
   const discountsEnabled = Boolean(
     promoSettings?.enabled && promoSettings?.discountsEnabled,
   );
+  const mixLabPricing = getMixLabPricingFromSettings(
+    promoSettings,
+    discountsEnabled,
+  );
   const { cartItems, total } = await getCartWithTotal(
     userId,
     discountsEnabled,
+    mixLabPricing,
   );
   const savedAddresses = await getAddressBookEntries(userId);
 
@@ -799,9 +1036,10 @@ exports.getCheckout = async (req, res) => {
 
   const insufficientStockItem = getInsufficientStockItem(cartItems);
   if (insufficientStockItem) {
+    const label = insufficientStockItem.productName || "An item";
     return res.redirect(
       `/auth/cart?error=${encodeURIComponent(
-        `${insufficientStockItem.product?.name || "An item"} doesn’t have enough stock for your quantity. Please reduce it and try again.`,
+        `${label} doesn't have enough stock for your quantity. Please reduce it and try again.`,
       )}`,
     );
   }
@@ -838,10 +1076,15 @@ exports.postCheckout = async (req, res) => {
   const discountsEnabled = Boolean(
     promoSettings?.enabled && promoSettings?.discountsEnabled,
   );
+  const mixLabPricing = getMixLabPricingFromSettings(
+    promoSettings,
+    discountsEnabled,
+  );
   const formData = buildCheckoutFormData(req.body);
   const { cartItems, total } = await getCartWithTotal(
     userId,
     discountsEnabled,
+    mixLabPricing,
   );
   const savedAddresses = await getAddressBookEntries(userId);
   const selectedAddressId = Number.parseInt(formData.selectedAddressId, 10);
@@ -860,9 +1103,10 @@ exports.postCheckout = async (req, res) => {
 
   const insufficientStockItem = getInsufficientStockItem(cartItems);
   if (insufficientStockItem) {
+    const label = insufficientStockItem.productName || "An item";
     return res.redirect(
       `/auth/cart?error=${encodeURIComponent(
-        `${insufficientStockItem.product?.name || "An item"} doesn’t have enough stock for your quantity. Please reduce it and try again.`,
+        `${label} doesn't have enough stock for your quantity. Please reduce it and try again.`,
       )}`,
     );
   }
@@ -1013,18 +1257,26 @@ exports.postCheckout = async (req, res) => {
         deliveryCountry: formData.deliveryCountry,
         orderItems: {
           create: cartItems.map((item) => ({
-            productId: item.productId,
-            productName: item.product.name,
-            productPrice: getDiscountedPrice(
-              item.product.price,
-              getEffectiveDiscountPercent(item.product, discountsEnabled),
-            ),
+            productId: item.isCustomPack ? null : item.productId,
+            isCustomPack: Boolean(item.isCustomPack),
+            customPackConfig: item.isCustomPack
+              ? (item.customPackEntries || []).map((entry) => ({
+                  productId: entry.productId,
+                  productName: entry.productName,
+                  bottlesPerPack: entry.bottlesPerPack,
+                }))
+              : null,
+            productName: item.isCustomPack
+              ? item.displayName || "Custom 12-Pack"
+              : item.product.name,
+            productPrice: item.isCustomPack
+              ? Number(item.unitPrice || 0)
+              : getDiscountedPrice(
+                  item.product.price,
+                  getEffectiveDiscountPercent(item.product, discountsEnabled),
+                ),
             quantity: item.quantity,
-            subtotal:
-              getDiscountedPrice(
-                item.product.price,
-                getEffectiveDiscountPercent(item.product, discountsEnabled),
-              ) * item.quantity,
+            subtotal: Number(item.subtotal || 0),
           })),
         },
       },
@@ -1238,6 +1490,7 @@ exports.postCheckout = async (req, res) => {
       affiliateBalance: availableAffiliateBalance,
       creditApplied,
       payableTotal,
+      discountsEnabled,
     });
   }
 };

@@ -186,18 +186,20 @@
           <h2 class="h5 mb-3">Order Summary</h2>
           <ul class="list-group list-group-flush">
             <% cartItems.forEach((item) => { %>
-            <% const discountPercent = Number(item.product.discountPercent || 0); %>
-            <% const hasDiscount = Boolean(discountsEnabled) && item.product.discountEnabled !== false && discountPercent > 0; %>
-            <% const discountedPrice = hasDiscount ? Number(item.product.price) * (1 - discountPercent / 100) : Number(item.product.price); %>
+            <% const isCustomPack = item.isCustomPack === true; %>
+            <% const discountPercent = !isCustomPack ? Number(item.product?.discountPercent || 0) : 0; %>
+            <% const hasDiscount = !isCustomPack && Boolean(discountsEnabled) && item.product?.discountEnabled !== false && discountPercent > 0; %>
+            <% const discountedPrice = !isCustomPack ? (hasDiscount ? Number(item.product?.price || 0) * (1 - discountPercent / 100) : Number(item.product?.price || 0)) : Number(item.unitPrice || 0); %>
             <li
               class="list-group-item d-flex justify-content-between align-items-center px-0"
             >
-              <span
-                ><%= item.product.name %>
-                x
-                <%= item.quantity %> case<%= item.quantity === 1 ? "" : "s" %> (<%= item.quantity * 12 %> bottles)</span
-              >
-              <span>R<%= (Number(discountedPrice) * item.quantity).toFixed(2) %></span>
+              <span>
+                <%= item.displayName || item.product?.name || "Item" %> x <%= item.quantity %> case<%= item.quantity === 1 ? "" : "s" %> (<%= item.bottles || (item.quantity * 12) %> bottles)
+                <% if (isCustomPack && Array.isArray(item.customPackEntries) && item.customPackEntries.length) { %>
+                <span class="d-block small text-muted"><%= item.customPackEntries.map((entry) => `${entry.productName} (${entry.bottlesPerPack})`).join(", ") %></span>
+                <% } %>
+              </span>
+              <span>R<%= Number(item.subtotal || (Number(discountedPrice) * item.quantity)).toFixed(2) %></span>
             </li>
             <% }) %>
           </ul>

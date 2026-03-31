@@ -78,12 +78,18 @@ return `${day}-${month}-${year}`; }; %>
           </thead>
           <tbody>
             <% order.orderItems.forEach((item) => { %>
+            <% const customEntries = Array.isArray(item.customPackConfig) ? item.customPackConfig : []; %>
             <tr>
               <td>
                 <div class="fw-semibold"><%= item.productName %></div>
                 <div class="small text-muted">
                   <%= item.quantity * 12 %> bottles
                 </div>
+                <% if (item.isCustomPack && customEntries.length) { %>
+                <div class="small text-muted">
+                  <%= customEntries.map((entry) => `${entry.productName || "Flavour"} (${entry.bottlesPerPack})`).join(", ") %>
+                </div>
+                <% } %>
               </td>
               <td class="text-center"><%= item.quantity %></td>
               <td class="text-end">

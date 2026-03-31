@@ -1,6 +1,18 @@
   <section class="card mb-4">
     <div class="card-body">
-      <h2 class="h5 mb-3">Website Stock (Live Store)</h2>
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h2 class="h5 mb-0">Website Stock (Live Store)</h2>
+        <button
+          type="button"
+          class="btn btn-outline-secondary btn-sm"
+          id="toggleBottleStock"
+          data-show-label="Show bottle stock"
+          data-hide-label="Hide bottle stock"
+          aria-pressed="false"
+        >
+          Show bottle stock
+        </button>
+      </div>
       <div class="alert alert-info py-2 small" role="alert">
         <strong>Stock actions:</strong> Use <strong>Add</strong> to increase stock by the entered amount.
         Use <strong>Remove</strong> to decrease stock by the entered amount.
@@ -43,6 +55,10 @@
               </td>
               <td data-label="Current Stock">
                 <strong><%= Number(product.websiteStock || 0) %></strong>
+                <% const totalBottleStock = (Number(product.websiteStock || 0) * 12) + Number(product.looseBottleStock || 0); %>
+                <div class="small text-muted d-none" data-bottle-stock>
+                  Bottle stock: <%= totalBottleStock %>
+                </div>
               </td>
               <td data-label="Low Threshold" class="inventory-mobile-inline-control">
                 <form

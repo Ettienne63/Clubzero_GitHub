@@ -120,6 +120,31 @@ const cartAddValidationRules = [
     .withMessage("Quantity must be at least 1."),
 ];
 
+const customPackAddValidationRules = [
+  body("packCount")
+    .optional({ values: "falsy" })
+    .isInt({ min: 1, max: 20 })
+    .withMessage("Pack count must be between 1 and 20."),
+  body("productIds")
+    .custom((value) => {
+      const source = Array.isArray(value)
+        ? value
+        : typeof value === "undefined"
+          ? []
+          : [value];
+      if (!source.length) {
+        throw new Error("Select at least one flavour.");
+      }
+      const allValid = source.every((entry) =>
+        Number.isInteger(Number.parseInt(entry, 10)),
+      );
+      if (!allValid) {
+        throw new Error("Invalid flavour selection.");
+      }
+      return true;
+    }),
+];
+
 const cartUpdateValidationRules = [
   param("id").isInt({ min: 1 }).withMessage("Invalid cart item id."),
   body("quantity").isInt({ min: 0 }).withMessage("Quantity must be 0 or more."),
@@ -328,6 +353,7 @@ module.exports = {
   resetPasswordValidationRules,
   reviewValidationRules,
   cartAddValidationRules,
+  customPackAddValidationRules,
   cartUpdateValidationRules,
   cartDeleteValidationRules,
   productValidationRules,

@@ -1,5 +1,6 @@
 
 app = "clubzero"
+primary_region = "iad"
 
 [env]
   UPLOAD_DIR = '/data/uploads'
@@ -13,14 +14,14 @@ app = "clubzero"
   processes = ['app']
 
 [[vm]]
-  memory = '1gb'
+  memory = '512mb'
   cpu_kind = 'shared'
   cpus = 1
-  memory_mb = 1024
+  memory_mb = 512
 
 [deploy]
   release_command = "npx prisma migrate deploy"
 
 [[mounts]]
-  source = 'uploads_data'
+  source = 'uploads_data_recovery'
   destination = '/data'

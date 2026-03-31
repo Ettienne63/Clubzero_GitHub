@@ -1,4 +1,29 @@
 (() => {
+  const toggleButton = document.getElementById("toggleBottleStock");
+  const bottleStockRows = document.querySelectorAll("[data-bottle-stock]");
+  if (!toggleButton || !bottleStockRows.length) return;
+
+  const showLabel = toggleButton.getAttribute("data-show-label") || "Show bottle stock";
+  const hideLabel = toggleButton.getAttribute("data-hide-label") || "Hide bottle stock";
+
+  const applyState = (isVisible) => {
+    bottleStockRows.forEach((row) => {
+      row.classList.toggle("d-none", !isVisible);
+    });
+    toggleButton.textContent = isVisible ? hideLabel : showLabel;
+    toggleButton.setAttribute("aria-pressed", isVisible ? "true" : "false");
+  };
+
+  let isVisible = false;
+  applyState(isVisible);
+
+  toggleButton.addEventListener("click", () => {
+    isVisible = !isVisible;
+    applyState(isVisible);
+  });
+})();
+
+(() => {
   const stateKey = "adminInventoryUiState";
   const forms = document.querySelectorAll("form");
   const toggleInput = document.getElementById("lowStockAlertsEnabled");

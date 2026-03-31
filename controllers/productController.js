@@ -1,5 +1,11 @@
 const { prisma } = require("../prisma/lib/prisma");
-const { getPromoSettings, savePromoSettings } = require("../lib/promoSettings");
+const {
+  getPromoSettings,
+  savePromoSettings,
+  setPromoDiscountsEnabled,
+  setMixLabCasePrice,
+  setMixLabDiscountSettings,
+} = require("../lib/promoSettings");
 const { clampDiscountPercent } = require("../lib/pricing");
 
 const PROMO_LIMITS = {
@@ -69,6 +75,46 @@ const setRecentlyViewedProductIds = (req, ids) => {
   }
 
   req.session.recentlyViewedProductIds = ids.slice(0, 5);
+};
+
+const normalizeMixLabPrice = (value) => {
+  const trimmed = (value || "").toString().trim();
+  if (!trimmed) {
+    return "";
+  }
+  const parsed = Number.parseFloat(trimmed);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return null;
+  }
+  return parsed.toFixed(2);
+};
+
+const getMixLabViewState = (promoSettings = {}) => {
+  const normalizedPrice = normalizeMixLabPrice(promoSettings?.mixLabCasePrice);
+  const hasFixedPrice = normalizedPrice !== "" && normalizedPrice !== null;
+  const baseCasePrice = hasFixedPrice ? Number(normalizedPrice) : 0;
+  const mixLabDiscountPercent = clampDiscountPercent(
+    Number(promoSettings?.mixLabDiscountPercent || 0),
+  );
+  const mixLabDiscountEnabled = promoSettings?.mixLabDiscountEnabled !== false;
+  const discountsEnabled = Boolean(
+    promoSettings?.enabled && promoSettings?.discountsEnabled,
+  );
+  const discountActive = discountsEnabled && mixLabDiscountEnabled;
+  const discountedCasePrice =
+    hasFixedPrice && discountActive && mixLabDiscountPercent > 0
+      ? baseCasePrice * (1 - mixLabDiscountPercent / 100)
+      : baseCasePrice;
+
+  return {
+    hasFixedPrice,
+    baseCasePrice,
+    baseCasePriceInput: hasFixedPrice ? normalizedPrice : "",
+    discountPercent: mixLabDiscountPercent,
+    discountEnabled: mixLabDiscountEnabled,
+    discountActive,
+    discountedCasePrice,
+  };
 };
 
 const parseProductInput = (body, file, options = {}) => {
@@ -353,6 +399,7 @@ exports.listProducts = async (req, res) => {
   }
 
   const productsWithStats = products.map(mapProductWithReviewStats);
+  const mixLabSettings = getMixLabViewState(promoSettings);
 
   res.render("products", {
     products: productsWithStats,
@@ -365,6 +412,7 @@ exports.listProducts = async (req, res) => {
     discountsEnabled: Boolean(
       promoSettings?.enabled && promoSettings?.discountsEnabled,
     ),
+    mixLabSettings,
   });
 };
 
@@ -466,10 +514,14 @@ exports.createReview = async (req, res) => {
 };
 
 exports.getAdminPage = async (req, res) => {
-  const products = await getProducts("", { includeInactive: true });
+  const [products, promoSettings] = await Promise.all([
+    getProducts("", { includeInactive: true }),
+    getPromoSettings(),
+  ]);
 
   res.render("admin", {
     products,
+    mixLabSettings: getMixLabViewState(promoSettings),
     success: req.query.success || null,
     error: req.query.error || null,
     formData: {
@@ -493,6 +545,7 @@ exports.getAdminPromoPage = async (req, res) => {
 
   return res.render("admin-promo", {
     promoSettings,
+    mixLabSettings: getMixLabViewState(promoSettings),
     products,
     success: req.query.success || null,
     error: req.query.error || null,
@@ -600,6 +653,23 @@ exports.updateProductDiscounts = async (req, res) => {
             return [idValue, value];
           })
       : [];
+  const mixLabDiscountRaw = (req.body?.mixLabDiscountPercent || "")
+    .toString()
+    .trim();
+  const hasMixLabDiscountPercent = mixLabDiscountRaw !== "";
+  const parsedMixLabDiscount = hasMixLabDiscountPercent
+    ? Number.parseFloat(mixLabDiscountRaw)
+    : Number(promoSettings?.mixLabDiscountPercent || 0);
+  const mixLabDiscountEnabledRaw = req.body?.mixLabDiscountEnabled;
+  const hasMixLabDiscountEnabled =
+    typeof mixLabDiscountEnabledRaw !== "undefined";
+  const mixLabDiscountEnabled = hasMixLabDiscountEnabled
+    ? Array.isArray(mixLabDiscountEnabledRaw)
+      ? mixLabDiscountEnabledRaw
+          .map((value) => String(value).toLowerCase())
+          .includes("on")
+      : String(mixLabDiscountEnabledRaw || "").toLowerCase() === "on"
+    : promoSettings?.mixLabDiscountEnabled !== false;
 
   const updates = [];
   const hasGlobalToggle =
@@ -619,17 +689,43 @@ exports.updateProductDiscounts = async (req, res) => {
       : perProductEnabledAny || Boolean(promoSettings?.discountsEnabled)
     : false;
 
-  if (!entries.length && !discountEnabledEntries.length) {
-    const upsertSetting = prisma.appSetting.upsert({
-      where: { key: "promo_discounts_enabled" },
-      create: {
-        key: "promo_discounts_enabled",
-        value: discountsEnabled ? "true" : "false",
-      },
-      update: { value: discountsEnabled ? "true" : "false" },
-    });
+  if (hasMixLabDiscountPercent && !Number.isFinite(parsedMixLabDiscount)) {
+    if (wantsJson) {
+      return res.status(400).json({
+        success: false,
+        message: "Mix Lab discount must be a number.",
+      });
+    }
+    return res.redirect(
+      `/admin/promo?error=${encodeURIComponent(
+        "Mix Lab discount must be a number.",
+      )}`,
+    );
+  }
 
-    await prisma.$transaction([upsertSetting]);
+  if (
+    Number.isFinite(parsedMixLabDiscount) &&
+    (parsedMixLabDiscount < 0 || parsedMixLabDiscount > 90)
+  ) {
+    if (wantsJson) {
+      return res.status(400).json({
+        success: false,
+        message: "Mix Lab discount must be between 0% and 90%.",
+      });
+    }
+    return res.redirect(
+      `/admin/promo?error=${encodeURIComponent(
+        "Mix Lab discount must be between 0% and 90%.",
+      )}`,
+    );
+  }
+
+  if (!entries.length && !discountEnabledEntries.length) {
+    await setPromoDiscountsEnabled(discountsEnabled);
+    await setMixLabDiscountSettings({
+      mixLabDiscountPercent: clampDiscountPercent(parsedMixLabDiscount),
+      mixLabDiscountEnabled,
+    });
 
     if (wantsJson) {
       return res.json({ success: true, message: "Discounts updated." });
@@ -704,14 +800,6 @@ exports.updateProductDiscounts = async (req, res) => {
 
   if (updates.length) {
     const results = await prisma.$transaction([
-      prisma.appSetting.upsert({
-        where: { key: "promo_discounts_enabled" },
-        create: {
-          key: "promo_discounts_enabled",
-          value: discountsEnabled ? "true" : "false",
-        },
-        update: { value: discountsEnabled ? "true" : "false" },
-      }),
       ...(!discountsEnabled
         ? [
             prisma.product.updateMany({
@@ -721,7 +809,12 @@ exports.updateProductDiscounts = async (req, res) => {
         : []),
       ...updates,
     ]);
-    const updateResults = results.slice(1);
+    await setPromoDiscountsEnabled(discountsEnabled);
+    await setMixLabDiscountSettings({
+      mixLabDiscountPercent: clampDiscountPercent(parsedMixLabDiscount),
+      mixLabDiscountEnabled,
+    });
+    const updateResults = results;
     const updatedCount = updateResults.reduce(
       (sum, result) => sum + Number(result?.count || 0),
       0,
@@ -757,13 +850,38 @@ exports.updateProductDiscounts = async (req, res) => {
   }
 
   if (wantsJson) {
+    await setMixLabDiscountSettings({
+      mixLabDiscountPercent: clampDiscountPercent(parsedMixLabDiscount),
+      mixLabDiscountEnabled,
+    });
     return res.json({
       success: true,
       message: "Discounts updated.",
       discountsEnabled,
     });
   }
+  await setMixLabDiscountSettings({
+    mixLabDiscountPercent: clampDiscountPercent(parsedMixLabDiscount),
+    mixLabDiscountEnabled,
+  });
   return res.redirect("/admin/promo?success=Discounts+updated");
+};
+
+exports.updateMixLabPricing = async (req, res) => {
+  const normalized = normalizeMixLabPrice(req.body?.mixLabCasePrice);
+  if (normalized === null) {
+    return res.redirect(
+      `/admin?error=${encodeURIComponent(
+        "Mix Lab case price must be a valid non-negative number.",
+      )}`,
+    );
+  }
+
+  await setMixLabCasePrice(normalized);
+  const message = normalized
+    ? `Mix Lab case price set to R${Number(normalized).toFixed(2)}.`
+    : "Mix Lab case price switched to flavour-based auto pricing.";
+  return res.redirect(`/admin?success=${encodeURIComponent(message)}`);
 };
 
 exports.updatePromoSettings = async (req, res) => {
@@ -780,6 +898,7 @@ exports.updatePromoSettings = async (req, res) => {
   }
 
   const nextSettings = {
+    ...current,
     ...parsed.data,
     discountsEnabled: parsed.data.enabled
       ? current.discountsEnabled !== false
@@ -795,8 +914,10 @@ exports.createProduct = async (req, res) => {
 
   if (parsed.error) {
     const products = await getProducts();
+    const promoSettings = await getPromoSettings();
     return res.status(400).render("admin", {
       products,
+      mixLabSettings: getMixLabViewState(promoSettings),
       success: null,
       error: parsed.error,
       formData: req.body,
@@ -813,6 +934,7 @@ exports.createProduct = async (req, res) => {
     return res.redirect("/admin?success=Product+created");
   } catch (error) {
     const products = await getProducts();
+    const promoSettings = await getPromoSettings();
     const errorMessage =
       error.code === "P2002"
         ? "A product with this name already exists."
@@ -820,6 +942,7 @@ exports.createProduct = async (req, res) => {
 
     return res.status(400).render("admin", {
       products,
+      mixLabSettings: getMixLabViewState(promoSettings),
       success: null,
       error: errorMessage,
       formData: req.body,
