@@ -18,6 +18,8 @@ const {
   fetchInventoryHistoryMaps,
 } = require("../lib/inventoryService");
 
+const SOFT_DELETED_PRODUCT_NAME = "TEST";
+
 const redirectInventoryError = (res, message) =>
   res.redirect(`/admin/inventory?error=${encodeURIComponent(message)}`);
 
@@ -43,10 +45,14 @@ const toSafeFilenamePart = (value) =>
     .replace(/^-+|-+$/g, "")
     .slice(0, 80) || "item";
 
-
 exports.getAdminInventoryPage = async (req, res) => {
   const [products, suppliers, lowStockEmailsEnabled] = await Promise.all([
     prisma.product.findMany({
+      where: {
+        NOT: {
+          name: SOFT_DELETED_PRODUCT_NAME,
+        },
+      },
       select: {
         id: true,
         name: true,
@@ -666,7 +672,12 @@ exports.importSupplierCustomProductsFromWebsite = async (req, res) => {
     }
 
     const websiteProducts = await prisma.product.findMany({
-      where: { id: { in: selectedProductIds } },
+      where: {
+        id: { in: selectedProductIds },
+        NOT: {
+          name: SOFT_DELETED_PRODUCT_NAME,
+        },
+      },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     });

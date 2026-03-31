@@ -38,7 +38,8 @@
           <% const hasDiscount = Boolean(discountsEnabled) && product.discountEnabled !== false && discountPercent > 0; %>
           <% const discountedPrice = hasDiscount ? Number(product.price) * (1 - discountPercent / 100) : Number(product.price); %>
           <% const websiteStock = Number(product.websiteStock || 0); %>
-          <% const isOutOfStock = websiteStock <= 0; %>
+          <% const isAlwaysPurchasable = String(product.name || '').trim().toUpperCase() === 'TEST'; %>
+          <% const isOutOfStock = websiteStock <= 0 && !isAlwaysPurchasable; %>
           <% const stockLabel = websiteStock === 1 ? "Only 1 case left" : `Only ${websiteStock} cases left`; %>
           <p class="small mb-2 <%= isOutOfStock ? 'text-danger' : 'text-muted' %>">
             <%= isOutOfStock ? "Out of stock" : stockLabel %>

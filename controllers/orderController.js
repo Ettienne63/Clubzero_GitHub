@@ -30,6 +30,9 @@ const INVOICE_STATUS = {
 };
 const INVOICE_PAYMENT_TERMS_DAYS = 7;
 const PAYSTACK_CURRENCY = "ZAR";
+const ALWAYS_PURCHASABLE_PRODUCT_NAME = "TEST";
+const isAlwaysPurchasableProduct = (product) =>
+  String(product?.name || "").trim().toUpperCase() === ALWAYS_PURCHASABLE_PRODUCT_NAME;
 
 const coerceAffiliateRate = (value) => {
   const parsed = Number(value);
@@ -682,6 +685,12 @@ const getInsufficientStockItem = (cartItems) => {
   });
 
   for (const [productId, demand] of demandByProduct.entries()) {
+    const label = String(labelByProduct.get(productId) || "An item")
+      .trim()
+      .toUpperCase();
+    if (label === ALWAYS_PURCHASABLE_PRODUCT_NAME) {
+      continue;
+    }
     const available = Number(availabilityByProduct.get(productId) || 0);
     if (demand > available) {
       return {
@@ -810,13 +819,17 @@ const decrementProductBottles = async (tx, productId, bottlesToDeduct, label) =>
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const current = await tx.product.findUnique({
       where: { id: productId },
-      select: { id: true, websiteStock: true, looseBottleStock: true },
+      select: { id: true, name: true, websiteStock: true, looseBottleStock: true },
     });
 
     if (!current) {
       const stockError = new Error(`${label || "A product"} is unavailable.`);
       stockError.code = "INSUFFICIENT_STOCK";
       throw stockError;
+    }
+
+    if (isAlwaysPurchasableProduct(current)) {
+      return;
     }
 
     const availableBottles = getProductAvailableBottles(current);
@@ -2073,17 +2086,22 @@ exports.getAdminPaymentsPage = async (req, res) => {
   const summary = normalizedOrders.reduce(
     (acc, order) => {
       acc.totalOrders += 1;
-      acc.totalValue += Number(order.total || 0);
+      const orderTotal = Number(order.total || 0);
+      acc.totalValue += orderTotal;
       if (order.status === "PAID") {
         acc.paidCount += 1;
+        acc.paidValue += orderTotal;
       } else if (order.status === "PENDING_PAYMENT") {
         acc.pendingCount += 1;
+        acc.pendingValue += orderTotal;
       }
       return acc;
     },
     {
       totalOrders: 0,
       totalValue: 0,
+      paidValue: 0,
+      pendingValue: 0,
       pendingCount: 0,
       paidCount: 0,
     },
@@ -2096,6 +2114,100 @@ exports.getAdminPaymentsPage = async (req, res) => {
     success: req.query.success || null,
     error: req.query.error || null,
   });
+};
+
+exports.markAdminOrderPaid = async (req, res) => {
+  const orderId = Number.parseInt(req.params.id, 10);
+  const statusFilter = String(req.query.status || "pending").toUpperCase();
+  const returnTo = `/admin/payments?status=${encodeURIComponent(
+    statusFilter.toLowerCase(),
+  )}`;
+
+  if (!Number.isInteger(orderId)) {
+    return res.redirect(
+      `${returnTo}&error=${encodeURIComponent("Invalid order id.")}`,
+    );
+  }
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { id: true, status: true },
+  });
+
+  if (!order) {
+    return res.redirect(
+      `${returnTo}&error=${encodeURIComponent("Order not found.")}`,
+    );
+  }
+
+  if (order.status !== "PENDING_PAYMENT") {
+    return res.redirect(
+      `${returnTo}&error=${encodeURIComponent(
+        "Only pending payments can be marked as paid.",
+      )}`,
+    );
+  }
+
+  try {
+    const affiliateRate = await getAffiliateRate();
+    const finalized = await finalizePaidOrder({
+      orderId,
+      paidAt: new Date(),
+      affiliateRate,
+    });
+
+    if (!finalized) {
+      return res.redirect(
+        `${returnTo}&error=${encodeURIComponent("Order not found.")}`,
+      );
+    }
+
+    if (finalized.invoice) {
+      await sendInvoiceForOrder({
+        invoice: finalized.invoice,
+        order: finalized.order,
+        req,
+      });
+    }
+
+    try {
+      await sendOrderConfirmationEmail({
+        order: finalized.order,
+        req,
+      });
+    } catch (error) {
+      logger.warn("admin_mark_paid_confirmation_email_failed", {
+        orderId: finalized.order.id,
+        error: error.message,
+      });
+    }
+
+    try {
+      await sendInternalOrderEmail({
+        order: finalized.order,
+      });
+    } catch (error) {
+      logger.warn("admin_mark_paid_internal_email_failed", {
+        orderId: finalized.order.id,
+        error: error.message,
+      });
+    }
+
+    return res.redirect(
+      `${returnTo}&success=${encodeURIComponent(
+        `Order #${finalized.order.id} marked as paid and emails sent.`,
+      )}`,
+    );
+  } catch (error) {
+    if (error.code === "INSUFFICIENT_STOCK") {
+      return res.redirect(
+        `${returnTo}&error=${encodeURIComponent(
+          error.message || "Unable to mark this order as paid because stock is insufficient.",
+        )}`,
+      );
+    }
+    throw error;
+  }
 };
 
 

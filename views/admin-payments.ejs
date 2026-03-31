@@ -24,15 +24,23 @@
     <div class="col-12 col-md-6 col-xl-3">
       <article class="card h-100">
         <div class="card-body">
-          <p class="small text-uppercase fw-semibold text-muted mb-2">Total Value</p>
-          <p class="h4 mb-0">R<%= Number(summary.totalValue).toFixed(2) %></p>
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Paid Value</p>
+          <p class="h4 mb-0">R<%= Number(summary.paidValue).toFixed(2) %></p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <article class="card h-100">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Pending Value</p>
+          <p class="h4 mb-0">R<%= Number(summary.pendingValue).toFixed(2) %></p>
         </div>
       </article>
     </div>
     <div class="col-12 col-md-6 col-xl-2">
       <article class="card h-100">
         <div class="card-body">
-          <p class="small text-uppercase fw-semibold text-muted mb-2">Pending</p>
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Pending Orders</p>
           <p class="h4 mb-0"><%= summary.pendingCount %></p>
         </div>
       </article>
@@ -40,7 +48,7 @@
     <div class="col-12 col-md-6 col-xl-2">
       <article class="card h-100">
         <div class="card-body">
-          <p class="small text-uppercase fw-semibold text-muted mb-2">Paid</p>
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Paid Orders</p>
           <p class="h4 mb-0"><%= summary.paidCount %></p>
         </div>
       </article>
@@ -79,7 +87,7 @@
               <th scope="col">Total</th>
               <th scope="col">Payment</th>
               <th scope="col">Invoice</th>
-              <th scope="col" class="text-end">View</th>
+              <th scope="col" class="text-end">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -108,18 +116,33 @@
                 <% } %>
               </td>
               <td class="text-end">
-                <% if (order.invoiceStatus) { %>
-                <a
-                  href="/auth/orders/<%= order.id %>/invoice"
-                  class="btn btn-sm btn-outline-secondary"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Invoice
-                </a>
-                <% } else { %>
-                <span class="text-muted">-</span>
-                <% } %>
+                <div class="d-inline-flex flex-wrap justify-content-end gap-2">
+                  <% if (order.status === "PENDING_PAYMENT") { %>
+                  <form
+                    action="/admin/payments/<%= order.id %>/mark-paid?status=<%= activeStatusFilter.toLowerCase() %>"
+                    method="POST"
+                    class="d-inline"
+                  >
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                    <button type="submit" class="btn btn-sm btn-success">
+                      Mark as Paid
+                    </button>
+                  </form>
+                  <% } %>
+                  <% if (order.invoiceStatus) { %>
+                  <a
+                    href="/auth/orders/<%= order.id %>/invoice"
+                    class="btn btn-sm btn-outline-secondary"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Invoice
+                  </a>
+                  <% } %>
+                  <% if (!order.invoiceStatus && order.status !== "PENDING_PAYMENT") { %>
+                  <span class="text-muted">-</span>
+                  <% } %>
+                </div>
               </td>
             </tr>
             <% }) %>

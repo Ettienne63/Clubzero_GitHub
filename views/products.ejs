@@ -68,7 +68,8 @@
                   <div class="custom-pack-grid">
                     <% products.forEach((product) => { %>
                     <% const availableBottleStock = (Number(product.websiteStock || 0) * 12) + Number(product.looseBottleStock || 0); %>
-                    <% if (availableBottleStock > 0) { %>
+                    <% const isAlwaysPurchasableMix = String(product.name || '').trim().toUpperCase() === 'TEST'; %>
+                    <% if (availableBottleStock > 0 || isAlwaysPurchasableMix) { %>
                     <% const mixDiscountPercent = Number(product.discountPercent || 0); %>
                     <% const mixHasDiscount = Boolean(discountsEnabled) && product.discountEnabled !== false && mixDiscountPercent > 0; %>
                     <% const mixCasePrice = Number(product.price || 0); %>
@@ -222,7 +223,8 @@
     <% const hasDiscount = Boolean(discountsEnabled) && product.discountEnabled !== false && discountPercent > 0; %>
     <% const discountedPrice = hasDiscount ? Number(product.price) * (1 - discountPercent / 100) : Number(product.price); %>
     <% const websiteStock = Number(product.websiteStock || 0); %>
-    <% const isOutOfStock = websiteStock <= 0; %>
+    <% const isAlwaysPurchasable = String(product.name || '').trim().toUpperCase() === 'TEST'; %>
+    <% const isOutOfStock = websiteStock <= 0 && !isAlwaysPurchasable; %>
     <% const showStockOnCard = product.showStockOnCard === true; %>
     <% const stockLabel = websiteStock === 1 ? "Only 1 case left" : `Only ${websiteStock} cases left`; %>
     <div class="col-12">

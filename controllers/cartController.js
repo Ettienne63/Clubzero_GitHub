@@ -14,6 +14,9 @@ const {
 } = require("../lib/customPack");
 
 const getUserId = (req) => Number.parseInt(req.session?.user?.id, 10);
+const ALWAYS_PURCHASABLE_PRODUCT_NAME = "TEST";
+const isAlwaysPurchasableProduct = (product) =>
+  String(product?.name || "").trim().toUpperCase() === ALWAYS_PURCHASABLE_PRODUCT_NAME;
 const isAjaxRequest = (req) =>
   req.xhr || req.get("X-Requested-With") === "XMLHttpRequest";
 const getEffectiveDiscountPercent = (product, discountsEnabled) =>
@@ -233,6 +236,9 @@ const buildBottleDemandForCartItems = (cartItems, override = null) => {
 const findInsufficientBottleStock = (demandByProductId, productsById) => {
   for (const [productId, neededBottles] of demandByProductId.entries()) {
     const product = productsById.get(productId);
+    if (isAlwaysPurchasableProduct(product)) {
+      continue;
+    }
     const availableBottles = getProductAvailableBottles(product);
     if (!product || product.isActive === false || neededBottles > availableBottles) {
       return {
@@ -288,11 +294,11 @@ exports.addToCart = async (req, res) => {
   }
 
   const product = await prisma.product.findFirst({
-    where: { id: productId, isActive: true },
-    select: { id: true, websiteStock: true, looseBottleStock: true },
+    where: { id: productId },
+    select: { id: true, name: true, isActive: true, websiteStock: true, looseBottleStock: true },
   });
 
-  if (!product) {
+  if (!product || (!product.isActive && !isAlwaysPurchasableProduct(product))) {
     return res.redirect(
       appendQueryParam(
         returnTo,
@@ -314,9 +320,12 @@ exports.addToCart = async (req, res) => {
   });
   const bottleDemand = buildBottleDemandForCartItems(existingCartItems);
   const currentDemandBottles = Number(bottleDemand.get(productId) || 0);
+  const alwaysPurchasable = isAlwaysPurchasableProduct(product);
   const availableBottles = getProductAvailableBottles(product);
   const remainingBottles = Math.max(0, availableBottles - currentDemandBottles);
-  const availableCases = Math.floor(remainingBottles / BOTTLES_PER_CASE);
+  const availableCases = alwaysPurchasable
+    ? Number.MAX_SAFE_INTEGER
+    : Math.floor(remainingBottles / BOTTLES_PER_CASE);
 
   if (availableCases <= 0) {
     return res.redirect(
@@ -328,7 +337,7 @@ exports.addToCart = async (req, res) => {
     );
   }
 
-  const quantityToAdd = Math.min(quantity, availableCases);
+  const quantityToAdd = alwaysPurchasable ? quantity : Math.min(quantity, availableCases);
 
   if (quantityToAdd <= 0) {
     return res.redirect(

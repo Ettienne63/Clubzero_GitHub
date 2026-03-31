@@ -407,6 +407,11 @@ app.get(
   requireAdmin,
   asyncHandler(orderController.getAdminPaymentsPage),
 );
+app.post(
+  "/admin/payments/:id/mark-paid",
+  requireAdmin,
+  asyncHandler(orderController.markAdminOrderPaid),
+);
 app.get(
   "/admin/team",
   requireOwner,

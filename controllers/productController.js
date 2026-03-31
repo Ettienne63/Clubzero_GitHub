@@ -378,7 +378,7 @@ exports.listProducts = async (req, res) => {
   if (Number.isInteger(userId)) {
     const [purchasedItems, myReviews] = await Promise.all([
       prisma.orderItem.findMany({
-        where: { order: { userId } },
+        where: { order: { userId, status: "PAID" } },
         distinct: ["productId"],
         select: { productId: true },
       }),
@@ -478,7 +478,7 @@ exports.createReview = async (req, res) => {
   const purchased = await prisma.orderItem.findFirst({
     where: {
       productId,
-      order: { userId },
+      order: { userId, status: "PAID" },
     },
     select: { id: true },
   });
