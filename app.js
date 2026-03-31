@@ -127,6 +127,13 @@ app.use(
   }),
 );
 app.use(express.urlencoded({ extended: true, limit: "100kb" }));
+app.get("/webhooks/paystack", (req, res) => {
+  const query = new URLSearchParams(req.query || {}).toString();
+  const target = query
+    ? `/auth/checkout/paystack?${query}`
+    : "/auth/checkout/paystack";
+  return res.redirect(target);
+});
 app.post(
   "/webhooks/paystack",
   express.raw({ type: "application/json" }),

@@ -277,6 +277,7 @@ const sendInvoiceEmail = async ({ invoice, order, req }) => {
   if (!smtp.isConfigured) {
     return false;
   }
+  const invoiceStatus = getInvoiceStatusBadge(invoice);
 
   const transporter = nodemailer.createTransport({
     host: smtp.host,
@@ -288,11 +289,11 @@ const sendInvoiceEmail = async ({ invoice, order, req }) => {
     },
   });
 
-  const invoiceUrl = buildInvoiceUrl(req, order.id);
+  const invoiceUrl = req ? buildInvoiceUrl(req, order.id) : "";
   const pdfBuffer = await renderInvoicePdf({
     invoice: {
       ...invoice,
-      status: getInvoiceStatusBadge(invoice),
+      status: invoiceStatus,
     },
     order,
   });
@@ -300,17 +301,14 @@ const sendInvoiceEmail = async ({ invoice, order, req }) => {
   const result = await transporter.sendMail({
     from: smtp.from,
     to: invoice.recipientEmail,
-    subject: `Invoice ${invoice.invoiceNumber} for Club Zero order #${order.id}`,
+    subject: `Payment receipt ${invoice.invoiceNumber} for Club Zero order #${order.id}`,
     text: [
       `Hi ${invoice.recipientName},`,
       "",
-      `Your invoice ${invoice.invoiceNumber} for order #${order.id} is ready.`,
-      `Amount due: R${Number(invoice.total).toFixed(2)}`,
-      invoice.dueAt ? `Due date: ${new Date(invoice.dueAt).toLocaleDateString()}` : "",
+      `Thanks for your order. Your payment for order #${order.id} was received successfully.`,
+      `Total paid: R${Number(invoice.total).toFixed(2)}`,
       "",
-      `View invoice: ${invoiceUrl}`,
-      "",
-      invoice.notes || "",
+      invoiceUrl ? `View invoice: ${invoiceUrl}` : "",
     ]
       .filter(Boolean)
       .join("\n"),

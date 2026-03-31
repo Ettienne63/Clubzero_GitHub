@@ -3,8 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="csrf-token" content="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>" />
-    <link rel="icon" type="image/png" href="/images/ClubZero_Logo.png" />
+    <meta
+      name="csrf-token"
+      content="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>"
+    />
+    <link rel="icon" type="image/avif" href="/images/ClubZero_logo.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <% if (typeof preloadImageUrl !== "undefined" && preloadImageUrl) { %>
     <link rel="preload" as="image" href="<%= preloadImageUrl %>" />
@@ -19,4 +22,5 @@
     />
     <link rel="stylesheet" href="/style.css?v=scene-20260325-76" />
   </head>
-  <body data-site-theme="<%= siteTheme || 'sunset' %>">
+  <body data-site-theme="<%= siteTheme || 'sunset' %>"></body>
+</html>
