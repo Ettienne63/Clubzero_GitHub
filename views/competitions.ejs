@@ -1,0 +1,272 @@
+<%- include("partials/header", { title: "Competitions" }) %>
+<%- include("partials/navbar") %>
+
+<% if (competitionRules?.comingSoonEnabled) { %>
+<div
+  id="competitionComingSoonPopup"
+  class="competition-coming-soon-popup"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="competitionComingSoonTitle"
+>
+  <div class="competition-coming-soon-popup__backdrop"></div>
+  <div class="competition-coming-soon-popup__card">
+    <button
+      type="button"
+      class="competition-coming-soon-popup__close"
+      id="competitionComingSoonClose"
+      aria-label="Close coming soon popup"
+    >
+      &times;
+    </button>
+    <p class="competition-coming-soon-popup__kicker mb-2">Club Zero Competitions</p>
+    <h2 id="competitionComingSoonTitle" class="competition-coming-soon-popup__title mb-3">
+      New Competition Coming Soon
+    </h2>
+    <p class="competition-coming-soon-popup__body mb-4">
+      We are preparing the next giveaway. Keep checking back and be ready to enter as soon as it goes live.
+    </p>
+    <button
+      type="button"
+      class="btn btn-primary btn-lg competition-coming-soon-popup__cta"
+      id="competitionComingSoonCta"
+    >
+      Got It
+    </button>
+  </div>
+</div>
+<% } %>
+
+<main class="cz-banded competition-page">
+  <section class="cz-band cz-band--custom competition-hero">
+    <div class="container cz-section">
+      <div class="row g-4 align-items-center">
+        <div class="col-lg-7">
+          <span class="badge competition-pill mb-2"><%= hero.badge %></span>
+          <% if (competitionRules?.comingSoonEnabled) { %>
+          <div class="competition-coming-soon mb-2">Competitions Coming Soon</div>
+          <% } %>
+          <h1 class="display-5 fw-bold mb-2"><%= hero.title %></h1>
+          <p class="competition-hero-subtitle mb-0"><%= hero.subtitle %></p>
+          <div class="competition-entry-counter mt-3">
+            <% if (competitionRules?.comingSoonEnabled) { %>
+            <span class="competition-entry-counter__label">Entries are currently paused.</span>
+            <% } else if (entryCounter?.isLoggedIn) { %>
+            <span class="competition-entry-counter__label">Your entries</span>
+            <strong class="competition-entry-counter__value"><%= entryCounter.totalEntries %></strong>
+            <span class="competition-entry-counter__meta">
+              from <%= entryCounter.qualifyingOrders %> qualifying order<%= entryCounter.qualifyingOrders === 1 ? '' : 's' %>
+            </span>
+            <% } else { %>
+            <a href="/auth/login" class="competition-entry-counter__link">
+              Sign in to view your entry count
+            </a>
+            <% } %>
+          </div>
+          <div class="competition-hero-glow"></div>
+        </div>
+        <div class="col-lg-5">
+          <div class="competition-hero-media-wrap">
+            <% if (hero.imageUrl) { %>
+            <img
+              src="<%= hero.imageUrl %>"
+              alt="<%= hero.title || 'Competition image' %>"
+              class="competition-hero-media"
+              loading="lazy"
+              decoding="async"
+            />
+            <% } else { %>
+            <div class="competition-hero-media competition-hero-media--placeholder">Add competition image</div>
+            <% } %>
+          </div>
+          <div class="text-lg-end mt-3">
+            <a href="<%= hero.ctaUrl %>" class="btn btn-light btn-lg competition-hero-btn"><%= hero.ctaLabel %></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cz-band competition-stack">
+    <div class="container cz-section">
+      <article class="card shadow-sm competition-card competition-card--focus">
+        <div class="card-body p-4">
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <h2 class="h4 mb-0">Current Competition</h2>
+            <span class="competition-status-pill">Live Now</span>
+          </div>
+          <% if (currentCompetition.title) { %>
+          <h3 class="competition-current-title mb-3"><%= currentCompetition.title %></h3>
+          <% } %>
+          <div class="row g-3 align-items-stretch">
+            <div class="col-lg-7">
+              <div class="competition-prize-spotlight h-100">
+                <p class="competition-prize-label mb-2">Mega Prize Drop</p>
+                <p class="competition-prize-value mb-0"><%= currentCompetition.prize %></p>
+              </div>
+            </div>
+            <div class="col-lg-5">
+              <div class="competition-detail-grid">
+                <div class="competition-detail-item">
+                  <p class="competition-detail-label mb-1">Entry Deadline</p>
+                  <p class="competition-detail-value mb-0"><%= currentCompetition.deadlineLabel %></p>
+                </div>
+                <div class="competition-detail-item">
+                  <p class="competition-detail-label mb-1">Winner Announced</p>
+                  <p class="competition-detail-value mb-0"><%= currentCompetition.winnerDateLabel %></p>
+                </div>
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="competition-detail-item competition-detail-item--full">
+                <p class="competition-detail-label mb-1">Eligibility</p>
+                <p class="competition-detail-value mb-0"><%= currentCompetition.eligibility %></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="cz-band competition-stack">
+    <div class="container cz-section">
+      <div class="row g-4">
+        <div class="col-lg-7">
+          <div class="card shadow-sm h-100 competition-card">
+            <div class="card-body p-4">
+              <h2 class="h5 mb-3">How To Enter</h2>
+              <ol class="mb-0">
+                <% currentCompetition.entryRules.forEach((rule) => { %>
+                <li class="mb-2"><%= rule %></li>
+                <% }) %>
+                <li class="mb-0">Complete checkout before the deadline.</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-5">
+          <div class="card shadow-sm h-100 competition-card competition-card--countdown">
+            <div class="card-body p-4">
+              <h2 class="h5 mb-2">Countdown</h2>
+              <p class="small mb-3">Time left to enter</p>
+              <div class="display-6 fw-bold" id="competitionCountdown">Loading...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cz-band competition-stack">
+    <div class="container cz-section">
+      <h2 class="h4 mb-3">FAQ</h2>
+      <div class="accordion" id="competitionFaq">
+        <% if (faqs.length === 0) { %>
+        <p class="text-secondary mb-0">FAQs will be added soon.</p>
+        <% } %>
+        <% faqs.forEach((faq, index) => { %>
+        <div class="accordion-item competition-accordion-item">
+          <h3 class="accordion-header" id="faqHeading<%= index %>">
+            <button
+              class="accordion-button <%= index === 0 ? '' : 'collapsed' %>"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#faqBody<%= index %>"
+              aria-expanded="<%= index === 0 ? 'true' : 'false' %>"
+              aria-controls="faqBody<%= index %>"
+            >
+              <%= faq.question %>
+            </button>
+          </h3>
+          <div
+            id="faqBody<%= index %>"
+            class="accordion-collapse collapse <%= index === 0 ? 'show' : '' %>"
+            aria-labelledby="faqHeading<%= index %>"
+            data-bs-parent="#competitionFaq"
+          >
+            <div class="accordion-body"><%= faq.answer %></div>
+          </div>
+        </div>
+        <% }) %>
+      </div>
+    </div>
+  </section>
+
+  <section class="cz-band competition-stack">
+    <div class="container cz-section">
+      <details class="card shadow-sm competition-card">
+        <summary class="card-body fw-semibold" style="cursor: pointer;">
+          Terms & Conditions
+        </summary>
+        <div class="card-body pt-0">
+          <ul class="mb-0">
+            <% terms.forEach((term) => { %>
+            <li><%= term %></li>
+            <% }) %>
+          </ul>
+        </div>
+      </details>
+    </div>
+  </section>
+</main>
+
+<script>
+  (() => {
+    const target = new Date(<%- JSON.stringify(currentCompetition.endsAtIso) %>).getTime();
+    const el = document.getElementById("competitionCountdown");
+    if (!el || !Number.isFinite(target)) return;
+
+    const render = () => {
+      const now = Date.now();
+      const diff = target - now;
+      if (diff <= 0) {
+        el.textContent = "Competition Closed";
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const mins = Math.floor((diff / (1000 * 60)) % 60);
+      const secs = Math.floor((diff / 1000) % 60);
+      el.textContent = `${days}d ${hours}h ${mins}m ${secs}s`;
+    };
+
+    render();
+    setInterval(render, 1000);
+  })();
+</script>
+<% if (competitionRules?.comingSoonEnabled) { %>
+<script>
+  (() => {
+    const popup = document.getElementById("competitionComingSoonPopup");
+    if (!popup) return;
+    const closeBtn = document.getElementById("competitionComingSoonClose");
+    const ctaBtn = document.getElementById("competitionComingSoonCta");
+    const storageKey = "competition-coming-soon-popup-seen";
+
+    const closePopup = () => {
+      popup.classList.add("is-closing");
+      window.setTimeout(() => {
+        popup.style.display = "none";
+      }, 180);
+      sessionStorage.setItem(storageKey, "1");
+    };
+
+    if (sessionStorage.getItem(storageKey) === "1") {
+      popup.style.display = "none";
+      return;
+    }
+
+    closeBtn?.addEventListener("click", closePopup);
+    ctaBtn?.addEventListener("click", closePopup);
+    popup.addEventListener("click", (event) => {
+      if (event.target === popup || event.target.classList.contains("competition-coming-soon-popup__backdrop")) {
+        closePopup();
+      }
+    });
+  })();
+</script>
+<% } %>
+
+<%- include("partials/footer") %>

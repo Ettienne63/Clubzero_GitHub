@@ -46,15 +46,11 @@ return `${day}-${month}-${year}`; }; %>
       </div>
 
       <div class="row g-4 mb-4">
-        <div class="col-sm-4">
+        <div class="col-sm-6">
           <p class="small text-uppercase text-muted mb-1">Issued</p>
           <p class="mb-0"><%= formatDate(invoice.issuedAt) %></p>
         </div>
-        <div class="col-sm-4">
-          <p class="small text-uppercase text-muted mb-1">Due</p>
-          <p class="mb-0"><%= formatDate(invoice.dueAt) %></p>
-        </div>
-        <div class="col-sm-4">
+        <div class="col-sm-6">
           <p class="small text-uppercase text-muted mb-1">Status</p>
           <p class="mb-0">
             <span

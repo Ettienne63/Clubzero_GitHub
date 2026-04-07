@@ -38,11 +38,13 @@ const inventoryController = require("./controllers/inventoryController");
 const storeLocationController = require("./controllers/storeLocationController");
 const homeController = require("./controllers/homeController");
 const aboutController = require("./controllers/aboutController");
+const competitionController = require("./controllers/competitionController");
 const themeController = require("./controllers/themeController");
 const { getPromoSettings } = require("./lib/promoSettings");
 const { getHomeHeroSettings } = require("./lib/homeHeroSettings");
 const { getHomeTextSettings } = require("./lib/homeTextSettings");
 const { getSiteTheme } = require("./lib/themeSettings");
+const { getCompetitionEntryRules } = require("./lib/competitionEntryRules");
 const { startAbandonedCartScheduler } = require("./lib/abandonedCart");
 const {
   startDailyOutOfStockSummaryScheduler,
@@ -216,6 +218,7 @@ app.use(async (req, res, next) => {
   res.locals.currentPath = req.path;
   res.locals.user = req.session.user || null;
   res.locals.cartCount = 0;
+  res.locals.showCompetitionsNavItem = true;
   const [siteThemeResult, homeHeroResult] = await Promise.allSettled([
     getSiteTheme(),
     getHomeHeroSettings(),
@@ -226,6 +229,16 @@ app.use(async (req, res, next) => {
     homeHeroResult.status === "fulfilled"
       ? String(homeHeroResult.value?.logoUrl || "").trim()
       : "";
+  try {
+    const competitionRules = await getCompetitionEntryRules();
+    res.locals.showCompetitionsNavItem = !Boolean(
+      competitionRules?.hideCompetitionsPage,
+    );
+  } catch (error) {
+    logger.warn("competition_nav_visibility_load_failed", {
+      error: error.message,
+    });
+  }
 
   if (res.locals.user) {
     const affiliateProgramStatus = String(
@@ -312,6 +325,7 @@ app.get("/", async (_req, res) => {
   });
 });
 app.get("/about", asyncHandler(aboutController.getAboutPage));
+app.get("/competitions", asyncHandler(competitionController.getCompetitionsPage));
 app.get("/contact", contactController.getContact);
 app.get("/store-locator", asyncHandler(async (req, res) => {
   const query = (req.query.city || "").toString().trim();
@@ -376,6 +390,41 @@ app.get(
   "/admin/promo-content",
   requireAdmin,
   asyncHandler(productController.getAdminPromoContentPage),
+);
+app.get(
+  "/admin/delivery-pricing",
+  requireAdmin,
+  asyncHandler(orderController.getAdminDeliveryPricingPage),
+);
+app.get(
+  "/admin/competition-rules",
+  requireAdmin,
+  asyncHandler(competitionController.getAdminCompetitionRulesPage),
+);
+app.post(
+  "/admin/delivery-pricing",
+  requireAdmin,
+  asyncHandler(orderController.updateAdminDeliveryPricing),
+);
+app.post(
+  "/admin/competition-rules",
+  requireAdmin,
+  asyncHandler(competitionController.updateAdminCompetitionRules),
+);
+app.post(
+  "/admin/competition-rules/toggle-coming-soon",
+  requireAdmin,
+  asyncHandler(competitionController.toggleAdminCompetitionComingSoon),
+);
+app.post(
+  "/admin/competition-rules/toggle-page-visibility",
+  requireAdmin,
+  asyncHandler(competitionController.toggleAdminCompetitionPageVisibility),
+);
+app.post(
+  "/admin/delivery-pricing/toggle",
+  requireAdmin,
+  asyncHandler(orderController.toggleAdminDeliveryPricing),
 );
 app.get(
   "/admin/affiliate",
@@ -457,6 +506,11 @@ app.get(
   requireAdmin,
   asyncHandler(aboutController.getAdminAboutContent),
 );
+app.get(
+  "/admin/competitions-content",
+  requireAdmin,
+  asyncHandler(competitionController.getAdminCompetitionContent),
+);
 app.post(
   "/admin/home-content",
   requireAdmin,
@@ -474,6 +528,12 @@ app.post(
   requireAdmin,
   upload.single("aboutIntroImage"),
   asyncHandler(aboutController.updateAdminAboutContent),
+);
+app.post(
+  "/admin/competitions-content",
+  requireAdmin,
+  upload.single("heroImage"),
+  asyncHandler(competitionController.updateAdminCompetitionContent),
 );
 app.get(
   "/admin/locations",
@@ -688,6 +748,10 @@ app.use((error, req, res, _next) => {
       "We couldn't process Home content right now. Please try again.",
     "/admin/about-content":
       "We couldn't process About content right now. Please try again.",
+    "/admin/competitions-content":
+      "We couldn't process Competition content right now. Please try again.",
+    "/admin/competition-rules":
+      "We couldn't process Competition rules right now. Please try again.",
     "/admin/nav-edit":
       "We couldn't process Nav content right now. Please try again.",
   };

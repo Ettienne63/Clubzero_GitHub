@@ -7,6 +7,7 @@ const normalizeEmail = (value) => (value || "").toString().trim().toLowerCase();
 const getUsernameFromEmail = (email) => normalizeEmail(email).split("@")[0] || "";
 
 const canAccessGoalTracker = (req) =>
+  Boolean(req.session?.user?.isAdmin) ||
   normalizeEmail(req.session?.user?.email).endsWith(GOAL_TRACKER_EMAIL_SUFFIX);
 
 const redirectGoalTrackerDenied = (res) =>

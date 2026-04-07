@@ -9,214 +9,182 @@
       <% if (error) { %>
       <div class="alert alert-danger"><%= error %></div>
       <% } %>
+      <% if (firstOrderFreeDelivery) { %>
+      <div class="alert alert-success">
+        You qualify for free delivery on your first order. You save
+        <strong>R<%= Number(firstOrderDeliverySavings || 0).toFixed(2) %></strong>
+        today.
+      </div>
+      <% } %>
+      <% if (thresholdFreeDelivery) { %>
+      <div class="alert alert-success">
+        Free delivery unlocked on orders over
+        <strong>R<%= Number(freeDeliveryThreshold || 0).toFixed(2) %></strong>.
+      </div>
+      <% } %>
 
       <div class="row g-4">
         <div class="col-lg-7">
           <div class="card shadow-sm">
-        <div class="card-body">
-          <h2 class="h5 mb-3">Delivery Information</h2>
-          <form action="/auth/checkout" method="POST" class="row g-3">
-            <% if (savedAddresses && savedAddresses.length > 0) { %>
-            <div class="col-12">
-              <label for="selectedAddressId" class="form-label">Choose Saved Address</label>
-              <select id="selectedAddressId" name="selectedAddressId" class="form-select">
-                <option value="">Use manual entry</option>
-                <% savedAddresses.forEach((address) => { %>
-                <option
-                  value="<%= address.id %>"
-                  <%= String(formData.selectedAddressId || "") === String(address.id) ? "selected" : "" %>
-                  data-recipient-name="<%= address.recipientName %>"
-                  data-phone="<%= address.phone %>"
-                  data-address-line1="<%= address.addressLine1 %>"
-                  data-address-line2="<%= address.addressLine2 || "" %>"
-                  data-city="<%= address.city %>"
-                  data-state="<%= address.state %>"
-                  data-postal-code="<%= address.postalCode %>"
-                  data-country="<%= address.country %>"
-                >
-                  <%= address.label || "Saved Address" %> - <%= address.addressLine1 %>, <%= address.city %>
-                </option>
-                <% }) %>
-              </select>
-              <div class="form-text">Select an address to autofill the delivery fields.</div>
+            <div class="card-body">
+              <h2 class="h5 mb-3">Delivery Information</h2>
+              <form id="checkoutForm" action="/auth/checkout" method="POST" class="row g-3">
+                <% if (savedAddresses && savedAddresses.length > 0) { %>
+                <div class="col-12">
+                  <label for="selectedAddressId" class="form-label">Choose Saved Address</label>
+                  <select id="selectedAddressId" name="selectedAddressId" class="form-select">
+                    <option value="">Use manual entry</option>
+                    <% savedAddresses.forEach((address) => { %>
+                    <option
+                      value="<%= address.id %>"
+                      <%= String(formData.selectedAddressId || "") === String(address.id) ? "selected" : "" %>
+                      data-recipient-name="<%= address.recipientName %>"
+                      data-phone="<%= address.phone %>"
+                      data-address-line1="<%= address.addressLine1 %>"
+                      data-address-line2="<%= address.addressLine2 || "" %>"
+                      data-city="<%= address.city %>"
+                      data-state="<%= address.state %>"
+                      data-postal-code="<%= address.postalCode %>"
+                      data-country="<%= address.country %>"
+                    >
+                      <%= address.label || "Saved Address" %> - <%= address.addressLine1 %>, <%= address.city %>
+                    </option>
+                    <% }) %>
+                  </select>
+                  <div class="form-text">Select an address to autofill the delivery fields.</div>
+                </div>
+                <% } %>
+
+                <div class="col-md-6">
+                  <label for="deliveryName" class="form-label">Full Name *</label>
+                  <input id="deliveryName" name="deliveryName" class="form-control" value="<%= formData.deliveryName %>" required />
+                </div>
+                <div class="col-md-6">
+                  <label for="deliveryPhone" class="form-label">Phone *</label>
+                  <input id="deliveryPhone" name="deliveryPhone" class="form-control" value="<%= formData.deliveryPhone %>" required />
+                </div>
+                <div class="col-12">
+                  <label for="deliveryAddressLine1" class="form-label">Address Line 1 *</label>
+                  <input id="deliveryAddressLine1" name="deliveryAddressLine1" class="form-control" value="<%= formData.deliveryAddressLine1 %>" required />
+                </div>
+                <div class="col-12">
+                  <label for="deliveryAddressLine2" class="form-label">Address Line 2</label>
+                  <input id="deliveryAddressLine2" name="deliveryAddressLine2" class="form-control" value="<%= formData.deliveryAddressLine2 %>" />
+                </div>
+                <div class="col-md-4">
+                  <label for="deliveryCity" class="form-label">City *</label>
+                  <input id="deliveryCity" name="deliveryCity" class="form-control" value="<%= formData.deliveryCity %>" required />
+                </div>
+                <div class="col-md-4">
+                  <label for="deliveryState" class="form-label">State *</label>
+                  <input id="deliveryState" name="deliveryState" class="form-control" value="<%= formData.deliveryState %>" required />
+                </div>
+                <div class="col-md-4">
+                  <label for="deliveryPostalCode" class="form-label">Postal Code *</label>
+                  <input id="deliveryPostalCode" name="deliveryPostalCode" class="form-control" value="<%= formData.deliveryPostalCode %>" required />
+                </div>
+                <div class="col-md-6">
+                  <label for="deliveryCountry" class="form-label">Country *</label>
+                  <select id="deliveryCountry" name="deliveryCountry" class="form-select" required>
+                    <option value="South Africa" selected>South Africa</option>
+                  </select>
+                </div>
+                <div class="col-12">
+                  <label for="affiliateCode" class="form-label">Affiliate Code</label>
+                  <input
+                    id="affiliateCode"
+                    name="affiliateCode"
+                    class="form-control"
+                    value="<%= formData.affiliateCode || '' %>"
+                    placeholder="Enter affiliate code if you have one"
+                  />
+                </div>
+
+                <% if (affiliateBalance && affiliateBalance > 0) { %>
+                <div class="col-12">
+                  <div class="form-check">
+                    <input
+                      id="applyAffiliateCredit"
+                      name="applyAffiliateCredit"
+                      type="checkbox"
+                      class="form-check-input"
+                      <%= formData.applyAffiliateCredit ? "checked" : "" %>
+                    />
+                    <label for="applyAffiliateCredit" class="form-check-label">
+                      Apply affiliate balance (R<%= Number(affiliateBalance).toFixed(2) %> available)
+                    </label>
+                  </div>
+                </div>
+                <% } %>
+
+                <div class="col-12">
+                  <div class="form-check">
+                    <input
+                      id="saveAddress"
+                      name="saveAddress"
+                      type="checkbox"
+                      class="form-check-input"
+                      <%= formData.saveAddress ? "checked" : "" %>
+                    />
+                    <label for="saveAddress" class="form-check-label">Save this as new address</label>
+                  </div>
+                </div>
+
+                <div class="col-12 d-flex gap-2">
+                  <button type="submit" class="btn btn-primary">Pay with Paystack</button>
+                  <a href="/auth/cart" class="btn btn-outline-secondary">Back to Cart</a>
+                </div>
+              </form>
             </div>
-            <% } %>
-            <div class="col-md-6">
-              <label for="deliveryName" class="form-label">Full Name *</label>
-              <input
-                id="deliveryName"
-                name="deliveryName"
-                class="form-control"
-                value="<%= formData.deliveryName %>"
-                required
-              />
-            </div>
-            <div class="col-md-6">
-              <label for="deliveryPhone" class="form-label">Phone *</label>
-              <input
-                id="deliveryPhone"
-                name="deliveryPhone"
-                class="form-control"
-                value="<%= formData.deliveryPhone %>"
-                required
-              />
-            </div>
-            <div class="col-12">
-              <label for="deliveryAddressLine1" class="form-label"
-                >Address Line 1 *</label
-              >
-              <input
-                id="deliveryAddressLine1"
-                name="deliveryAddressLine1"
-                class="form-control"
-                value="<%= formData.deliveryAddressLine1 %>"
-                required
-              />
-            </div>
-            <div class="col-12">
-              <label for="deliveryAddressLine2" class="form-label"
-                >Address Line 2</label
-              >
-              <input
-                id="deliveryAddressLine2"
-                name="deliveryAddressLine2"
-                class="form-control"
-                value="<%= formData.deliveryAddressLine2 %>"
-              />
-            </div>
-            <div class="col-md-4">
-              <label for="deliveryCity" class="form-label">City *</label>
-              <input
-                id="deliveryCity"
-                name="deliveryCity"
-                class="form-control"
-                value="<%= formData.deliveryCity %>"
-                required
-              />
-            </div>
-            <div class="col-md-4">
-              <label for="deliveryState" class="form-label">State *</label>
-              <input
-                id="deliveryState"
-                name="deliveryState"
-                class="form-control"
-                value="<%= formData.deliveryState %>"
-                required
-              />
-            </div>
-            <div class="col-md-4">
-              <label for="deliveryPostalCode" class="form-label"
-                >Postal Code *</label
-              >
-              <input
-                id="deliveryPostalCode"
-                name="deliveryPostalCode"
-                class="form-control"
-                value="<%= formData.deliveryPostalCode %>"
-                required
-              />
-            </div>
-            <div class="col-md-6">
-              <label for="deliveryCountry" class="form-label">Country *</label>
-              <input
-                id="deliveryCountry"
-                name="deliveryCountry"
-                class="form-control"
-                value="<%= formData.deliveryCountry %>"
-                required
-              />
-            </div>
-            <div class="col-12">
-              <label for="affiliateCode" class="form-label">Affiliate Code</label>
-              <input
-                id="affiliateCode"
-                name="affiliateCode"
-                class="form-control"
-                value="<%= formData.affiliateCode || '' %>"
-                placeholder="Enter affiliate code if you have one"
-              />
-              <div class="form-text">
-                If you came from an affiliate link, this code may already be filled in.
-              </div>
-            </div>
-            <% if (affiliateBalance && affiliateBalance > 0) { %>
-            <div class="col-12">
-              <div class="form-check">
-                <input
-                  id="applyAffiliateCredit"
-                  name="applyAffiliateCredit"
-                  type="checkbox"
-                  class="form-check-input"
-                  <%= formData.applyAffiliateCredit ? "checked" : "" %>
-                />
-                <label for="applyAffiliateCredit" class="form-check-label">
-                  Apply affiliate balance (R<%= Number(affiliateBalance).toFixed(2) %> available)
-                </label>
-              </div>
-            </div>
-            <% } %>
-            <div class="col-12">
-              <div class="form-check">
-                <input
-                  id="saveAddress"
-                  name="saveAddress"
-                  type="checkbox"
-                  class="form-check-input"
-                  <%= formData.saveAddress ? "checked" : "" %>
-                />
-                <label for="saveAddress" class="form-check-label">
-                  Save this as new address
-                </label>
-              </div>
-            </div>
-            <div class="col-12 d-flex gap-2">
-              <button type="submit" class="btn btn-primary">Pay with Paystack</button>
-              <a href="/auth/cart" class="btn btn-outline-secondary"
-                >Back to Cart</a
-              >
-            </div>
-          </form>
+          </div>
         </div>
-      </div>
-    </div>
 
         <div class="col-lg-5">
           <div class="card shadow-sm">
-        <div class="card-body">
-          <h2 class="h5 mb-3">Order Summary</h2>
-          <ul class="list-group list-group-flush">
-            <% cartItems.forEach((item) => { %>
-            <% const isCustomPack = item.isCustomPack === true; %>
-            <% const discountPercent = !isCustomPack ? Number(item.product?.discountPercent || 0) : 0; %>
-            <% const hasDiscount = !isCustomPack && Boolean(discountsEnabled) && item.product?.discountEnabled !== false && discountPercent > 0; %>
-            <% const discountedPrice = !isCustomPack ? (hasDiscount ? Number(item.product?.price || 0) * (1 - discountPercent / 100) : Number(item.product?.price || 0)) : Number(item.unitPrice || 0); %>
-            <li
-              class="list-group-item d-flex justify-content-between align-items-center px-0"
-            >
-              <span>
-                <%= item.displayName || item.product?.name || "Item" %> x <%= item.quantity %> case<%= item.quantity === 1 ? "" : "s" %> (<%= item.bottles || (item.quantity * 12) %> bottles)
-                <% if (isCustomPack && Array.isArray(item.customPackEntries) && item.customPackEntries.length) { %>
-                <span class="d-block small text-muted"><%= item.customPackEntries.map((entry) => `${entry.productName} (${entry.bottlesPerPack})`).join(", ") %></span>
+            <div class="card-body">
+              <h2 class="h5 mb-3">Order Summary</h2>
+              <ul class="list-group list-group-flush">
+                <% cartItems.forEach((item) => { %>
+                <% const isCustomPack = item.isCustomPack === true; %>
+                <% const discountPercent = !isCustomPack ? Number(item.product?.discountPercent || 0) : 0; %>
+                <% const hasDiscount = !isCustomPack && Boolean(discountsEnabled) && item.product?.discountEnabled !== false && discountPercent > 0; %>
+                <% const discountedPrice = !isCustomPack ? (hasDiscount ? Number(item.product?.price || 0) * (1 - discountPercent / 100) : Number(item.product?.price || 0)) : Number(item.unitPrice || 0); %>
+                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                  <span>
+                    <%= item.displayName || item.product?.name || "Item" %> x <%= item.quantity %> case<%= item.quantity === 1 ? "" : "s" %>
+                  </span>
+                  <span>R<%= Number(item.subtotal || (Number(discountedPrice) * item.quantity)).toFixed(2) %></span>
+                </li>
+                <% }) %>
+              </ul>
+              <hr />
+              <div class="d-flex justify-content-between">
+                <span>Products subtotal</span>
+                <span>R<%= Number(typeof productsSubtotal !== "undefined" ? productsSubtotal : total).toFixed(2) %></span>
+              </div>
+              <div class="d-flex justify-content-between">
+                <span>Delivery fee</span>
+                <% if (firstOrderFreeDelivery) { %>
+                <span>Free (first order)</span>
+                <% } else if (thresholdFreeDelivery) { %>
+                <span>Free (threshold reached)</span>
+                <% } else { %>
+                <span>R<%= Number(deliveryFee || 0).toFixed(2) %></span>
                 <% } %>
-              </span>
-              <span>R<%= Number(item.subtotal || (Number(discountedPrice) * item.quantity)).toFixed(2) %></span>
-            </li>
-            <% }) %>
-          </ul>
-          <hr />
-          <% if (creditApplied && creditApplied > 0) { %>
-          <div class="d-flex justify-content-between">
-            <span>Affiliate credit</span>
-            <span>-R<%= Number(creditApplied).toFixed(2) %></span>
-          </div>
-          <% } %>
-          <div class="d-flex justify-content-between fw-bold">
-            <span>Total</span>
-            <span>R<%= Number(payableTotal || total).toFixed(2) %></span>
+              </div>
+              <% if (creditApplied && creditApplied > 0) { %>
+              <div class="d-flex justify-content-between">
+                <span>Affiliate credit</span>
+                <span>-R<%= Number(creditApplied).toFixed(2) %></span>
+              </div>
+              <% } %>
+              <div class="d-flex justify-content-between fw-bold">
+                <span>Total</span>
+                <span>R<%= Number(typeof payableTotal !== "undefined" ? payableTotal : total).toFixed(2) %></span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
       </div>
     </div>
   </section>
@@ -252,7 +220,6 @@
     };
 
     addressSelect.addEventListener("change", applyAddress);
-
     if (addressSelect.value) {
       applyAddress();
     }

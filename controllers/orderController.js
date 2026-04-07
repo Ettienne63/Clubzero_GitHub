@@ -10,6 +10,10 @@ const { renderInvoicePdf } = require("../lib/invoicePdf");
 const { getDiscountedPrice } = require("../lib/pricing");
 const { getPromoSettings } = require("../lib/promoSettings");
 const {
+  getDeliveryPricingSettings,
+  saveDeliveryPricingSettings,
+} = require("../lib/deliveryPricing");
+const {
   BOTTLES_PER_CASE,
   parseCustomPackConfig,
   resolveCustomPack,
@@ -28,8 +32,8 @@ const INVOICE_STATUS = {
   SENT: "SENT",
   PAID: "PAID",
 };
-const INVOICE_PAYMENT_TERMS_DAYS = 7;
 const PAYSTACK_CURRENCY = "ZAR";
+const DEFAULT_DELIVERY_COUNTRY = "South Africa";
 const ALWAYS_PURCHASABLE_PRODUCT_NAME = "TEST";
 const isAlwaysPurchasableProduct = (product) =>
   String(product?.name || "").trim().toUpperCase() === ALWAYS_PURCHASABLE_PRODUCT_NAME;
@@ -93,6 +97,53 @@ const buildCheckoutFormData = (body = {}) => ({
   deliveryCountry: (body.deliveryCountry || "").trim(),
 });
 
+const PIN_TAG_PATTERN = /\[PIN:([-\d.]+),([-\d.]+)\]\s*$/i;
+const extractPinFromAddressLine2 = (value = "") => {
+  const source = String(value || "");
+  const match = source.match(PIN_TAG_PATTERN);
+  if (!match) {
+    return { cleanLine2: source.trim(), latitude: "", longitude: "" };
+  }
+
+  const lat = Number.parseFloat(match[1]);
+  const lng = Number.parseFloat(match[2]);
+  const cleanLine2 = source.replace(PIN_TAG_PATTERN, "").trim();
+  if (
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lng >= -180 &&
+    lng <= 180
+  ) {
+    return {
+      cleanLine2,
+      latitude: lat.toFixed(6),
+      longitude: lng.toFixed(6),
+    };
+  }
+  return { cleanLine2, latitude: "", longitude: "" };
+};
+
+const appendPinToAddressLine2 = (line2 = "", latitude = "", longitude = "") => {
+  const parsed = extractPinFromAddressLine2(line2);
+  const baseLine2 = parsed.cleanLine2;
+  const lat = Number.parseFloat(String(latitude || "").trim());
+  const lng = Number.parseFloat(String(longitude || "").trim());
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng) ||
+    lat < -90 ||
+    lat > 90 ||
+    lng < -180 ||
+    lng > 180
+  ) {
+    return baseLine2 || null;
+  }
+  const pinTag = `[PIN:${lat.toFixed(6)},${lng.toFixed(6)}]`;
+  return baseLine2 ? `${baseLine2} ${pinTag}` : pinTag;
+};
+
 const hasAllRequiredDeliveryFields = (formData) =>
   Boolean(
     formData.deliveryName &&
@@ -103,6 +154,79 @@ const hasAllRequiredDeliveryFields = (formData) =>
       formData.deliveryPostalCode &&
       formData.deliveryCountry,
   );
+
+const isTruthy = (value) => {
+  if (Array.isArray(value)) {
+    return value.some((entry) => isTruthy(entry));
+  }
+  if (typeof value === "boolean") {
+    return value;
+  }
+  const normalized = String(value || "").trim().toLowerCase();
+  return normalized === "true" || normalized === "1" || normalized === "on";
+};
+
+const roundMoney = (value) => Number(Number(value || 0).toFixed(2));
+
+const buildCheckoutTotals = ({
+  productsSubtotal,
+  deliveryFee,
+  availableAffiliateBalance,
+  wantsAffiliateCredit,
+}) => {
+  const normalizedProductsSubtotal = roundMoney(productsSubtotal);
+  const normalizedDeliveryFee = roundMoney(deliveryFee);
+  const orderSubtotal = roundMoney(normalizedProductsSubtotal + normalizedDeliveryFee);
+  const creditApplied = wantsAffiliateCredit
+    ? roundMoney(Math.min(Number(availableAffiliateBalance || 0), orderSubtotal))
+    : 0;
+  const payableTotal = roundMoney(Math.max(orderSubtotal - creditApplied, 0));
+
+  return {
+    productsSubtotal: normalizedProductsSubtotal,
+    deliveryFee: normalizedDeliveryFee,
+    orderSubtotal,
+    creditApplied,
+    payableTotal,
+  };
+};
+
+const getDeliveryBenefit = async (
+  userId,
+  deliverySettings,
+  productsSubtotal = 0,
+) => {
+  const configuredFee = deliverySettings.enabled
+    ? roundMoney(deliverySettings.fixedFee || 0)
+    : 0;
+  const freeDeliveryThreshold = roundMoney(
+    deliverySettings.freeDeliveryThreshold || 0,
+  );
+
+  const priorOrderCount = await prisma.order.count({
+    where: {
+      userId,
+      status: { not: "PAYMENT_FAILED" },
+    },
+  });
+  const isFirstOrder = priorOrderCount === 0;
+  const isThresholdEligible =
+    freeDeliveryThreshold > 0 &&
+    roundMoney(productsSubtotal) >= freeDeliveryThreshold;
+  const isThresholdFreeDelivery = isThresholdEligible && !isFirstOrder;
+  const isFreeDelivery = (isFirstOrder || isThresholdFreeDelivery) && configuredFee > 0;
+
+  return {
+    isFirstOrderFreeDelivery: isFirstOrder && configuredFee > 0,
+    isThresholdFreeDelivery: isThresholdFreeDelivery && configuredFee > 0,
+    freeDeliveryThreshold,
+    configuredFee,
+    effectiveFee: isFreeDelivery ? 0 : configuredFee,
+  };
+};
+
+const getCommissionableOrderAmount = (order) =>
+  Number(order?.productsSubtotal || order?.total || 0);
 
 const getCartWithTotal = async (
   userId,
@@ -198,12 +322,6 @@ const getCartWithTotal = async (
   return { cartItems, total, productsById };
 };
 
-const addDays = (date, days) => {
-  const nextDate = new Date(date);
-  nextDate.setDate(nextDate.getDate() + days);
-  return nextDate;
-};
-
 const buildInvoiceNumber = (order) =>
   `CZ-${new Date(order.createdAt).getFullYear()}-${String(order.id).padStart(6, "0")}`;
 
@@ -265,10 +383,9 @@ const createInvoiceRecord = async (tx, order, recipientEmail) =>
       invoiceNumber: buildInvoiceNumber(order),
       recipientName: order.deliveryName,
       recipientEmail,
-      subtotal: Number(order.total),
+      subtotal: Number(order.productsSubtotal || 0) + Number(order.deliveryFee || 0),
       total: Number(order.total),
       notes: buildInvoiceNotes(),
-      dueAt: addDays(order.createdAt, INVOICE_PAYMENT_TERMS_DAYS),
     },
   });
 
@@ -401,7 +518,27 @@ const getOrderItemQuantityLabel = (item) => {
   return `${caseLabel} (${bottlesLabel})`;
 };
 
+const getOrderDeliveryCoordinates = (order = {}) => {
+  const lat = Number.parseFloat(String(order.deliveryLatitude || "").trim());
+  const lng = Number.parseFloat(String(order.deliveryLongitude || "").trim());
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng) ||
+    lat < -90 ||
+    lat > 90 ||
+    lng < -180 ||
+    lng > 180
+  ) {
+    return null;
+  }
+  return {
+    latitude: lat.toFixed(6),
+    longitude: lng.toFixed(6),
+  };
+};
+
 const buildOrderConfirmationText = (order) => {
+  const coords = getOrderDeliveryCoordinates(order);
   const lines = [
     `Hi ${order.deliveryName || order.user?.name || "there"},`,
     "",
@@ -430,6 +567,7 @@ const buildOrderConfirmationText = (order) => {
       order.deliveryPostalCode || ""
     }`,
     `${order.deliveryCountry || ""}`,
+    coords ? `Coordinates: ${coords.latitude}, ${coords.longitude}` : "",
     "",
     "You will receive a shipping update once dispatched.",
   );
@@ -438,6 +576,7 @@ const buildOrderConfirmationText = (order) => {
 };
 
 const buildOrderConfirmationHtml = (order) => {
+  const coords = getOrderDeliveryCoordinates(order);
   const itemsHtml = order.orderItems
     .map(
       (item) => `
@@ -481,12 +620,14 @@ const buildOrderConfirmationHtml = (order) => {
           order.deliveryPostalCode || ""
         }<br />
         ${order.deliveryCountry || ""}
+        ${coords ? `<br />Coordinates: ${coords.latitude}, ${coords.longitude}` : ""}
       </p>
     </div>
   `;
 };
 
 const buildInternalOrderText = (order) => {
+  const coords = getOrderDeliveryCoordinates(order);
   const lines = [
     `New order received: #${order.id}`,
     "",
@@ -517,12 +658,14 @@ const buildInternalOrderText = (order) => {
       order.deliveryPostalCode || ""
     }`,
     `${order.deliveryCountry || ""}`,
+    coords ? `Coordinates: ${coords.latitude}, ${coords.longitude}` : "",
   );
 
   return lines.filter(Boolean).join("\n");
 };
 
 const buildInternalOrderHtml = (order) => {
+  const coords = getOrderDeliveryCoordinates(order);
   const itemsHtml = order.orderItems
     .map(
       (item) => `
@@ -572,6 +715,7 @@ const buildInternalOrderHtml = (order) => {
           order.deliveryPostalCode || ""
         }<br />
         ${order.deliveryCountry || ""}
+        ${coords ? `<br />Coordinates: ${coords.latitude}, ${coords.longitude}` : ""}
       </p>
     </div>
   `;
@@ -706,9 +850,18 @@ const getAddressBookEntries = async (userId) => {
     return [];
   }
 
-  return prisma.addressBookEntry.findMany({
+  const entries = await prisma.addressBookEntry.findMany({
     where: { userId },
     orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+  });
+  return entries.map((entry) => {
+    const parsed = extractPinFromAddressLine2(entry.addressLine2 || "");
+    return {
+      ...entry,
+      addressLine2: parsed.cleanLine2 || null,
+      latitude: parsed.latitude,
+      longitude: parsed.longitude,
+    };
   });
 };
 
@@ -963,7 +1116,7 @@ const finalizePaidOrder = async ({
       Number.isInteger(order.affiliateReferrerUserId) &&
       String(order.affiliateStatus || "").toUpperCase() !== "PAID"
     ) {
-      const commission = Number(order.total) * appliedAffiliateRate;
+      const commission = getCommissionableOrderAmount(order) * appliedAffiliateRate;
       if (Number.isFinite(commission) && commission > 0) {
         await tx.order.update({
           where: { id: order.id },
@@ -1060,18 +1213,38 @@ exports.getCheckout = async (req, res) => {
     select: { affiliateBalance: true },
   });
   const affiliateBalance = Number(buyer?.affiliateBalance || 0);
+  const deliverySettings = await getDeliveryPricingSettings();
+  const deliveryBenefit = await getDeliveryBenefit(
+    userId,
+    deliverySettings,
+    total,
+  );
+  const checkoutTotals = buildCheckoutTotals({
+    productsSubtotal: total,
+    deliveryFee: deliveryBenefit.effectiveFee,
+    availableAffiliateBalance: affiliateBalance,
+    wantsAffiliateCredit: false,
+  });
 
   return res.render("checkout", {
     cartItems,
     total,
+    productsSubtotal: checkoutTotals.productsSubtotal,
+    deliveryFee: checkoutTotals.deliveryFee,
+    orderSubtotal: checkoutTotals.orderSubtotal,
+    deliveryPricingEnabled: deliverySettings.enabled,
+    firstOrderFreeDelivery: deliveryBenefit.isFirstOrderFreeDelivery,
+    thresholdFreeDelivery: deliveryBenefit.isThresholdFreeDelivery,
+    freeDeliveryThreshold: deliveryBenefit.freeDeliveryThreshold,
+    firstOrderDeliverySavings: deliveryBenefit.configuredFee,
     savedAddresses,
     error: null,
     formData: buildCheckoutFormData({
       affiliateCode: req.session?.refAffiliateCode || "",
     }),
     affiliateBalance,
-    creditApplied: 0,
-    payableTotal: total,
+    creditApplied: checkoutTotals.creditApplied,
+    payableTotal: checkoutTotals.payableTotal,
     discountsEnabled,
   });
 };
@@ -1098,6 +1271,12 @@ exports.postCheckout = async (req, res) => {
     mixLabPricing,
   );
   const savedAddresses = await getAddressBookEntries(userId);
+  const deliverySettings = await getDeliveryPricingSettings();
+  const deliveryBenefit = await getDeliveryBenefit(
+    userId,
+    deliverySettings,
+    total,
+  );
   const selectedAddressId = Number.parseInt(formData.selectedAddressId, 10);
 
   if (!cartItems.length) {
@@ -1137,10 +1316,6 @@ exports.postCheckout = async (req, res) => {
     0,
   );
   const wantsAffiliateCredit = Boolean(formData.applyAffiliateCredit);
-  const creditApplied = wantsAffiliateCredit
-    ? Math.min(availableAffiliateBalance, Number(total))
-    : 0;
-  const payableTotal = Math.max(Number(total) - creditApplied, 0);
 
   if (!hasAllRequiredDeliveryFields(formData) && Number.isInteger(selectedAddressId)) {
     const selectedAddress = savedAddresses.find(
@@ -1160,18 +1335,44 @@ exports.postCheckout = async (req, res) => {
   }
 
   if (!hasAllRequiredDeliveryFields(formData)) {
+    const checkoutTotals = buildCheckoutTotals({
+      productsSubtotal: total,
+      deliveryFee: deliveryBenefit.effectiveFee,
+      availableAffiliateBalance,
+      wantsAffiliateCredit,
+    });
     return res.status(400).render("checkout", {
       cartItems,
       total,
+      productsSubtotal: checkoutTotals.productsSubtotal,
+      deliveryFee: checkoutTotals.deliveryFee,
+      orderSubtotal: checkoutTotals.orderSubtotal,
+      deliveryPricingEnabled: deliverySettings.enabled,
+      firstOrderFreeDelivery: deliveryBenefit.isFirstOrderFreeDelivery,
+      thresholdFreeDelivery: deliveryBenefit.isThresholdFreeDelivery,
+      freeDeliveryThreshold: deliveryBenefit.freeDeliveryThreshold,
+      firstOrderDeliverySavings: deliveryBenefit.configuredFee,
       savedAddresses,
       error: "Please fill in all required delivery fields.",
       formData,
       affiliateBalance: availableAffiliateBalance,
-      creditApplied,
-      payableTotal,
+      creditApplied: checkoutTotals.creditApplied,
+      payableTotal: checkoutTotals.payableTotal,
       discountsEnabled,
     });
   }
+
+  const checkoutTotals = buildCheckoutTotals({
+    productsSubtotal: total,
+    deliveryFee: deliveryBenefit.effectiveFee,
+    availableAffiliateBalance,
+    wantsAffiliateCredit,
+  });
+  const productsSubtotal = checkoutTotals.productsSubtotal;
+  const deliveryFee = checkoutTotals.deliveryFee;
+  const orderSubtotal = checkoutTotals.orderSubtotal;
+  const creditApplied = checkoutTotals.creditApplied;
+  const payableTotal = checkoutTotals.payableTotal;
 
   let affiliateReferrerUserId = Number.parseInt(
     req.session?.refAffiliateUserId,
@@ -1187,6 +1388,14 @@ exports.postCheckout = async (req, res) => {
     return res.status(400).render("checkout", {
       cartItems,
       total,
+      productsSubtotal,
+      deliveryFee,
+      orderSubtotal,
+      deliveryPricingEnabled: deliverySettings.enabled,
+      firstOrderFreeDelivery: deliveryBenefit.isFirstOrderFreeDelivery,
+      thresholdFreeDelivery: deliveryBenefit.isThresholdFreeDelivery,
+      freeDeliveryThreshold: deliveryBenefit.freeDeliveryThreshold,
+      firstOrderDeliverySavings: deliveryBenefit.configuredFee,
       savedAddresses,
       error: "Affiliate code is invalid or not approved yet.",
       formData,
@@ -1255,6 +1464,9 @@ exports.postCheckout = async (req, res) => {
         affiliateReferrerUserId: affiliateReferrerUserId || null,
         affiliateReferrerCode,
         affiliateRate,
+        productsSubtotal,
+        deliveryFee,
+        deliveryDistanceKm: null,
         total: payableTotal,
         status: "PENDING_PAYMENT",
         affiliateCreditApplied: creditApplied,
@@ -1266,6 +1478,8 @@ exports.postCheckout = async (req, res) => {
         deliveryState: formData.deliveryState,
         deliveryPostalCode: formData.deliveryPostalCode,
         deliveryCountry: formData.deliveryCountry,
+        deliveryLatitude: null,
+        deliveryLongitude: null,
         orderItems: {
           create: cartItems.map((item) => ({
             productId: item.isCustomPack ? null : item.productId,
@@ -1297,13 +1511,18 @@ exports.postCheckout = async (req, res) => {
     });
 
     if (formData.saveAddress && hasAddressBookModel()) {
+      const addressLine2WithPin = appendPinToAddressLine2(
+        formData.deliveryAddressLine2 || null,
+        null,
+        null,
+      );
       const existingAddress = await tx.addressBookEntry.findFirst({
         where: {
           userId,
           recipientName: formData.deliveryName,
           phone: formData.deliveryPhone,
           addressLine1: formData.deliveryAddressLine1,
-          addressLine2: formData.deliveryAddressLine2 || null,
+          addressLine2: addressLine2WithPin,
           city: formData.deliveryCity,
           state: formData.deliveryState,
           postalCode: formData.deliveryPostalCode,
@@ -1320,7 +1539,7 @@ exports.postCheckout = async (req, res) => {
             recipientName: formData.deliveryName,
             phone: formData.deliveryPhone,
             addressLine1: formData.deliveryAddressLine1,
-            addressLine2: formData.deliveryAddressLine2 || null,
+            addressLine2: addressLine2WithPin,
             city: formData.deliveryCity,
             state: formData.deliveryState,
             postalCode: formData.deliveryPostalCode,
@@ -1349,7 +1568,7 @@ exports.postCheckout = async (req, res) => {
           where: { id: createdOrder.id },
           data: {
             affiliateCreditApplied: 0,
-            total,
+            total: orderSubtotal,
             status: "PAYMENT_FAILED",
           },
         }),
@@ -1363,6 +1582,14 @@ exports.postCheckout = async (req, res) => {
     return res.status(500).render("checkout", {
       cartItems,
       total,
+      productsSubtotal,
+      deliveryFee,
+      orderSubtotal,
+      deliveryPricingEnabled: deliverySettings.enabled,
+      firstOrderFreeDelivery: deliveryBenefit.isFirstOrderFreeDelivery,
+      thresholdFreeDelivery: deliveryBenefit.isThresholdFreeDelivery,
+      freeDeliveryThreshold: deliveryBenefit.freeDeliveryThreshold,
+      firstOrderDeliverySavings: deliveryBenefit.configuredFee,
       savedAddresses,
       error: "Payments are not configured yet. Please try again later.",
       formData,
@@ -1483,7 +1710,7 @@ exports.postCheckout = async (req, res) => {
           where: { id: createdOrder.id },
           data: {
             affiliateCreditApplied: 0,
-            total,
+            total: orderSubtotal,
           },
         }),
       ]);
@@ -1495,6 +1722,14 @@ exports.postCheckout = async (req, res) => {
     return res.status(500).render("checkout", {
       cartItems,
       total,
+      productsSubtotal,
+      deliveryFee,
+      orderSubtotal,
+      deliveryPricingEnabled: deliverySettings.enabled,
+      firstOrderFreeDelivery: deliveryBenefit.isFirstOrderFreeDelivery,
+      thresholdFreeDelivery: deliveryBenefit.isThresholdFreeDelivery,
+      freeDeliveryThreshold: deliveryBenefit.freeDeliveryThreshold,
+      firstOrderDeliverySavings: deliveryBenefit.configuredFee,
       savedAddresses,
       error: "Unable to start payment. Please try again.",
       formData,
@@ -2252,7 +2487,7 @@ exports.getAffiliateDashboard = async (req, res) => {
     const affiliateStatus = getAffiliateStatus(order);
     const orderRate =
       coerceAffiliateRate(order.affiliateRate) ?? affiliateRate;
-    const commission = Number(order.total) * orderRate;
+    const commission = getCommissionableOrderAmount(order) * orderRate;
 
     return {
       ...order,
@@ -2443,6 +2678,105 @@ exports.updateAffiliateRate = async (req, res) => {
   }
 };
 
+exports.getAdminDeliveryPricingPage = async (req, res) => {
+  const deliverySettings = await getDeliveryPricingSettings();
+  return res.render("admin-delivery-pricing", {
+    success: req.query.success || null,
+    error: req.query.error || null,
+    formData: {
+      enabled: deliverySettings.enabled,
+      fixedFee: Number(deliverySettings.fixedFee || 0),
+      freeDeliveryThreshold: Number(deliverySettings.freeDeliveryThreshold || 600),
+      defaultCountry: DEFAULT_DELIVERY_COUNTRY,
+    },
+  });
+};
+
+exports.updateAdminDeliveryPricing = async (req, res) => {
+  const enabled = isTruthy(req.body?.deliveryPricingEnabled);
+  const fixedFeeRaw = (req.body?.fixedFee || "").toString().trim();
+  const fixedFee = Number.parseFloat(fixedFeeRaw);
+  const freeDeliveryThresholdRaw = (req.body?.freeDeliveryThreshold || "")
+    .toString()
+    .trim();
+  const freeDeliveryThreshold = Number.parseFloat(freeDeliveryThresholdRaw);
+  if (!Number.isFinite(fixedFee) || fixedFee < 0) {
+    return res.redirect(
+      `/admin/delivery-pricing?error=${encodeURIComponent("Please enter a valid delivery fee.")}`,
+    );
+  }
+  if (
+    !Number.isFinite(freeDeliveryThreshold) ||
+    freeDeliveryThreshold < 0
+  ) {
+    return res.redirect(
+      `/admin/delivery-pricing?error=${encodeURIComponent("Please enter a valid free delivery threshold.")}`,
+    );
+  }
+
+  try {
+    await saveDeliveryPricingSettings({
+      enabled,
+      fixedFee,
+      freeDeliveryThreshold,
+      defaultCountry: DEFAULT_DELIVERY_COUNTRY,
+    });
+    return res.redirect(
+      `/admin/delivery-pricing?success=${encodeURIComponent(
+        `Delivery pricing is now ${enabled ? "enabled" : "disabled"}.`,
+      )}`,
+    );
+  } catch (error) {
+    return res.redirect(
+      `/admin/delivery-pricing?error=${encodeURIComponent(
+        error.message || "Unable to save delivery pricing settings.",
+      )}`,
+    );
+  }
+};
+
+exports.toggleAdminDeliveryPricing = async (req, res) => {
+  const enabled = isTruthy(req.body?.deliveryPricingEnabled);
+  const wantsJson =
+    req.xhr || (req.get("Accept") || "").includes("application/json");
+
+  try {
+    const current = await getDeliveryPricingSettings();
+    const next = await saveDeliveryPricingSettings({
+      enabled,
+      fixedFee: current.fixedFee,
+      freeDeliveryThreshold: current.freeDeliveryThreshold,
+      defaultCountry: DEFAULT_DELIVERY_COUNTRY,
+    });
+
+    if (wantsJson) {
+      return res.json({
+        success: true,
+        enabled: Boolean(next.enabled),
+        message: `Delivery pricing is now ${next.enabled ? "enabled" : "disabled"}.`,
+      });
+    }
+
+    return res.redirect(
+      `/admin/delivery-pricing?success=${encodeURIComponent(
+        `Delivery pricing is now ${next.enabled ? "enabled" : "disabled"}.`,
+      )}`,
+    );
+  } catch (error) {
+    if (wantsJson) {
+      return res.status(400).json({
+        success: false,
+        message: error.message || "Unable to update delivery pricing toggle.",
+      });
+    }
+    return res.redirect(
+      `/admin/delivery-pricing?error=${encodeURIComponent(
+        error.message || "Unable to update delivery pricing toggle.",
+      )}`,
+    );
+  }
+};
+
 exports.getAdminAffiliateStatsPage = async (req, res) => {
   const affiliateRate = await getAffiliateRate();
   const allowedRanges = new Set(["7", "30", "90", "all"]);
@@ -2494,7 +2828,7 @@ exports.getAdminAffiliateStatsPage = async (req, res) => {
     );
     const orderRate =
       coerceAffiliateRate(order.affiliateRate) ?? affiliateRate;
-    const commission = Number(order.total) * orderRate;
+    const commission = getCommissionableOrderAmount(order) * orderRate;
 
     return {
       ...order,

@@ -1,0 +1,285 @@
+<%- include("partials/header", { title: "Competition Rules" }) %>
+<%- include("partials/navbar") %>
+<%- include("partials/admin-nav") %>
+
+<main class="container py-5 admin-shell">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">Competition Rules</h1>
+      <p class="text-muted mb-0">Adjust how customer entries are calculated for competitions.</p>
+    </div>
+  </div>
+
+  <%- include("partials/admin-floating-alert", { success, error }) %>
+
+  <section class="card">
+    <div class="card-body">
+      <form action="/admin/competition-rules" method="POST" class="row g-3">
+        <div class="col-12">
+          <div class="form-check form-switch">
+            <input type="hidden" name="comingSoonEnabled" value="off" />
+            <input
+              id="comingSoonEnabled"
+              name="comingSoonEnabled"
+              class="form-check-input"
+              type="checkbox"
+              value="on"
+              <%= formData?.comingSoonEnabled ? "checked" : "" %>
+            />
+            <label class="form-check-label" for="comingSoonEnabled">
+              Competitions Coming Soon
+            </label>
+          </div>
+          <div class="mt-2 small">
+            Current status:
+            <span
+              id="competitionComingSoonCurrentStatus"
+              class="<%= formData?.comingSoonEnabled ? 'text-success' : 'text-danger' %> fw-semibold"
+            >
+              <%= formData?.comingSoonEnabled ? "Enabled" : "Disabled" %>
+            </span>
+          </div>
+          <div id="competitionComingSoonToggleStatus" class="small text-muted mt-1"></div>
+          <div class="form-text">
+            When enabled, the competitions page shows a coming-soon message and entry counting is paused.
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="form-check form-switch">
+            <input type="hidden" name="competitionPageEnabled" value="off" />
+            <input
+              id="competitionPageEnabled"
+              name="competitionPageEnabled"
+              class="form-check-input"
+              type="checkbox"
+              value="on"
+              <%= formData?.hideCompetitionsPage ? "" : "checked" %>
+            />
+            <label class="form-check-label" for="competitionPageEnabled">
+              Competitions Page Enabled
+            </label>
+          </div>
+          <div class="mt-2 small">
+            Current status:
+            <span
+              id="competitionPageVisibilityCurrentStatus"
+              class="<%= formData?.hideCompetitionsPage ? 'text-danger' : 'text-success' %> fw-semibold"
+            >
+              <%= formData?.hideCompetitionsPage ? "Hidden" : "Visible" %>
+            </span>
+          </div>
+          <div id="competitionPageVisibilityToggleStatus" class="small text-muted mt-1"></div>
+          <div class="form-text">ON = visible, OFF = hidden.</div>
+        </div>
+
+        <div class="col-md-6">
+          <label for="tierOneMinSubtotal" class="form-label">Tier 1 Minimum Subtotal (R)</label>
+          <input
+            id="tierOneMinSubtotal"
+            name="tierOneMinSubtotal"
+            type="number"
+            step="0.01"
+            min="0"
+            class="form-control"
+            value="<%= Number(formData?.tierOneMinSubtotal || 400).toFixed(2) %>"
+            required
+          />
+          <div class="form-text">Orders at or above this amount qualify for Tier 1 entries.</div>
+        </div>
+
+        <div class="col-md-6">
+          <label for="tierOneEntries" class="form-label">Tier 1 Entries</label>
+          <input
+            id="tierOneEntries"
+            name="tierOneEntries"
+            type="number"
+            step="1"
+            min="0"
+            class="form-control"
+            value="<%= Number(formData?.tierOneEntries || 1) %>"
+            required
+          />
+          <div class="form-text">Entries awarded when Tier 1 threshold is met.</div>
+        </div>
+
+        <div class="col-md-6">
+          <label for="tierTwoMinSubtotal" class="form-label">Tier 2 Minimum Subtotal (R)</label>
+          <input
+            id="tierTwoMinSubtotal"
+            name="tierTwoMinSubtotal"
+            type="number"
+            step="0.01"
+            min="0"
+            class="form-control"
+            value="<%= Number(formData?.tierTwoMinSubtotal || 800).toFixed(2) %>"
+            required
+          />
+          <div class="form-text">Higher-value orders can unlock larger entry rewards.</div>
+        </div>
+
+        <div class="col-md-6">
+          <label for="tierTwoEntries" class="form-label">Tier 2 Entries</label>
+          <input
+            id="tierTwoEntries"
+            name="tierTwoEntries"
+            type="number"
+            step="1"
+            min="0"
+            class="form-control"
+            value="<%= Number(formData?.tierTwoEntries || 3) %>"
+            required
+          />
+          <div class="form-text">Entries awarded when Tier 2 threshold is met.</div>
+        </div>
+
+        <div class="col-md-6">
+          <label for="affiliateBonusEntries" class="form-label">Affiliate Bonus Entries</label>
+          <input
+            id="affiliateBonusEntries"
+            name="affiliateBonusEntries"
+            type="number"
+            step="1"
+            min="0"
+            class="form-control"
+            value="<%= Number(formData?.affiliateBonusEntries || 1) %>"
+            required
+          />
+          <div class="form-text">Extra entries for qualifying orders with an affiliate code.</div>
+        </div>
+
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary">Save Competition Rules</button>
+        </div>
+      </form>
+    </div>
+  </section>
+</main>
+
+<script>
+  (() => {
+    const toggle = document.getElementById("comingSoonEnabled");
+    const currentStatus = document.getElementById("competitionComingSoonCurrentStatus");
+    const toggleStatus = document.getElementById("competitionComingSoonToggleStatus");
+    const pageToggle = document.getElementById("competitionPageEnabled");
+    const pageCurrentStatus = document.getElementById("competitionPageVisibilityCurrentStatus");
+    const pageToggleStatus = document.getElementById("competitionPageVisibilityToggleStatus");
+    const token = document
+      .querySelector('meta[name="csrf-token"]')
+      ?.getAttribute("content");
+
+    if (!toggle || !currentStatus) return;
+
+    const setStatusText = (enabled) => {
+      currentStatus.textContent = enabled ? "Enabled" : "Disabled";
+      currentStatus.classList.toggle("text-success", enabled);
+      currentStatus.classList.toggle("text-danger", !enabled);
+    };
+
+    const setToggleMessage = (message, kind = "muted") => {
+      if (!toggleStatus) return;
+      toggleStatus.textContent = message || "";
+      toggleStatus.className =
+        kind === "error" ? "small text-danger mt-1" : "small text-muted mt-1";
+    };
+    const setPageStatusText = (enabled) => {
+      pageCurrentStatus.textContent = enabled ? "Visible" : "Hidden";
+      pageCurrentStatus.classList.toggle("text-success", enabled);
+      pageCurrentStatus.classList.toggle("text-danger", !enabled);
+    };
+    const setPageToggleMessage = (message, kind = "muted") => {
+      if (!pageToggleStatus) return;
+      pageToggleStatus.textContent = message || "";
+      pageToggleStatus.className =
+        kind === "error" ? "small text-danger mt-1" : "small text-muted mt-1";
+    };
+
+    toggle.addEventListener("change", async () => {
+      const nextEnabled = Boolean(toggle.checked);
+      const previousEnabled = !nextEnabled;
+      toggle.disabled = true;
+      setToggleMessage("Saving...");
+
+      try {
+        const body = new URLSearchParams();
+        body.set("comingSoonEnabled", nextEnabled ? "on" : "off");
+        if (token) {
+          body.set("_csrf", token);
+        }
+
+        const response = await fetch("/admin/competition-rules/toggle-coming-soon", {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+            "X-Requested-With": "XMLHttpRequest",
+            "X-CSRF-Token": token || "",
+          },
+          credentials: "same-origin",
+          body: body.toString(),
+        });
+
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || !payload?.success) {
+          throw new Error(payload?.message || "Unable to save toggle.");
+        }
+
+        setStatusText(Boolean(payload.comingSoonEnabled));
+        toggle.checked = Boolean(payload.comingSoonEnabled);
+        setToggleMessage(payload.message || "Saved.");
+      } catch (error) {
+        toggle.checked = previousEnabled;
+        setStatusText(previousEnabled);
+        setToggleMessage(error.message || "Unable to save toggle.", "error");
+      } finally {
+        toggle.disabled = false;
+      }
+    });
+
+    if (!pageToggle || !pageCurrentStatus) return;
+
+    pageToggle.addEventListener("change", async () => {
+      const nextEnabled = Boolean(pageToggle.checked);
+      const previousEnabled = !nextEnabled;
+      pageToggle.disabled = true;
+      setPageToggleMessage("Saving...");
+
+      try {
+        const body = new URLSearchParams();
+        body.set("competitionPageEnabled", nextEnabled ? "on" : "off");
+        if (token) {
+          body.set("_csrf", token);
+        }
+
+        const response = await fetch("/admin/competition-rules/toggle-page-visibility", {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+            "X-Requested-With": "XMLHttpRequest",
+            "X-CSRF-Token": token || "",
+          },
+          credentials: "same-origin",
+          body: body.toString(),
+        });
+
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || !payload?.success) {
+          throw new Error(payload?.message || "Unable to save toggle.");
+        }
+
+        const savedEnabled = !Boolean(payload.hideCompetitionsPage);
+        setPageStatusText(savedEnabled);
+        pageToggle.checked = savedEnabled;
+        setPageToggleMessage(payload.message || "Saved.");
+      } catch (error) {
+        pageToggle.checked = previousEnabled;
+        setPageStatusText(previousEnabled);
+        setPageToggleMessage(error.message || "Unable to save toggle.", "error");
+      } finally {
+        pageToggle.disabled = false;
+      }
+    });
+  })();
+</script>
+
+<%- include("partials/footer") %>

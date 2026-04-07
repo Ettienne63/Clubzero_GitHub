@@ -3,6 +3,8 @@
   "/admin": "Product Settings",
   "/admin/inventory": "Inventory Tracking",
   "/admin/promo": "Promotion Discounts",
+  "/admin/delivery-pricing": "Delivery Pricing",
+  "/admin/competition-rules": "Competition Rules",
   "/admin/promo-content": "Edit Promotion",
   "/admin/locations": "Store Locations",
   "/admin/payments": "Payments",
@@ -11,6 +13,7 @@
   "/admin/stockists": "Stockist Requests",
   "/admin/theme": "Color Schemes",
   "/admin/home-content": "Edit Home",
+  "/admin/competitions-content": "Edit Comp",
   "/admin/nav-edit": "Edit Nav",
   "/admin/about-content": "Edit About",
   "/admin/team": "Team"
@@ -21,6 +24,8 @@
   "/admin/locations",
   "/admin/inventory",
   "/admin/promo",
+  "/admin/delivery-pricing",
+  "/admin/competition-rules",
   "/admin/analytics",
   "/admin/payments",
   "/admin/affiliate/stats",
@@ -29,6 +34,7 @@
 ]; %>
 <% const contentPaths = [
   "/admin/home-content",
+  "/admin/competitions-content",
   "/admin/promo-content",
   "/admin/about-content",
   "/admin/nav-edit",
@@ -71,6 +77,18 @@
             class="admin-nav-link <%= currentPath === '/admin/promo' ? 'is-active' : '' %>"
           >
             Promotions
+          </a>
+          <a
+            href="/admin/delivery-pricing"
+            class="admin-nav-link <%= currentPath === '/admin/delivery-pricing' ? 'is-active' : '' %>"
+          >
+            Delivery Pricing
+          </a>
+          <a
+            href="/admin/competition-rules"
+            class="admin-nav-link <%= currentPath === '/admin/competition-rules' ? 'is-active' : '' %>"
+          >
+            Competition Rules
           </a>
           <a
             href="/admin/analytics"
@@ -121,6 +139,12 @@
             class="admin-nav-link <%= currentPath === '/admin/promo-content' ? 'is-active' : '' %>"
           >
             Edit Promo
+          </a>
+          <a
+            href="/admin/competitions-content"
+            class="admin-nav-link <%= currentPath === '/admin/competitions-content' ? 'is-active' : '' %>"
+          >
+            Edit Comp
           </a>
           <a
             href="/admin/about-content"

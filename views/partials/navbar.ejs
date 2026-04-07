@@ -33,11 +33,23 @@
     </button>
     <div class="collapse navbar-collapse" id="collapsibleNavId">
       <ul class="navbar-nav me-auto mt-3 mt-lg-0 cz-nav-main">
-        <li class="nav-item">
-          <a class="nav-link cz-nav-link" href="/about">About Us</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link cz-nav-link" href="/contact">Contact</a>
+        <li class="nav-item dropdown">
+          <a
+            class="nav-link dropdown-toggle cz-nav-link"
+            href="#"
+            role="button"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+          >
+            About Us
+          </a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="/about">About Us</a></li>
+            <li><a class="dropdown-item" href="/contact">Contact</a></li>
+            <% if (showCompetitionsNavItem !== false) { %>
+            <li><a class="dropdown-item" href="/competitions">Competitions</a></li>
+            <% } %>
+          </ul>
         </li>
         <li class="nav-item">
           <a class="nav-link cz-nav-link" href="/auth/products">Products</a>
@@ -70,18 +82,13 @@
         <% const isLoggedIn = typeof user !== "undefined" && Boolean(user); %>
         <% const showAdmin = isLoggedIn && Boolean(user.isAdmin); %>
         <% const
-        showGoalTracker = isLoggedIn && String(user.email ||
-        "").toLowerCase().trim().endsWith("@clubzero.co.za"); %>
+        showGoalTracker = isLoggedIn && (Boolean(user.isAdmin) ||
+        String(user.email || "").toLowerCase().trim().endsWith("@clubzero.co.za")); %>
         <% if
         (isLoggedIn) { %>
         <% if (showAdmin) { %>
         <li class="nav-item">
           <a class="nav-link cz-nav-link" href="/admin">Admin</a>
-        </li>
-        <% } %>
-        <% if (showGoalTracker) { %>
-        <li class="nav-item">
-          <a class="nav-link cz-nav-link" href="/auth/goals">Goal Tracker</a>
         </li>
         <% } %>
         <li class="nav-item">
@@ -107,6 +114,9 @@
           <ul class="dropdown-menu dropdown-menu-end">
             <li><a class="dropdown-item" href="/auth/profile">Profile</a></li>
             <li><a class="dropdown-item" href="/auth/orders">Orders</a></li>
+            <% if (showGoalTracker) { %>
+            <li><a class="dropdown-item" href="/auth/goals">Goal Tracker</a></li>
+            <% } %>
             <li>
               <% if (Boolean(user.isAffiliate)) { %>
               <a class="dropdown-item" href="/auth/affiliate"

@@ -96,6 +96,9 @@ model CartItem {
 model Order {
   id                      Int         @id @default(autoincrement())
   userId                  Int
+  productsSubtotal        Float       @default(0)
+  deliveryFee             Float       @default(0)
+  deliveryDistanceKm      Float?
   total                   Float
   status                  String      @default("PLACED")
   deliveryName            String
@@ -106,6 +109,8 @@ model Order {
   deliveryState           String
   deliveryPostalCode      String
   deliveryCountry         String
+  deliveryLatitude        Float?
+  deliveryLongitude       Float?
   createdAt               DateTime    @default(now())
   affiliateStatus         String      @default("PENDING")
   affiliateApprovedAt     DateTime?

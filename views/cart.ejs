@@ -58,7 +58,7 @@
         <% const availableStock = !isCustomPack ? Number(item.availableCases || 0) : 999; %>
         <% const canIncreaseQuantity = !isCustomPack ? (availableStock > Number(item.quantity || 0)) : true; %>
         <tr data-cart-item-row="<%= item.id %>">
-          <td>
+          <td data-label="Product">
             <div class="d-flex align-items-center gap-3">
               <% if (!isCustomPack) { %>
               <img
@@ -76,9 +76,6 @@
               <% } %>
               <div>
                 <div class="fw-semibold"><%= item.displayName || item.product?.name || "Item" %></div>
-                <% if (!isCustomPack) { %>
-                <div class="text-muted small"><%= item.product?.description || "No description" %></div>
-                <% } %>
                 <% if (isCustomPack && Array.isArray(item.customPackEntries) && item.customPackEntries.length) { %>
                 <div class="text-muted small">
                   <%= item.customPackEntries.map((entry) => `${entry.productName} (${entry.bottlesPerPack})`).join(", ") %>
@@ -90,7 +87,7 @@
               </div>
             </div>
           </td>
-          <td>
+          <td data-label="Price (Per Case)">
             <% if (hasDiscount) { %>
             <span class="price-discounted">R<%= Number(discountedPrice).toFixed(2) %></span>
             <span class="price-original ms-1">R<%= Number(item.product?.price || 0).toFixed(2) %></span>
@@ -98,7 +95,7 @@
             R<%= Number(item.product?.price || 0).toFixed(2) %>
             <% } %>
           </td>
-          <td>
+          <td data-label="Cases">
             <div class="cart-qty-stack">
               <form
                 action="/auth/cart/<%= item.id %>/update"
@@ -123,10 +120,10 @@
               </div>
             </div>
           </td>
-          <td data-subtotal-cell>
+          <td data-label="Subtotal" data-subtotal-cell>
             R<%= Number(item.subtotal || (Number(discountedPrice) * item.quantity)).toFixed(2) %>
           </td>
-          <td>
+          <td data-label="Actions">
             <form action="/auth/cart/<%= item.id %>/delete" method="POST">
               <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
             </form>
@@ -151,6 +148,12 @@
       </tfoot>
         </table>
       </div>
+      <div class="cart-mobile-total d-md-none mt-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="fw-semibold">Total</span>
+          <span class="fw-bold" id="cart-total-mobile">R<%= Number(total).toFixed(2) %></span>
+        </div>
+      </div>
       <% } %>
     </div>
   </section>
@@ -162,6 +165,7 @@
     if (!updateForms.length) return;
 
     const totalCell = document.getElementById("cart-total-cell");
+    const totalMobile = document.getElementById("cart-total-mobile");
     const inlineError = document.getElementById("cart-inline-error");
     const csrfToken = document
       .querySelector('meta[name="csrf-token"]')
@@ -253,6 +257,9 @@
           refreshMaxStockNote();
           if (totalCell) {
             totalCell.textContent = formatCurrency(payload.total);
+          }
+          if (totalMobile) {
+            totalMobile.textContent = formatCurrency(payload.total);
           }
 
           const cartLink = document.querySelector('a[href="/auth/cart"]');
