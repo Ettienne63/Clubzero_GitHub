@@ -104,6 +104,19 @@ const resolveCompetitionStartAt = (content = {}) => {
   }
   return getStartOfTodayLocal();
 };
+const normalizeEndDateToSast2359Iso = (rawValue) => {
+  const value = trimText(rawValue);
+  if (!value) return "";
+  const datePart = value.includes("T") ? value.split("T")[0] : value;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+    return "";
+  }
+  const endsAtIso = `${datePart}T23:59:00+02:00`;
+  if (Number.isNaN(new Date(endsAtIso).getTime())) {
+    return "";
+  }
+  return endsAtIso;
+};
 const parseRecentCompetitionWinners = (rawValue) => {
   if (!trimText(rawValue)) return [];
   try {
@@ -432,6 +445,7 @@ exports.getAdminCompetitionRulesPage = async (req, res) => {
   const endsAtLocalValue = rawEndsAtIso
     ? rawEndsAtIso.replace(/([+-]\d{2}:\d{2}|Z)$/i, "").slice(0, 16)
     : "";
+  const endsAtDateValue = formatDateInput(rawEndsAtIso);
   const effectiveStartAt = resolveCompetitionStartAt(content);
   const competitionStartsAtLocalValue =
     formatSastDateTimeLocalValue(effectiveStartAt);
@@ -461,6 +475,7 @@ exports.getAdminCompetitionRulesPage = async (req, res) => {
     formData: rules,
     drawDefaults: {
       endsAtLocalValue,
+      endsAtDateValue,
       competitionStartsAtLocalValue,
       drawFromDate: formatDateInput(drawStartAt),
       drawToDate: formatDateInput(content?.endsAtIso),
@@ -700,11 +715,11 @@ exports.updateAdminCompetitionRules = async (req, res) => {
 exports.startAdminCompetitionWindow = async (req, res) => {
   const wantsJson =
     req.xhr || (req.get("Accept") || "").includes("application/json");
-  const endsAtLocal = trimText(req.body?.endsAtLocal);
-  const endsAtIso = endsAtLocal ? `${endsAtLocal}:00+02:00` : "";
+  const endsAtInput = trimText(req.body?.endsAtLocal);
+  const endsAtIso = normalizeEndDateToSast2359Iso(endsAtInput);
 
-  if (!endsAtLocal || Number.isNaN(new Date(endsAtIso).getTime())) {
-    const message = "Please provide a valid competition end date and time.";
+  if (!endsAtInput || !endsAtIso) {
+    const message = "Please provide a valid competition end date.";
     if (wantsJson) {
       return res.status(400).json({ success: false, message });
     }
@@ -756,11 +771,11 @@ exports.startAdminCompetitionWindow = async (req, res) => {
 exports.updateAdminCompetitionCurrentEnd = async (req, res) => {
   const wantsJson =
     req.xhr || (req.get("Accept") || "").includes("application/json");
-  const endsAtLocal = trimText(req.body?.endsAtLocal);
-  const endsAtIso = endsAtLocal ? `${endsAtLocal}:00+02:00` : "";
+  const endsAtInput = trimText(req.body?.endsAtLocal);
+  const endsAtIso = normalizeEndDateToSast2359Iso(endsAtInput);
 
-  if (!endsAtLocal || Number.isNaN(new Date(endsAtIso).getTime())) {
-    const message = "Please provide a valid competition end date and time.";
+  if (!endsAtInput || !endsAtIso) {
+    const message = "Please provide a valid competition end date.";
     if (wantsJson) {
       return res.status(400).json({ success: false, message });
     }
@@ -804,6 +819,50 @@ exports.updateAdminCompetitionCurrentEnd = async (req, res) => {
     );
   } catch (error) {
     const message = error.message || "Unable to update current competition end date.";
+    if (wantsJson) {
+      return res.status(400).json({ success: false, message });
+    }
+    return res.redirect(
+      `/admin/competition-rules?error=${encodeURIComponent(message)}`,
+    );
+  }
+};
+
+exports.endAdminCompetitionNow = async (req, res) => {
+  const wantsJson =
+    req.xhr || (req.get("Accept") || "").includes("application/json");
+
+  try {
+    const [content, rules] = await Promise.all([
+      getCompetitionContentSettings(),
+      getCompetitionEntryRules(),
+    ]);
+
+    const nowIso = formatSastIso(new Date());
+    await saveCompetitionContentSettings({
+      ...content,
+      endsAtIso: nowIso,
+      deadlineLabel: resolveDeadlineLabel(nowIso, content.deadlineLabel),
+    });
+
+    await saveCompetitionEntryRules({
+      ...rules,
+      comingSoonEnabled: true,
+    });
+
+    const message = "Competition ended manually. Entries are now closed.";
+    if (wantsJson) {
+      return res.json({
+        success: true,
+        message,
+        endsAtIso: nowIso,
+      });
+    }
+    return res.redirect(
+      `/admin/competition-rules?success=${encodeURIComponent(message)}`,
+    );
+  } catch (error) {
+    const message = error.message || "Unable to end competition right now.";
     if (wantsJson) {
       return res.status(400).json({ success: false, message });
     }

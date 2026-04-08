@@ -422,6 +422,11 @@ app.post(
   asyncHandler(competitionController.updateAdminCompetitionCurrentEnd),
 );
 app.post(
+  "/admin/competition-rules/end-now",
+  requireAdmin,
+  asyncHandler(competitionController.endAdminCompetitionNow),
+);
+app.post(
   "/admin/competition-rules/current-end-now-test",
   requireAdmin,
   asyncHandler(competitionController.setAdminCompetitionEndNowForTest),

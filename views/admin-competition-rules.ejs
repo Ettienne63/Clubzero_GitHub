@@ -20,15 +20,16 @@
 
       <form id="startNewCompetitionForm" class="row g-3 competition-action-form">
         <div class="col-md-8 competition-action-field">
-          <label for="newCompetitionEndsAtLocal" class="form-label">Competition End (SAST)</label>
+          <label for="newCompetitionEndsAtLocal" class="form-label">Competition End Date (SAST)</label>
           <input
             id="newCompetitionEndsAtLocal"
             name="endsAtLocal"
-            type="datetime-local"
+            type="date"
             class="form-control"
-            value="<%= drawDefaults?.endsAtLocalValue || '' %>"
+            value="<%= drawDefaults?.endsAtDateValue || '' %>"
             required
           />
+          <div class="form-text">Competition closes automatically at 23:59 SAST on this date.</div>
         </div>
         <div class="col-md-4 d-flex align-items-end">
           <button id="startNewCompetitionBtn" type="submit" class="btn btn-danger w-100 competition-action-btn competition-action-btn--primary">
@@ -48,21 +49,26 @@
 
       <form id="currentCompetitionEndForm" class="row g-3 competition-action-form">
         <div class="col-md-8 competition-action-field">
-          <label for="currentCompetitionEndsAtLocal" class="form-label">Current Competition End (SAST)</label>
+          <label for="currentCompetitionEndsAtLocal" class="form-label">Current Competition End Date (SAST)</label>
           <input
             id="currentCompetitionEndsAtLocal"
             name="endsAtLocal"
-            type="datetime-local"
+            type="date"
             class="form-control"
-            value="<%= drawDefaults?.endsAtLocalValue || '' %>"
+            value="<%= drawDefaults?.endsAtDateValue || '' %>"
             required
           />
-          <div class="form-text">Updates the active competition deadline only. Start date and points window stay unchanged.</div>
+          <div class="form-text">Closes at 23:59 SAST on this date. Start date and points window stay unchanged.</div>
         </div>
         <div class="col-md-4 d-flex align-items-end">
-          <button id="currentCompetitionEndBtn" type="submit" class="btn btn-outline-primary w-100 competition-action-btn competition-action-btn--secondary">
-            Update Current End Date
-          </button>
+          <div class="w-100 d-grid gap-2">
+            <button id="currentCompetitionEndBtn" type="submit" class="btn btn-outline-primary w-100 competition-action-btn competition-action-btn--secondary">
+              Update Current End Date
+            </button>
+            <button id="endCompetitionNowBtn" type="button" class="btn btn-outline-danger w-100 competition-action-btn">
+              End Competition Now
+            </button>
+          </div>
         </div>
       </form>
       <div id="currentCompetitionEndStatus" class="small text-muted mt-2"></div>
@@ -328,13 +334,15 @@
     const newCompetitionEndsAtLocal = document.getElementById("newCompetitionEndsAtLocal");
     const currentCompetitionEndForm = document.getElementById("currentCompetitionEndForm");
     const currentCompetitionEndBtn = document.getElementById("currentCompetitionEndBtn");
+    const endCompetitionNowBtn = document.getElementById("endCompetitionNowBtn");
     const currentCompetitionEndStatus = document.getElementById("currentCompetitionEndStatus");
     const currentCompetitionEndsAtLocal = document.getElementById("currentCompetitionEndsAtLocal");
     const countdownEndIso = <%- JSON.stringify(drawDefaults?.countdownEndIso || "") %>;
     const initialDrawReady = <%- JSON.stringify(Boolean(drawDefaults?.drawReady)) %>;
+    const serverCsrfToken = <%- JSON.stringify(typeof csrfToken !== "undefined" ? csrfToken : "") %>;
     const token = document
       .querySelector('meta[name="csrf-token"]')
-      ?.getAttribute("content");
+      ?.getAttribute("content") || serverCsrfToken;
 
     if (!toggle || !currentStatus) return;
 
@@ -504,6 +512,60 @@
           );
         } finally {
           currentCompetitionEndBtn.disabled = false;
+        }
+      });
+    }
+
+    if (endCompetitionNowBtn) {
+      endCompetitionNowBtn.addEventListener("click", async () => {
+        const confirmed = window.confirm(
+          "End the competition now? This will close entries immediately.",
+        );
+        if (!confirmed) {
+          return;
+        }
+
+        endCompetitionNowBtn.disabled = true;
+        if (currentCompetitionEndBtn) {
+          currentCompetitionEndBtn.disabled = true;
+        }
+        setCurrentCompetitionEndStatus("Ending competition...");
+
+        try {
+          const body = new URLSearchParams();
+          if (token) {
+            body.set("_csrf", token);
+          }
+
+          const response = await fetch("/admin/competition-rules/end-now", {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+              "X-Requested-With": "XMLHttpRequest",
+              "X-CSRF-Token": token || "",
+            },
+            credentials: "same-origin",
+            body: body.toString(),
+          });
+
+          const payload = await response.json().catch(() => null);
+          if (!response.ok || !payload?.success) {
+            throw new Error(payload?.message || "Unable to end competition.");
+          }
+
+          setCurrentCompetitionEndStatus(payload.message || "Competition ended.");
+          window.setTimeout(() => window.location.reload(), 700);
+        } catch (error) {
+          setCurrentCompetitionEndStatus(
+            error.message || "Unable to end competition.",
+            "error",
+          );
+        } finally {
+          endCompetitionNowBtn.disabled = false;
+          if (currentCompetitionEndBtn) {
+            currentCompetitionEndBtn.disabled = false;
+          }
         }
       });
     }
