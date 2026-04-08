@@ -1,7 +1,12 @@
 <%- include("partials/header", { title: "Competitions" }) %>
 <%- include("partials/navbar") %>
 
-<% if (competitionRules?.comingSoonEnabled) { %>
+<%
+  const showComingSoon = Boolean(competitionHasEnded);
+  const isEndedNotice = Boolean(competitionHasEnded);
+%>
+
+<% if (showComingSoon) { %>
 <div
   id="competitionComingSoonPopup"
   class="competition-coming-soon-popup"
@@ -21,10 +26,13 @@
     </button>
     <p class="competition-coming-soon-popup__kicker mb-2">Club Zero Competitions</p>
     <h2 id="competitionComingSoonTitle" class="competition-coming-soon-popup__title mb-3">
-      New Competition Coming Soon
+      <%= isEndedNotice ? "Competition Has Ended" : "New Competition Coming Soon" %>
     </h2>
     <p class="competition-coming-soon-popup__body mb-4">
-      We are preparing the next giveaway. Keep checking back and be ready to enter as soon as it goes live.
+      <%= isEndedNotice
+        ? "This competition has ended. A new one is coming soon."
+        : "We are preparing the next giveaway. Keep checking back and be ready to enter as soon as it goes live."
+      %>
     </p>
     <button
       type="button"
@@ -43,13 +51,19 @@
       <div class="row g-4 align-items-center">
         <div class="col-lg-7">
           <span class="badge competition-pill mb-2"><%= hero.badge %></span>
-          <% if (competitionRules?.comingSoonEnabled) { %>
-          <div class="competition-coming-soon mb-2">Competitions Coming Soon</div>
+          <% if (showComingSoon) { %>
+          <div class="competition-coming-soon mb-2">
+            <%= isEndedNotice ? "Competition Ended - New One Coming Soon" : "Competitions Coming Soon" %>
+          </div>
           <% } %>
           <h1 class="display-5 fw-bold mb-2"><%= hero.title %></h1>
           <p class="competition-hero-subtitle mb-0"><%= hero.subtitle %></p>
           <div class="competition-entry-counter mt-3">
-            <% if (competitionRules?.comingSoonEnabled) { %>
+            <% if (isEndedNotice) { %>
+            <span class="competition-entry-counter__label">
+              Competition has ended. New one coming soon.
+            </span>
+            <% } else if (competitionRules?.comingSoonEnabled) { %>
             <span class="competition-entry-counter__label">Entries are currently paused.</span>
             <% } else if (entryCounter?.isLoggedIn) { %>
             <span class="competition-entry-counter__label">Your entries</span>
@@ -236,14 +250,16 @@
     setInterval(render, 1000);
   })();
 </script>
-<% if (competitionRules?.comingSoonEnabled) { %>
+<% if (showComingSoon) { %>
 <script>
   (() => {
     const popup = document.getElementById("competitionComingSoonPopup");
     if (!popup) return;
     const closeBtn = document.getElementById("competitionComingSoonClose");
     const ctaBtn = document.getElementById("competitionComingSoonCta");
-    const storageKey = "competition-coming-soon-popup-seen";
+    const storageKey = <%- JSON.stringify(
+      isEndedNotice ? "competition-ended-popup-seen" : "competition-coming-soon-popup-seen"
+    ) %>;
 
     const closePopup = () => {
       popup.classList.add("is-closing");

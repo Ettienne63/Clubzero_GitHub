@@ -1,7 +1,7 @@
 <%- include("partials/header", { title: "Checkout" }) %>
 <%- include("partials/navbar") %>
 
-<main class="cz-banded">
+<main class="cz-banded checkout-page">
   <section class="cz-band">
     <div class="container cz-section">
       <h1 class="h3 mb-4">Checkout</h1>
@@ -9,17 +9,16 @@
       <% if (error) { %>
       <div class="alert alert-danger"><%= error %></div>
       <% } %>
-      <% if (firstOrderFreeDelivery) { %>
+      <% if (firstOrderFreeDelivery || thresholdFreeDelivery) { %>
       <div class="alert alert-success">
+        <% if (firstOrderFreeDelivery) { %>
         You qualify for free delivery on your first order. You save
         <strong>R<%= Number(firstOrderDeliverySavings || 0).toFixed(2) %></strong>
         today.
-      </div>
-      <% } %>
-      <% if (thresholdFreeDelivery) { %>
-      <div class="alert alert-success">
+        <% } else { %>
         Free delivery unlocked on orders over
         <strong>R<%= Number(freeDeliveryThreshold || 0).toFixed(2) %></strong>.
+        <% } %>
       </div>
       <% } %>
 
@@ -28,7 +27,7 @@
           <div class="card shadow-sm">
             <div class="card-body">
               <h2 class="h5 mb-3">Delivery Information</h2>
-              <form id="checkoutForm" action="/auth/checkout" method="POST" class="row g-3">
+              <form id="checkoutForm" action="/auth/checkout" method="POST" class="row g-3" novalidate>
                 <% if (savedAddresses && savedAddresses.length > 0) { %>
                 <div class="col-12">
                   <label for="selectedAddressId" class="form-label">Choose Saved Address</label>
@@ -57,37 +56,92 @@
 
                 <div class="col-md-6">
                   <label for="deliveryName" class="form-label">Full Name *</label>
-                  <input id="deliveryName" name="deliveryName" class="form-control" value="<%= formData.deliveryName %>" required />
+                  <input
+                    id="deliveryName"
+                    name="deliveryName"
+                    class="form-control"
+                    value="<%= formData.deliveryName %>"
+                    required
+                    autocomplete="name"
+                  />
+                  <div class="invalid-feedback">Please enter your full name.</div>
                 </div>
                 <div class="col-md-6">
                   <label for="deliveryPhone" class="form-label">Phone *</label>
-                  <input id="deliveryPhone" name="deliveryPhone" class="form-control" value="<%= formData.deliveryPhone %>" required />
+                  <input
+                    id="deliveryPhone"
+                    name="deliveryPhone"
+                    type="tel"
+                    inputmode="tel"
+                    class="form-control"
+                    value="<%= formData.deliveryPhone %>"
+                    required
+                    autocomplete="tel"
+                  />
+                  <div class="invalid-feedback">Please enter your phone number.</div>
                 </div>
                 <div class="col-12">
                   <label for="deliveryAddressLine1" class="form-label">Address Line 1 *</label>
-                  <input id="deliveryAddressLine1" name="deliveryAddressLine1" class="form-control" value="<%= formData.deliveryAddressLine1 %>" required />
+                  <input
+                    id="deliveryAddressLine1"
+                    name="deliveryAddressLine1"
+                    class="form-control"
+                    value="<%= formData.deliveryAddressLine1 %>"
+                    required
+                    autocomplete="address-line1"
+                  />
+                  <div class="invalid-feedback">Please enter your street address.</div>
                 </div>
                 <div class="col-12">
                   <label for="deliveryAddressLine2" class="form-label">Address Line 2</label>
-                  <input id="deliveryAddressLine2" name="deliveryAddressLine2" class="form-control" value="<%= formData.deliveryAddressLine2 %>" />
+                  <input
+                    id="deliveryAddressLine2"
+                    name="deliveryAddressLine2"
+                    class="form-control"
+                    value="<%= formData.deliveryAddressLine2 %>"
+                    autocomplete="address-line2"
+                  />
                 </div>
                 <div class="col-md-4">
                   <label for="deliveryCity" class="form-label">City *</label>
-                  <input id="deliveryCity" name="deliveryCity" class="form-control" value="<%= formData.deliveryCity %>" required />
+                  <input
+                    id="deliveryCity"
+                    name="deliveryCity"
+                    class="form-control"
+                    value="<%= formData.deliveryCity %>"
+                    required
+                    autocomplete="address-level2"
+                  />
+                  <div class="invalid-feedback">Please enter your city.</div>
                 </div>
                 <div class="col-md-4">
-                  <label for="deliveryState" class="form-label">State *</label>
-                  <input id="deliveryState" name="deliveryState" class="form-control" value="<%= formData.deliveryState %>" required />
+                  <label for="deliveryState" class="form-label">Province *</label>
+                  <input
+                    id="deliveryState"
+                    name="deliveryState"
+                    class="form-control"
+                    value="<%= formData.deliveryState %>"
+                    required
+                    autocomplete="address-level1"
+                  />
+                  <div class="invalid-feedback">Please enter your province.</div>
                 </div>
                 <div class="col-md-4">
                   <label for="deliveryPostalCode" class="form-label">Postal Code *</label>
-                  <input id="deliveryPostalCode" name="deliveryPostalCode" class="form-control" value="<%= formData.deliveryPostalCode %>" required />
+                  <input
+                    id="deliveryPostalCode"
+                    name="deliveryPostalCode"
+                    class="form-control"
+                    value="<%= formData.deliveryPostalCode %>"
+                    required
+                    autocomplete="postal-code"
+                  />
+                  <div class="invalid-feedback">Please enter your postal code.</div>
                 </div>
                 <div class="col-md-6">
                   <label for="deliveryCountry" class="form-label">Country *</label>
-                  <select id="deliveryCountry" name="deliveryCountry" class="form-select" required>
-                    <option value="South Africa" selected>South Africa</option>
-                  </select>
+                  <input type="hidden" id="deliveryCountry" name="deliveryCountry" value="South Africa" />
+                  <input class="form-control" value="South Africa" readonly aria-readonly="true" autocomplete="country-name" />
                 </div>
                 <div class="col-12">
                   <label for="affiliateCode" class="form-label">Affiliate Code</label>
@@ -131,7 +185,7 @@
                 </div>
 
                 <div class="col-12 d-flex gap-2">
-                  <button type="submit" class="btn btn-primary">Pay with Paystack</button>
+                  <button type="submit" class="btn btn-primary" id="checkoutSubmitBtn">Pay with Paystack</button>
                   <a href="/auth/cart" class="btn btn-outline-secondary">Back to Cart</a>
                 </div>
               </form>
@@ -139,8 +193,8 @@
           </div>
         </div>
 
-        <div class="col-lg-5">
-          <div class="card shadow-sm">
+        <div class="col-lg-5 checkout-summary-col">
+          <div class="card shadow-sm checkout-summary-card">
             <div class="card-body">
               <h2 class="h5 mb-3">Order Summary</h2>
               <ul class="list-group list-group-flush">
@@ -162,6 +216,7 @@
                 <span>Products subtotal</span>
                 <span>R<%= Number(typeof productsSubtotal !== "undefined" ? productsSubtotal : total).toFixed(2) %></span>
               </div>
+              <% if (deliveryPricingEnabled) { %>
               <div class="d-flex justify-content-between">
                 <span>Delivery fee</span>
                 <% if (firstOrderFreeDelivery) { %>
@@ -172,6 +227,7 @@
                 <span>R<%= Number(deliveryFee || 0).toFixed(2) %></span>
                 <% } %>
               </div>
+              <% } %>
               <% if (creditApplied && creditApplied > 0) { %>
               <div class="d-flex justify-content-between">
                 <span>Affiliate credit</span>
@@ -192,9 +248,9 @@
 
 <script>
   (() => {
+    const form = document.getElementById("checkoutForm");
+    const submitBtn = document.getElementById("checkoutSubmitBtn");
     const addressSelect = document.getElementById("selectedAddressId");
-    if (!addressSelect) return;
-
     const fieldMap = {
       deliveryName: "recipientName",
       deliveryPhone: "phone",
@@ -203,25 +259,90 @@
       deliveryCity: "city",
       deliveryState: "state",
       deliveryPostalCode: "postalCode",
-      deliveryCountry: "country",
     };
 
-    const applyAddress = () => {
-      const selectedOption = addressSelect.options[addressSelect.selectedIndex];
-      if (!selectedOption || !selectedOption.value) {
-        return;
-      }
+    const deliveryFieldIds = Object.keys(fieldMap);
 
-      Object.entries(fieldMap).forEach(([inputId, dataKey]) => {
+    const setDeliveryFieldsLocked = (locked) => {
+      deliveryFieldIds.forEach((inputId) => {
         const input = document.getElementById(inputId);
         if (!input) return;
-        input.value = selectedOption.dataset[dataKey] || "";
+        input.readOnly = locked;
+        input.classList.toggle("bg-light", locked);
       });
     };
 
-    addressSelect.addEventListener("change", applyAddress);
-    if (addressSelect.value) {
-      applyAddress();
+    const clearDeliveryFields = () => {
+      deliveryFieldIds.forEach((inputId) => {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        input.value = "";
+        input.classList.remove("is-invalid");
+      });
+    };
+
+    const validateField = (field) => {
+      if (!field || !field.hasAttribute("required")) return;
+      if (field.checkValidity()) {
+        field.classList.remove("is-invalid");
+      } else {
+        field.classList.add("is-invalid");
+      }
+    };
+
+    if (form) {
+      const requiredFields = Array.from(form.querySelectorAll("input[required], select[required], textarea[required]"));
+
+      requiredFields.forEach((field) => {
+        const eventName = field.tagName === "SELECT" ? "change" : "input";
+        field.addEventListener(eventName, () => validateField(field));
+        field.addEventListener("blur", () => validateField(field));
+      });
+
+      form.addEventListener("submit", (event) => {
+        requiredFields.forEach((field) => validateField(field));
+
+        if (!form.checkValidity()) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+
+        if (submitBtn && !submitBtn.disabled) {
+          submitBtn.disabled = true;
+          submitBtn.dataset.originalLabel = submitBtn.textContent || "";
+          submitBtn.textContent = "Processing...";
+        }
+      });
+    }
+
+    if (addressSelect) {
+      const applyAddress = (shouldResetManualFields = false) => {
+        const selectedOption = addressSelect.options[addressSelect.selectedIndex];
+        if (!selectedOption || !selectedOption.value) {
+          setDeliveryFieldsLocked(false);
+          if (shouldResetManualFields) {
+            clearDeliveryFields();
+          }
+          return;
+        }
+
+        Object.entries(fieldMap).forEach(([inputId, dataKey]) => {
+          const input = document.getElementById(inputId);
+          if (!input) return;
+          input.value = selectedOption.dataset[dataKey] || "";
+          input.classList.remove("is-invalid");
+        });
+
+        setDeliveryFieldsLocked(true);
+      };
+
+      addressSelect.addEventListener("change", () => applyAddress(true));
+      if (addressSelect.value) {
+        applyAddress(false);
+      } else {
+        setDeliveryFieldsLocked(false);
+      }
     }
   })();
 </script>

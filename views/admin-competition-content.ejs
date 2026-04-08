@@ -100,41 +100,8 @@
             <input class="form-control" name="prize" value="<%= content.prize %>" />
           </div>
           <div class="col-md-6">
-            <label class="form-label">Deadline Label</label>
-            <input
-              id="deadlineLabel"
-              class="form-control"
-              name="deadlineLabel"
-              value="<%= content.deadlineLabel %>"
-            />
-          </div>
-          <div class="col-md-6">
             <label class="form-label">Winner Announced Label</label>
             <input class="form-control" name="winnerDateLabel" value="<%= content.winnerDateLabel %>" />
-          </div>
-          <div class="col-md-6">
-            <% 
-              const rawEndsAtIso = (content.endsAtIso || "").toString().trim();
-              const endsAtLocalValue = rawEndsAtIso
-                ? rawEndsAtIso.replace(/([+-]\d{2}:\d{2}|Z)$/i, "").slice(0, 16)
-                : "";
-            %>
-            <label for="endsAtLocal" class="form-label">Countdown End (Date & Time)</label>
-            <input
-              id="endsAtLocal"
-              type="datetime-local"
-              class="form-control"
-              value="<%= endsAtLocalValue %>"
-            />
-            <input
-              id="endsAtIso"
-              type="hidden"
-              name="endsAtIso"
-              value="<%= rawEndsAtIso %>"
-            />
-            <div class="form-text">
-              Pick a date/time quickly. Saved automatically as SAST (<code>+02:00</code>).
-            </div>
           </div>
           <div class="col-md-6">
             <label class="form-label">Eligibility</label>
@@ -151,32 +118,6 @@
             <label class="form-label">Terms (one per line)</label>
             <textarea class="form-control" name="termsText" rows="5"><%= content.termsText %></textarea>
           </div>
-        </div>
-      </div>
-    </details>
-
-    <details class="admin-compact-details">
-      <summary>Past Winners</summary>
-      <div class="card card-body border-0 pt-2">
-        <div class="row g-3">
-          <% [1,2,3].forEach((n) => { %>
-          <div class="col-md-3">
-            <label class="form-label">Winner <%= n %> Name</label>
-            <input class="form-control" name="winner<%= n %>Name" value="<%= content[`winner${n}Name`] %>" />
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Winner <%= n %> City</label>
-            <input class="form-control" name="winner<%= n %>City" value="<%= content[`winner${n}City`] %>" />
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Winner <%= n %> Month</label>
-            <input class="form-control" name="winner<%= n %>WonAt" value="<%= content[`winner${n}WonAt`] %>" />
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Winner <%= n %> Prize</label>
-            <input class="form-control" name="winner<%= n %>Prize" value="<%= content[`winner${n}Prize`] %>" />
-          </div>
-          <% }) %>
         </div>
       </div>
     </details>
@@ -209,9 +150,6 @@
   (() => {
     const form = document.querySelector('form[data-enter-submit="true"]');
     if (!form) return;
-    const endsAtLocal = document.getElementById("endsAtLocal");
-    const endsAtIso = document.getElementById("endsAtIso");
-    const deadlineLabelInput = document.getElementById("deadlineLabel");
     const scrollKey = "admin-competitions-content-scroll-y";
     const detailsStateKey = "admin-competitions-content-details-state";
     const detailsList = Array.from(
@@ -254,48 +192,7 @@
       sessionStorage.setItem(scrollKey, String(window.scrollY || 0));
     };
 
-    const formatDeadlineLabel = (localValue) => {
-      const value = String(localValue || "").trim();
-      if (!value) return "";
-      const parsed = new Date(`${value}:00+02:00`);
-      if (Number.isNaN(parsed.getTime())) return "";
-
-      const formatter = new Intl.DateTimeFormat("en-ZA", {
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      });
-      const datePart = formatter.format(parsed);
-      const hours = String(parsed.getHours()).padStart(2, "0");
-      const minutes = String(parsed.getMinutes()).padStart(2, "0");
-      return `${datePart} at ${hours}:${minutes} SAST`;
-    };
-
-    if (endsAtLocal && deadlineLabelInput) {
-      let deadlineTouched = false;
-
-      deadlineLabelInput.addEventListener("input", () => {
-        deadlineTouched = true;
-      });
-
-      endsAtLocal.addEventListener("change", () => {
-        if (deadlineTouched) return;
-        const nextLabel = formatDeadlineLabel(endsAtLocal.value);
-        if (nextLabel) {
-          deadlineLabelInput.value = nextLabel;
-        }
-      });
-    }
-
     form.addEventListener("submit", () => {
-      if (endsAtLocal && endsAtIso) {
-        const localValue = String(endsAtLocal.value || "").trim();
-        if (localValue) {
-          endsAtIso.value = `${localValue}:00+02:00`;
-        } else {
-          endsAtIso.value = "";
-        }
-      }
       rememberDetailsState();
       rememberScroll();
     });

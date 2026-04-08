@@ -13,6 +13,12 @@ const {
   stashAdminFormState,
   consumeAdminFormState,
 } = require("../lib/adminFormState");
+const { randomInt } = require("crypto");
+
+const SAST_OFFSET_MINUTES = 2 * 60;
+const SAST_OFFSET_MS = SAST_OFFSET_MINUTES * 60 * 1000;
+const RECENT_COMPETITION_WINNERS_KEY = "competition_recent_winners";
+const RECENT_COMPETITION_WINNERS_LIMIT = 25;
 
 const COMPETITION_CONTENT_DRAFT_KEY = "competition_content_form";
 
@@ -36,6 +42,100 @@ const splitLines = (value) =>
     .split(/\r?\n/)
     .map((item) => item.trim())
     .filter(Boolean);
+const formatDateInput = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+};
+const formatDateTimeDisplay = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const readable = new Intl.DateTimeFormat("en-ZA", {
+    timeZone: "Africa/Johannesburg",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+  return `${readable} SAST`;
+};
+const resolveDeadlineLabel = (endsAtIso, fallbackLabel = "") => {
+  const formatted = formatDateTimeDisplay(endsAtIso);
+  return formatted || trimText(fallbackLabel);
+};
+const formatSastDateTimeLocalValue = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const sast = new Date(date.getTime() + SAST_OFFSET_MS);
+  const year = sast.getUTCFullYear();
+  const month = String(sast.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(sast.getUTCDate()).padStart(2, "0");
+  const hours = String(sast.getUTCHours()).padStart(2, "0");
+  const minutes = String(sast.getUTCMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+const getStartOfTodayLocal = () => {
+  const now = new Date();
+  const sastNow = new Date(now.getTime() + SAST_OFFSET_MS);
+  const year = sastNow.getUTCFullYear();
+  const month = sastNow.getUTCMonth();
+  const day = sastNow.getUTCDate();
+  const utcMsAtSastMidnight = Date.UTC(year, month, day, 0, 0, 0) - SAST_OFFSET_MS;
+  return new Date(utcMsAtSastMidnight);
+};
+const formatSastIso = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const sast = new Date(date.getTime() + SAST_OFFSET_MS);
+  const year = sast.getUTCFullYear();
+  const month = String(sast.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(sast.getUTCDate()).padStart(2, "0");
+  const hours = String(sast.getUTCHours()).padStart(2, "0");
+  const minutes = String(sast.getUTCMinutes()).padStart(2, "0");
+  const seconds = String(sast.getUTCSeconds()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}+02:00`;
+};
+const resolveCompetitionStartAt = (content = {}) => {
+  const configuredStart = new Date(content?.competitionStartsAtIso || "");
+  if (!Number.isNaN(configuredStart.getTime())) {
+    return configuredStart;
+  }
+  return getStartOfTodayLocal();
+};
+const parseRecentCompetitionWinners = (rawValue) => {
+  if (!trimText(rawValue)) return [];
+  try {
+    const parsed = JSON.parse(String(rawValue));
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item) => item && typeof item === "object");
+  } catch (_error) {
+    return [];
+  }
+};
+const getRecentCompetitionWinners = async () => {
+  const setting = await prisma.appSetting.findUnique({
+    where: { key: RECENT_COMPETITION_WINNERS_KEY },
+    select: { value: true },
+  });
+  return parseRecentCompetitionWinners(setting?.value);
+};
+const appendRecentCompetitionWinner = async (winnerRecord) => {
+  const current = await getRecentCompetitionWinners();
+  const next = [winnerRecord, ...current].slice(0, RECENT_COMPETITION_WINNERS_LIMIT);
+  await prisma.appSetting.upsert({
+    where: { key: RECENT_COMPETITION_WINNERS_KEY },
+    create: {
+      key: RECENT_COMPETITION_WINNERS_KEY,
+      value: JSON.stringify(next),
+    },
+    update: {
+      value: JSON.stringify(next),
+    },
+  });
+  return next;
+};
 
 const getFieldLengthLimit = (field) => {
   if (field === "heroCtaUrl") return 2048;
@@ -63,6 +163,82 @@ const calculateEntriesForOrder = (order, rules) => {
   }
 
   return entries;
+};
+
+const buildCompetitionPointsLeaderboard = async ({
+  rules,
+  drawStartAt,
+  drawEndAt,
+}) => {
+  const orders = await prisma.order.findMany({
+    where: {
+      status: "PAID",
+      createdAt: {
+        gte: drawStartAt,
+        lte: drawEndAt,
+      },
+    },
+    select: {
+      id: true,
+      userId: true,
+      productsSubtotal: true,
+      total: true,
+      affiliateReferrerCode: true,
+      createdAt: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+  });
+
+  const entrantsByUser = new Map();
+
+  orders.forEach((order) => {
+    const pointsForOrder = calculateEntriesForOrder(order, rules);
+    if (pointsForOrder <= 0) return;
+
+    const existing = entrantsByUser.get(order.userId) || {
+      userId: order.userId,
+      name: trimText(order?.user?.name) || "Unnamed customer",
+      email: trimText(order?.user?.email),
+      points: 0,
+      qualifyingOrders: 0,
+      sampleOrderId: order.id,
+    };
+
+    existing.points += pointsForOrder;
+    existing.qualifyingOrders += 1;
+    entrantsByUser.set(order.userId, existing);
+  });
+
+  const entrants = Array.from(entrantsByUser.values()).sort(
+    (a, b) => Number(b.points || 0) - Number(a.points || 0),
+  );
+
+  const totalPoints = entrants.reduce(
+    (sum, entrant) => sum + Number(entrant.points || 0),
+    0,
+  );
+  const totalQualifyingOrders = entrants.reduce(
+    (sum, entrant) => sum + Number(entrant.qualifyingOrders || 0),
+    0,
+  );
+
+  return {
+    entrants,
+    stats: {
+      totalPoints,
+      uniqueEntrants: entrants.length,
+      qualifyingOrders: totalQualifyingOrders,
+    },
+  };
 };
 
 const formatCurrencyCompact = (value) => {
@@ -148,7 +324,7 @@ const buildPublicPageModel = (content) => {
     currentCompetition: {
       title: content.currentTitle,
       prize: content.prize,
-      deadlineLabel: content.deadlineLabel,
+      deadlineLabel: resolveDeadlineLabel(content.endsAtIso, content.deadlineLabel),
       endsAtIso: content.endsAtIso,
       winnerDateLabel: content.winnerDateLabel,
       eligibility: content.eligibility,
@@ -175,6 +351,7 @@ exports.getCompetitionsPage = async (_req, res) => {
   };
   const pageModel = buildPublicPageModel(contentWithRuleText);
   const competitionEndsAt = new Date(pageModel.currentCompetition.endsAtIso);
+  const competitionStartsAt = resolveCompetitionStartAt(content);
   const hasValidEndAt = !Number.isNaN(competitionEndsAt.getTime());
   const isCompetitionExpired = hasValidEndAt && Date.now() > competitionEndsAt.getTime();
 
@@ -204,7 +381,10 @@ exports.getCompetitionsPage = async (_req, res) => {
       where: {
         userId,
         status: "PAID",
-        ...(hasValidEndAt ? { createdAt: { lte: competitionEndsAt } } : {}),
+        createdAt: {
+          gte: competitionStartsAt,
+          ...(hasValidEndAt ? { lte: competitionEndsAt } : {}),
+        },
       },
       select: {
         productsSubtotal: true,
@@ -238,21 +418,196 @@ exports.getCompetitionsPage = async (_req, res) => {
     ...pageModel,
     entryCounter,
     competitionRules: rules,
+    competitionHasEnded: isCompetitionExpired,
   });
 };
 
 exports.getAdminCompetitionRulesPage = async (req, res) => {
-  const rules = await getCompetitionEntryRules();
+  const [rules, content, recentWinners] = await Promise.all([
+    getCompetitionEntryRules(),
+    getCompetitionContentSettings(),
+    getRecentCompetitionWinners(),
+  ]);
+  const rawEndsAtIso = trimText(content?.endsAtIso);
+  const endsAtLocalValue = rawEndsAtIso
+    ? rawEndsAtIso.replace(/([+-]\d{2}:\d{2}|Z)$/i, "").slice(0, 16)
+    : "";
+  const effectiveStartAt = resolveCompetitionStartAt(content);
+  const competitionStartsAtLocalValue =
+    formatSastDateTimeLocalValue(effectiveStartAt);
+  const countdownEndAt = new Date(content?.endsAtIso || "");
+  const drawStartAt = resolveCompetitionStartAt(content);
+  const hasValidCountdownEnd = !Number.isNaN(countdownEndAt.getTime());
+  const drawReady = hasValidCountdownEnd ? Date.now() >= countdownEndAt.getTime() : false;
+  const drawEndAt = hasValidCountdownEnd ? countdownEndAt : null;
+  const pointsWindow = drawEndAt
+    ? await buildCompetitionPointsLeaderboard({
+        rules,
+        drawStartAt,
+        drawEndAt,
+      })
+    : {
+        entrants: [],
+        stats: {
+          totalPoints: 0,
+          uniqueEntrants: 0,
+          qualifyingOrders: 0,
+        },
+      };
+
   return res.render("admin-competition-rules", {
     success: req.query.success || null,
     error: req.query.error || null,
     formData: rules,
+    drawDefaults: {
+      endsAtLocalValue,
+      competitionStartsAtLocalValue,
+      drawFromDate: formatDateInput(drawStartAt),
+      drawToDate: formatDateInput(content?.endsAtIso),
+      drawFromDateTime: formatDateTimeDisplay(drawStartAt),
+      drawToDateTime: formatDateTimeDisplay(content?.endsAtIso),
+      countdownEndIso: hasValidCountdownEnd ? countdownEndAt.toISOString() : "",
+      drawReady,
+    },
+    pointsWindow,
+    recentWinners,
+  });
+};
+
+exports.drawAdminCompetitionWinner = async (req, res) => {
+  const wantsJson =
+    req.xhr || (req.get("Accept") || "").includes("application/json");
+
+  const [rules, content] = await Promise.all([
+    getCompetitionEntryRules(),
+    getCompetitionContentSettings(),
+  ]);
+
+  const competitionEndAt = new Date(content?.endsAtIso || "");
+  if (Number.isNaN(competitionEndAt.getTime())) {
+    const message =
+      "Countdown end date is not set. Please set a valid competition countdown end date/time in Competition Rules first.";
+    if (wantsJson) {
+      return res.status(400).json({ success: false, message });
+    }
+    return res.redirect(
+      `/admin/competition-rules?error=${encodeURIComponent(message)}`,
+    );
+  }
+
+  if (Date.now() < competitionEndAt.getTime()) {
+    const message = `Draw is not ready yet. Countdown ends at ${formatDateTimeDisplay(competitionEndAt)}.`;
+    if (wantsJson) {
+      return res.status(400).json({ success: false, message });
+    }
+    return res.redirect(
+      `/admin/competition-rules?error=${encodeURIComponent(message)}`,
+    );
+  }
+
+  const drawStartAt = resolveCompetitionStartAt(content);
+  if (drawStartAt.getTime() > competitionEndAt.getTime()) {
+    const message =
+      "Draw window is invalid (start is after end). Set Current Competition End to a time after the competition start, or start a new competition.";
+    if (wantsJson) {
+      return res.status(400).json({ success: false, message });
+    }
+    return res.redirect(
+      `/admin/competition-rules?error=${encodeURIComponent(message)}`,
+    );
+  }
+
+  const leaderboard = await buildCompetitionPointsLeaderboard({
+    rules,
+    drawStartAt,
+    drawEndAt: competitionEndAt,
+  });
+  const entrants = leaderboard.entrants;
+  const totalEntries = Number(leaderboard.stats.totalPoints || 0);
+
+  if (!totalEntries || !entrants.length) {
+    const payload = {
+      success: false,
+      message: "No eligible entries found for the selected draw window.",
+      stats: {
+        totalEntries: 0,
+        qualifyingOrders: 0,
+        uniqueEntrants: 0,
+      },
+    };
+    if (wantsJson) {
+      return res.status(400).json(payload);
+    }
+    return res.redirect(
+      `/admin/competition-rules?error=${encodeURIComponent(payload.message)}`,
+    );
+  }
+
+  let cumulativeEntries = 0;
+  const weightedPool = entrants.map((entrant) => {
+    cumulativeEntries += entrant.points;
+    return {
+      entrant,
+      cumulativeEntries,
+    };
+  });
+
+  const winningTicket = randomInt(totalEntries) + 1;
+  const winningRecord =
+    weightedPool.find((item) => winningTicket <= item.cumulativeEntries) ||
+    weightedPool[weightedPool.length - 1];
+  const winningEntrant = winningRecord.entrant;
+
+  const winnerPayload = {
+    ticketNumber: winningTicket,
+    orderId: winningEntrant.sampleOrderId,
+    entriesForWinningOrder: winningEntrant.points,
+    drawnAtIso: new Date().toISOString(),
+    winner: {
+      userId: winningEntrant.userId,
+      name: winningEntrant.name,
+      email: winningEntrant.email,
+      points: winningEntrant.points,
+    },
+    stats: {
+      totalEntries,
+      qualifyingOrders: Number(leaderboard.stats.qualifyingOrders || 0),
+      uniqueEntrants: Number(leaderboard.stats.uniqueEntrants || 0),
+    },
+    filters: {
+      drawFromDate: formatDateInput(drawStartAt),
+      drawToDate: formatDateInput(competitionEndAt),
+      drawFromDateTime: formatDateTimeDisplay(drawStartAt),
+      drawToDateTime: formatDateTimeDisplay(competitionEndAt),
+    },
+  };
+
+  try {
+    await appendRecentCompetitionWinner({
+      drawnAtIso: winnerPayload.drawnAtIso,
+      orderId: winnerPayload.orderId,
+      ticketNumber: winnerPayload.ticketNumber,
+      totalEntries: Number(winnerPayload.stats?.totalEntries || 0),
+      points: Number(winnerPayload.winner?.points || 0),
+      name: winnerPayload.winner?.name || "Unnamed customer",
+      email: winnerPayload.winner?.email || "",
+    });
+  } catch (error) {
+    logger.warn("competition_recent_winner_store_failed", {
+      error: error.message,
+    });
+  }
+
+  return res.json({
+    success: true,
+    message: "Winner drawn successfully.",
+    result: winnerPayload,
   });
 };
 
 exports.updateAdminCompetitionRules = async (req, res) => {
   const rawComingSoonValue = req.body?.comingSoonEnabled;
-  const comingSoonEnabled = parseSwitchOn(rawComingSoonValue);
+  const requestedComingSoonEnabled = parseSwitchOn(rawComingSoonValue);
   const competitionPageEnabled = parseCompetitionPageEnabled(req.body, true);
   const hideCompetitionsPage = !competitionPageEnabled;
   const tierOneMinSubtotal = Number.parseFloat(
@@ -316,8 +671,9 @@ exports.updateAdminCompetitionRules = async (req, res) => {
       )}`,
     );
   }
-
   try {
+    const comingSoonEnabled = requestedComingSoonEnabled;
+
     await saveCompetitionEntryRules({
       comingSoonEnabled,
       hideCompetitionsPage,
@@ -329,7 +685,7 @@ exports.updateAdminCompetitionRules = async (req, res) => {
     });
     return res.redirect(
       `/admin/competition-rules?success=${encodeURIComponent(
-        "Competition entry rules updated.",
+        "Competition rules updated.",
       )}`,
     );
   } catch (error) {
@@ -337,6 +693,161 @@ exports.updateAdminCompetitionRules = async (req, res) => {
       `/admin/competition-rules?error=${encodeURIComponent(
         error.message || "Unable to save competition entry rules.",
       )}`,
+    );
+  }
+};
+
+exports.startAdminCompetitionWindow = async (req, res) => {
+  const wantsJson =
+    req.xhr || (req.get("Accept") || "").includes("application/json");
+  const endsAtLocal = trimText(req.body?.endsAtLocal);
+  const endsAtIso = endsAtLocal ? `${endsAtLocal}:00+02:00` : "";
+
+  if (!endsAtLocal || Number.isNaN(new Date(endsAtIso).getTime())) {
+    const message = "Please provide a valid competition end date and time.";
+    if (wantsJson) {
+      return res.status(400).json({ success: false, message });
+    }
+    return res.redirect(
+      `/admin/competition-rules?error=${encodeURIComponent(message)}`,
+    );
+  }
+
+  try {
+    const [content, rules] = await Promise.all([
+      getCompetitionContentSettings(),
+      getCompetitionEntryRules(),
+    ]);
+
+    await saveCompetitionContentSettings({
+      ...content,
+      endsAtIso,
+      deadlineLabel: resolveDeadlineLabel(endsAtIso, content.deadlineLabel),
+      competitionStartsAtIso: formatSastIso(new Date()),
+    });
+
+    await saveCompetitionEntryRules({
+      ...rules,
+      comingSoonEnabled: false,
+    });
+
+    const message = "New competition started. Countdown updated and points window reset.";
+    if (wantsJson) {
+      return res.json({
+        success: true,
+        message,
+        endsAtIso,
+      });
+    }
+    return res.redirect(
+      `/admin/competition-rules?success=${encodeURIComponent(message)}`,
+    );
+  } catch (error) {
+    const message = error.message || "Unable to start new competition.";
+    if (wantsJson) {
+      return res.status(400).json({ success: false, message });
+    }
+    return res.redirect(
+      `/admin/competition-rules?error=${encodeURIComponent(message)}`,
+    );
+  }
+};
+
+exports.updateAdminCompetitionCurrentEnd = async (req, res) => {
+  const wantsJson =
+    req.xhr || (req.get("Accept") || "").includes("application/json");
+  const endsAtLocal = trimText(req.body?.endsAtLocal);
+  const endsAtIso = endsAtLocal ? `${endsAtLocal}:00+02:00` : "";
+
+  if (!endsAtLocal || Number.isNaN(new Date(endsAtIso).getTime())) {
+    const message = "Please provide a valid competition end date and time.";
+    if (wantsJson) {
+      return res.status(400).json({ success: false, message });
+    }
+    return res.redirect(
+      `/admin/competition-rules?error=${encodeURIComponent(message)}`,
+    );
+  }
+
+  try {
+    const content = await getCompetitionContentSettings();
+    const proposedEndAt = new Date(endsAtIso);
+    const currentStartAt = resolveCompetitionStartAt(content);
+
+    if (proposedEndAt.getTime() < currentStartAt.getTime()) {
+      const message =
+        "End date/time cannot be earlier than the current competition start.";
+      if (wantsJson) {
+        return res.status(400).json({ success: false, message });
+      }
+      return res.redirect(
+        `/admin/competition-rules?error=${encodeURIComponent(message)}`,
+      );
+    }
+
+    await saveCompetitionContentSettings({
+      ...content,
+      endsAtIso,
+      deadlineLabel: resolveDeadlineLabel(endsAtIso, content.deadlineLabel),
+    });
+
+    const message = "Current competition end date updated.";
+    if (wantsJson) {
+      return res.json({
+        success: true,
+        message,
+        endsAtIso,
+      });
+    }
+    return res.redirect(
+      `/admin/competition-rules?success=${encodeURIComponent(message)}`,
+    );
+  } catch (error) {
+    const message = error.message || "Unable to update current competition end date.";
+    if (wantsJson) {
+      return res.status(400).json({ success: false, message });
+    }
+    return res.redirect(
+      `/admin/competition-rules?error=${encodeURIComponent(message)}`,
+    );
+  }
+};
+
+exports.setAdminCompetitionEndNowForTest = async (req, res) => {
+  const wantsJson =
+    req.xhr || (req.get("Accept") || "").includes("application/json");
+
+  try {
+    const content = await getCompetitionContentSettings();
+    const currentStartAt = resolveCompetitionStartAt(content);
+    const now = new Date();
+    const endAt = now.getTime() < currentStartAt.getTime() ? currentStartAt : now;
+    const endsAtIso = formatSastIso(endAt);
+
+    await saveCompetitionContentSettings({
+      ...content,
+      endsAtIso,
+      deadlineLabel: resolveDeadlineLabel(endsAtIso, content.deadlineLabel),
+    });
+
+    const message = "Competition end set to now for testing.";
+    if (wantsJson) {
+      return res.json({
+        success: true,
+        message,
+        endsAtIso,
+      });
+    }
+    return res.redirect(
+      `/admin/competition-rules?success=${encodeURIComponent(message)}`,
+    );
+  } catch (error) {
+    const message = error.message || "Unable to set competition end for testing.";
+    if (wantsJson) {
+      return res.status(400).json({ success: false, message });
+    }
+    return res.redirect(
+      `/admin/competition-rules?error=${encodeURIComponent(message)}`,
     );
   }
 };
@@ -350,6 +861,7 @@ exports.toggleAdminCompetitionComingSoon = async (req, res) => {
 
   try {
     const current = await getCompetitionEntryRules();
+
     const next = await saveCompetitionEntryRules({
       ...current,
       comingSoonEnabled,
@@ -359,13 +871,17 @@ exports.toggleAdminCompetitionComingSoon = async (req, res) => {
       return res.json({
         success: true,
         comingSoonEnabled: Boolean(next.comingSoonEnabled),
-        message: `Competitions Coming Soon is now ${next.comingSoonEnabled ? "enabled" : "disabled"}.`,
+        message: next.comingSoonEnabled
+          ? "Entries are now paused (Coming Soon mode)."
+          : "Entries are now live.",
       });
     }
 
     return res.redirect(
       `/admin/competition-rules?success=${encodeURIComponent(
-        `Competitions Coming Soon is now ${next.comingSoonEnabled ? "enabled" : "disabled"}.`,
+        next.comingSoonEnabled
+          ? "Entries are now paused (Coming Soon mode)."
+          : "Entries are now live.",
       )}`,
     );
   } catch (error) {
@@ -379,6 +895,47 @@ exports.toggleAdminCompetitionComingSoon = async (req, res) => {
     return res.redirect(
       `/admin/competition-rules?error=${encodeURIComponent(
         error.message || "Unable to update competitions coming soon toggle.",
+      )}`,
+    );
+  }
+};
+
+exports.resetAdminCompetitionPointsWindow = async (req, res) => {
+  const wantsJson =
+    req.xhr || (req.get("Accept") || "").includes("application/json");
+
+  try {
+    const currentContent = await getCompetitionContentSettings();
+    const resetAtIso = formatSastIso(new Date());
+
+    await saveCompetitionContentSettings({
+      ...currentContent,
+      competitionStartsAtIso: resetAtIso,
+    });
+
+    if (wantsJson) {
+      return res.json({
+        success: true,
+        message: "Points window reset successfully.",
+        resetAtIso,
+      });
+    }
+
+    return res.redirect(
+      `/admin/competition-rules?success=${encodeURIComponent(
+        "Points window reset successfully.",
+      )}`,
+    );
+  } catch (error) {
+    if (wantsJson) {
+      return res.status(400).json({
+        success: false,
+        message: error.message || "Unable to reset points window.",
+      });
+    }
+    return res.redirect(
+      `/admin/competition-rules?error=${encodeURIComponent(
+        error.message || "Unable to reset points window.",
       )}`,
     );
   }

@@ -412,6 +412,21 @@ app.post(
   asyncHandler(competitionController.updateAdminCompetitionRules),
 );
 app.post(
+  "/admin/competition-rules/start-new",
+  requireAdmin,
+  asyncHandler(competitionController.startAdminCompetitionWindow),
+);
+app.post(
+  "/admin/competition-rules/current-end",
+  requireAdmin,
+  asyncHandler(competitionController.updateAdminCompetitionCurrentEnd),
+);
+app.post(
+  "/admin/competition-rules/current-end-now-test",
+  requireAdmin,
+  asyncHandler(competitionController.setAdminCompetitionEndNowForTest),
+);
+app.post(
   "/admin/competition-rules/toggle-coming-soon",
   requireAdmin,
   asyncHandler(competitionController.toggleAdminCompetitionComingSoon),
@@ -420,6 +435,16 @@ app.post(
   "/admin/competition-rules/toggle-page-visibility",
   requireAdmin,
   asyncHandler(competitionController.toggleAdminCompetitionPageVisibility),
+);
+app.post(
+  "/admin/competition-rules/reset-points-window",
+  requireAdmin,
+  asyncHandler(competitionController.resetAdminCompetitionPointsWindow),
+);
+app.post(
+  "/admin/competition-rules/draw-winner",
+  requireAdmin,
+  asyncHandler(competitionController.drawAdminCompetitionWinner),
 );
 app.post(
   "/admin/delivery-pricing/toggle",

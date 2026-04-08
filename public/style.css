@@ -418,6 +418,71 @@ main {
   padding-bottom: 0.7rem;
 }
 
+.admin-shell .competition-action-card {
+  position: relative;
+  overflow: hidden;
+  border-width: 1px;
+}
+
+.admin-shell .competition-action-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 6px;
+  pointer-events: none;
+}
+
+.admin-shell .competition-action-card--start::before {
+  background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
+}
+
+.admin-shell .competition-action-card--update::before {
+  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.competition-action-kicker {
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: #475569;
+}
+
+.competition-action-form {
+  border: 1px solid #dbe6f7;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fbfdff 0%, #f4f8ff 100%);
+  padding: 0.75rem;
+  margin: 0;
+}
+
+.competition-action-field .form-control[type="datetime-local"] {
+  min-height: 46px;
+  font-weight: 600;
+  background: #ffffff;
+}
+
+.competition-action-btn {
+  min-height: 46px;
+  border-radius: 10px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.competition-action-btn--primary {
+  box-shadow: 0 10px 20px rgba(220, 38, 38, 0.22);
+}
+
+.competition-action-btn--secondary {
+  box-shadow: 0 10px 20px rgba(29, 78, 216, 0.16);
+}
+
+@media (max-width: 767.98px) {
+  .competition-action-form {
+    padding: 0.65rem;
+  }
+}
+
 .inventory-action-badge {
   letter-spacing: 0.02em;
   font-weight: 700;
@@ -4713,7 +4778,7 @@ body[data-site-theme] .thank-you-review-btn.active {
 
 .competition-entry-counter__label {
   font-size: 0.85rem;
-  color: color-mix(in srgb, var(--theme-on-intense, #ffffff) 84%, #0f172a);
+  color: #ffffff;
 }
 
 .competition-entry-counter__value {
@@ -5076,7 +5141,7 @@ body[data-site-theme] .competition-entry-counter {
 
 body[data-site-theme] .competition-entry-counter__label,
 body[data-site-theme] .competition-entry-counter__meta {
-  color: color-mix(in srgb, var(--theme-on-intense) 88%, #0f172a) !important;
+  color: #ffffff !important;
 }
 
 body[data-site-theme] .competition-entry-counter__value {
@@ -5123,7 +5188,7 @@ body[data-site-theme] .competition-card--countdown {
 
 body[data-site-theme] .competition-status-pill {
   background: var(--theme-primary) !important;
-  color: var(--theme-on-intense) !important;
+  color: #ffffff !important;
 }
 
 body[data-site-theme] .competition-current-title,
@@ -5252,5 +5317,16 @@ body[data-site-theme] .competition-accordion-item {
     bottom: 10px;
     width: calc(100vw - 20px);
     padding: 10px 12px;
+  }
+}
+
+@media (min-width: 992px) {
+  .checkout-page .checkout-summary-col {
+    align-self: flex-start;
+  }
+
+  .checkout-page .checkout-summary-card {
+    position: sticky;
+    top: 96px;
   }
 }
