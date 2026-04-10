@@ -16,13 +16,16 @@ services:
       - db
     environment:
       PORT: 3000
-      SESSION_SECRET: dev-secret-change-me
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/clubzero?schema=public
+      SESSION_SECRET: ${SESSION_SECRET}
+      DB_SCHEMA: ${DB_SCHEMA}
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/clubzero?schema=${DB_SCHEMA}
     ports:
       - "3000:3000"
     volumes:
+      - .:/app
+      - /app/node_modules
       - uploads_data:/app/public/uploads
-    command: sh -c "npx prisma migrate deploy && npm start"
+    command: sh -c "npx prisma migrate deploy && npm run dev"
 
 volumes:
   postgres_data:
