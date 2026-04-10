@@ -1,0 +1,143 @@
+<%- include("partials/header", { title: `Invoice ${invoice.invoiceNumber}` }) %>
+<%- include("partials/navbar") %>
+
+<% const formatDate = (value) => { if (!value) return "-"; const date = new
+Date(value); const day = String(date.getDate()).padStart(2, "0"); const month =
+String(date.getMonth() + 1).padStart(2, "0"); const year = date.getFullYear();
+return `${day}-${month}-${year}`; }; %>
+
+<main class="cz-banded">
+  <section class="cz-band">
+    <div class="container cz-section">
+      <div
+        class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4"
+      >
+        <div>
+          <span class="text-uppercase small text-muted">Invoice</span>
+          <h1 class="h3 mb-1"><%= invoice.invoiceNumber %></h1>
+          <p class="text-muted mb-0">Order #<%= order.id %></p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            onclick="window.print()"
+          >
+            Print
+          </button>
+          <a href="/auth/orders" class="btn btn-primary">Back to Orders</a>
+        </div>
+      </div>
+
+      <article class="card shadow-sm">
+        <div class="card-body p-4 p-lg-5">
+      <div class="row g-4 mb-4">
+        <div class="col-md-6">
+          <h2 class="h6 text-uppercase text-muted">From</h2>
+          <p class="mb-0 fw-semibold">Club Zero</p>
+          <p class="mb-0">South Africa</p>
+        </div>
+        <div class="col-md-6 text-md-end">
+          <h2 class="h6 text-uppercase text-muted">Bill To</h2>
+          <p class="mb-0 fw-semibold"><%= invoice.recipientName %></p>
+          <p class="mb-0"><%= invoice.recipientEmail %></p>
+          <p class="mb-0"><%= order.deliveryPhone %></p>
+        </div>
+      </div>
+
+      <div class="row g-4 mb-4">
+        <div class="col-sm-6">
+          <p class="small text-uppercase text-muted mb-1">Issued</p>
+          <p class="mb-0"><%= formatDate(invoice.issuedAt) %></p>
+        </div>
+        <div class="col-sm-6">
+          <p class="small text-uppercase text-muted mb-1">Status</p>
+          <p class="mb-0">
+            <span
+              class="badge <%= invoice.status === 'PAID' ? 'text-bg-success' : invoice.status === 'SENT' ? 'text-bg-primary' : 'text-bg-secondary' %>"
+            >
+              <%= invoice.status %>
+            </span>
+          </p>
+        </div>
+      </div>
+
+      <div class="table-responsive mb-4">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th scope="col">Description</th>
+              <th scope="col" class="text-center">Cases</th>
+              <th scope="col" class="text-end">Unit Price</th>
+              <th scope="col" class="text-end">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% order.orderItems.forEach((item) => { %>
+            <% const customEntries = Array.isArray(item.customPackConfig) ? item.customPackConfig : []; %>
+            <tr>
+              <td>
+                <div class="fw-semibold"><%= item.productName %></div>
+                <div class="small text-muted">
+                  <%= item.quantity * 12 %> bottles
+                </div>
+                <% if (item.isCustomPack && customEntries.length) { %>
+                <div class="small text-muted">
+                  <%= customEntries.map((entry) => `${entry.productName || "Flavour"} (${entry.bottlesPerPack})`).join(", ") %>
+                </div>
+                <% } %>
+              </td>
+              <td class="text-center"><%= item.quantity %></td>
+              <td class="text-end">
+                R<%= Number(item.productPrice).toFixed(2) %>
+              </td>
+              <td class="text-end">R<%= Number(item.subtotal).toFixed(2) %></td>
+            </tr>
+            <% }) %>
+          </tbody>
+          <tfoot>
+            <tr>
+              <th colspan="3" class="text-end">Subtotal</th>
+              <th class="text-end">
+                R<%= Number(invoice.subtotal).toFixed(2) %>
+              </th>
+            </tr>
+            <tr>
+              <th colspan="3" class="text-end">Total</th>
+              <th class="text-end">R<%= Number(invoice.total).toFixed(2) %></th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-lg-7">
+          <h2 class="h6 text-uppercase text-muted">Delivery Address</h2>
+          <p class="mb-0">
+            <%= order.deliveryName %><br />
+            <%= order.deliveryAddressLine1 %><br />
+            <% if (order.deliveryAddressLine2) { %>
+            <%= order.deliveryAddressLine2 %><br />
+            <% } %>
+            <%= order.deliveryCity %>,
+            <%= order.deliveryState %>
+            <%= order.deliveryPostalCode %><br />
+            <%= order.deliveryCountry %>
+          </p>
+        </div>
+        <div class="col-lg-5">
+          <h2 class="h6 text-uppercase text-muted">Notes</h2>
+          <p class="mb-2"><%= invoice.notes || "No notes." %></p>
+          <p class="small text-muted mb-0">
+            Keep this invoice for your records. If payment is made manually, use
+            <strong><%= invoice.invoiceNumber %></strong> as the reference.
+          </p>
+        </div>
+      </div>
+    </div>
+      </article>
+    </div>
+  </section>
+</main>
+
+<%- include("partials/footer") %>

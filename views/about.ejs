@@ -1,0 +1,182 @@
+<%
+  const rawAboutIntroImageUrl = (aboutText?.introImageUrl || "").toString().trim();
+  const hasAboutIntroImage = Boolean(rawAboutIntroImageUrl);
+  const aboutIntroImageUrl = hasAboutIntroImage ? rawAboutIntroImageUrl : "";
+%>
+<%- include("partials/header",{title: "About", preloadImageUrl: hasAboutIntroImage ? aboutIntroImageUrl : undefined }) %>
+<%- include("partials/navbar") %>
+<main class="cz-banded about-page">
+  <section class="cz-band cz-band--custom about-intro-section cz-section">
+    <div class="container">
+      <div class="row align-items-center g-4">
+        <div class="<%= hasAboutIntroImage ? 'col-lg-7' : 'col-12' %>">
+          <span class="about-kicker"><%= aboutText?.introKicker || "Who We Are" %></span>
+          <h1 class="display-5 fw-bold mb-3"><%= aboutText?.introTitle || "About Club Zero" %></h1>
+          <p class="lead text-secondary mb-3">
+            <%= aboutText?.introLead || "Club Zero was built for people who want bold flavor and clean ingredients without the sugar crash." %>
+          </p>
+          <p class="text-secondary mb-0">
+            <%= aboutText?.introBody || "Our mission is simple: make drinks that feel good to choose every day. From product quality to customer experience, everything we do is focused on consistency, clarity, and real value." %>
+          </p>
+          <div class="d-flex flex-wrap gap-2 mt-4">
+            <span class="about-stat-chip"><%= aboutText?.introChip1 || "0g Added Sugar" %></span>
+            <span class="about-stat-chip"><%= aboutText?.introChip2 || "Big Flavor" %></span>
+            <span class="about-stat-chip"><%= aboutText?.introChip3 || "Everyday Energy" %></span>
+          </div>
+        </div>
+        <% if (hasAboutIntroImage) { %>
+        <div class="col-lg-5">
+          <div class="about-image-wrap">
+            <img
+              src="<%= aboutIntroImageUrl %>"
+              alt="Club Zero product"
+              class="about-intro-image"
+              width="1024"
+              height="1024"
+              loading="eager"
+              fetchpriority="high"
+            />
+          </div>
+        </div>
+        <% } %>
+      </div>
+    </div>
+  </section>
+
+  <section class="cz-band cz-section border-top">
+    <div class="container">
+      <div class="row g-4 align-items-start">
+        <div class="col-lg-4">
+          <h2 class="h3 fw-bold mb-3 about-section-title"><%= aboutText?.storyTitle || "Our Story" %></h2>
+        </div>
+        <div class="col-lg-8">
+          <p class="text-secondary mb-3">
+            <%= aboutText?.storyBody1 || "Club Zero started with one simple question: why should better-for-you drinks feel like a compromise? We set out to create products that taste great, feel modern, and support healthier day-to-day choices." %>
+          </p>
+          <p class="text-secondary mb-0">
+            <%= aboutText?.storyBody2 || "What began as a small product idea quickly grew into a mission-driven brand focused on quality, consistency, and customer trust." %>
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cz-band cz-band--custom cz-section bg-light border-top border-bottom">
+    <div class="container">
+      <div class="row g-4">
+        <div class="col-md-6">
+          <div class="about-panel h-100">
+            <h3 class="h5 fw-bold mb-2"><%= aboutText?.missionTitle || "Our Mission" %></h3>
+            <p class="text-secondary mb-0">
+              <%= aboutText?.missionBody || "To make clean, low-sugar refreshment easy to choose without sacrificing flavor." %>
+            </p>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="about-panel h-100">
+            <h3 class="h5 fw-bold mb-2"><%= aboutText?.visionTitle || "Our Vision" %></h3>
+            <p class="text-secondary mb-0">
+              <%= aboutText?.visionBody || "To become the most trusted everyday beverage brand for health-conscious customers." %>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cz-band cz-band--custom cz-section about-promise-section">
+    <div class="container">
+      <div class="text-center mb-4">
+        <span class="about-kicker d-inline-flex mb-2"><%= aboutText?.promiseKicker || "Product Promise" %></span>
+        <h2 class="h3 fw-bold mb-0"><%= aboutText?.promiseTitle || "What you can always expect" %></h2>
+      </div>
+      <div class="row g-4">
+        <div class="col-md-4">
+          <div class="about-promise-card h-100">
+            <span class="about-promise-icon"><%= aboutText?.promiseCard1Icon || "0g" %></span>
+            <h3 class="h5 fw-bold"><%= aboutText?.promiseCard1Title || "Zero Added Sugar" %></h3>
+            <p class="text-secondary mb-0">
+              <%= aboutText?.promiseCard1Body || "All the flavor you want, without the sugar spike." %>
+            </p>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="about-promise-card h-100">
+            <span class="about-promise-icon"><%= aboutText?.promiseCard2Icon || "Low" %></span>
+            <h3 class="h5 fw-bold"><%= aboutText?.promiseCard2Title || "Low Calories" %></h3>
+            <p class="text-secondary mb-0">
+              <%= aboutText?.promiseCard2Body || "Built for everyday refreshment that feels light and clean." %>
+            </p>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="about-promise-card h-100">
+            <span class="about-promise-icon"><%= aboutText?.promiseCard3Icon || "Bold" %></span>
+            <h3 class="h5 fw-bold"><%= aboutText?.promiseCard3Title || "Big Flavor" %></h3>
+            <p class="text-secondary mb-0">
+              <%= aboutText?.promiseCard3Body || "Bright, fruit-forward profiles that keep every sip exciting." %>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cz-band cz-section">
+    <div class="container">
+      <div class="text-center mb-4">
+        <h2 class="h3 fw-bold mb-2"><%= aboutText?.valuesTitle || "Our Core Values" %></h2>
+        <p class="text-secondary mb-0">
+          <%= aboutText?.valuesSubtitle || "The standards we use to build every product and experience." %>
+        </p>
+      </div>
+      <div class="row g-4">
+        <div class="col-md-4">
+          <div class="about-value-card h-100">
+            <span class="about-value-tag"><%= aboutText?.value1Tag || "01" %></span>
+            <h3 class="h5 fw-bold"><%= aboutText?.value1Title || "Quality First" %></h3>
+            <p class="text-secondary mb-0">
+              <%= aboutText?.value1Body || "We choose ingredients and processes that keep quality high and consistency reliable." %>
+            </p>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="about-value-card h-100">
+            <span class="about-value-tag"><%= aboutText?.value2Tag || "02" %></span>
+            <h3 class="h5 fw-bold"><%= aboutText?.value2Title || "Customer Focus" %></h3>
+            <p class="text-secondary mb-0">
+              <%= aboutText?.value2Body || "Every decision is measured by the value and experience it creates for our customers." %>
+            </p>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="about-value-card h-100">
+            <span class="about-value-tag"><%= aboutText?.value3Tag || "03" %></span>
+            <h3 class="h5 fw-bold"><%= aboutText?.value3Title || "Continuous Improvement" %></h3>
+            <p class="text-secondary mb-0">
+              <%= aboutText?.value3Body || "We keep refining our products and service to meet changing needs and expectations." %>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cz-band cz-band--custom cz-section text-white about-cta-section">
+    <div class="container text-center">
+      <h2 class="h3 fw-bold mb-3"><%= aboutText?.ctaTitle || "Ready to Explore Club Zero?" %></h2>
+      <p class="mb-4 text-white-50">
+        <%= aboutText?.ctaBody || "Browse our latest products and find your next favorite low-sugar refreshment." %>
+      </p>
+      <div class="d-flex justify-content-center flex-wrap gap-2">
+        <a href="/auth/products" class="btn btn-primary btn-lg px-4"
+          ><%= aboutText?.ctaPrimaryLabel || "View Products" %></a
+        >
+        <a href="/auth/affiliate/join" class="btn btn-outline-light btn-lg px-4">
+          <%= aboutText?.ctaSecondaryLabel || "Become an Affiliate" %>
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+<%- include("partials/footer") %>

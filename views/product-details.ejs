@@ -1,0 +1,198 @@
+<%- include("partials/header", { title: product.name }) %>
+<%- include("partials/navbar") %>
+<main class="cz-banded">
+  <section class="cz-band">
+    <div class="container cz-section product-details-page">
+      <div class="mb-3">
+        <a href="/auth/products" class="btn btn-outline-secondary btn-sm">&larr; Back to Products</a>
+      </div>
+
+      <% if (success) { %>
+      <div class="alert alert-success"><%= success %></div>
+      <% } %>
+
+      <% if (error) { %>
+      <div class="alert alert-danger"><%= error %></div>
+      <% } %>
+
+      <article class="card shadow-sm product-details-card product-hero-card">
+        <div class="row g-0">
+          <div class="col-md-5">
+              <img
+                src="<%= product.imageUrl %>"
+                class="img-fluid w-100 h-100 product-details-image rounded-start"
+                alt="<%= product.name %>"
+                loading="lazy"
+                decoding="async"
+              />
+          </div>
+          <div class="col-md-7">
+            <div class="card-body">
+          <div class="d-flex flex-wrap gap-2 mb-2">
+            <span class="product-tag product-tag--favorite">Fan Favorite</span>
+            <span class="product-tag product-tag--zero">Zero Sugar</span>
+          </div>
+          <h1 class="h3 mb-2"><%= product.name %></h1>
+          <p class="text-muted mb-3"><%= product.description || "No description." %></p>
+          <% const discountPercent = Number(product.discountPercent || 0); %>
+          <% const hasDiscount = Boolean(discountsEnabled) && product.discountEnabled !== false && discountPercent > 0; %>
+          <% const discountedPrice = hasDiscount ? Number(product.price) * (1 - discountPercent / 100) : Number(product.price); %>
+          <% const websiteStock = Number(product.websiteStock || 0); %>
+          <% const isAlwaysPurchasable = String(product.name || '').trim().toUpperCase() === 'TEST'; %>
+          <% const isOutOfStock = websiteStock <= 0 && !isAlwaysPurchasable; %>
+          <% const stockLabel = websiteStock === 1 ? "Only 1 case left" : `Only ${websiteStock} cases left`; %>
+          <p class="small mb-2 <%= isOutOfStock ? 'text-danger' : 'text-muted' %>">
+            <%= isOutOfStock ? "Out of stock" : stockLabel %>
+          </p>
+          <p class="fw-bold fs-5 mb-3">
+            <% if (hasDiscount) { %>
+            <span class="price-discounted">
+              R<%= Number(discountedPrice).toFixed(2) %>
+            </span>
+            <span class="price-original ms-1">
+              R<%= Number(product.price).toFixed(2) %>
+            </span>
+            <span class="discount-badge ms-2"><%= discountPercent.toFixed(0) %>% Off</span>
+            <% } else { %>
+            R<%= Number(product.price).toFixed(2) %>
+            <% } %>
+            / case (12 bottles)
+          </p>
+
+          <%- include("partials/product-rating", { product, wrapperClass: "mb-3" }) %>
+
+          <% if (user) { %>
+          <form action="/auth/cart/add" method="POST" class="d-flex gap-2">
+            <input type="hidden" name="productId" value="<%= product.id %>" />
+            <input type="hidden" name="returnTo" value="<%= currentPath || '/auth/products' %>" />
+            <input
+              type="number"
+              name="quantity"
+              min="1"
+              value="1"
+              class="form-control"
+              style="max-width: 100px"
+              aria-label="Cases"
+              <%= isOutOfStock ? "disabled" : "" %>
+            />
+            <button type="submit" class="btn btn-primary" <%= isOutOfStock ? "disabled" : "" %>>
+              <%= isOutOfStock ? "Unavailable" : "Add Case(s)" %>
+            </button>
+          </form>
+          <% } else { %>
+          <a href="/auth/login" class="btn btn-outline-primary">Login to buy</a>
+          <% } %>
+        </div>
+          </div>
+        </div>
+      </article>
+
+      <section class="mt-4 product-details-card">
+        <div class="product-vibe-banner mb-3">
+          <div>
+            <p class="product-vibe-kicker mb-1">Flavor Vibe</p>
+            <h2 class="h5 mb-0">Crisp, bright, and made for repeat sips</h2>
+          </div>
+          <span class="product-vibe-pill">Top Pick</span>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="card h-100 shadow-sm product-info-card">
+              <div class="card-body">
+                <h2 class="h6 mb-3">Nutrition Snapshot</h2>
+                <p class="small text-muted mb-0 product-info-text">
+                  <%= product.nutritionInfo || "0g added sugar. Low calories. Hydration support." %>
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card h-100 shadow-sm product-info-card">
+              <div class="card-body">
+                <h2 class="h6 mb-3">Ingredients</h2>
+                <p class="small text-muted mb-0 product-info-text">
+                  <%= product.ingredients || "Carbonated water, natural flavor blend, citric acid, sweetener blend." %>
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card h-100 shadow-sm product-info-card">
+              <div class="card-body">
+                <h2 class="h6 mb-3">Best For</h2>
+                <p class="small text-muted mb-0 product-info-text">
+                  <%= product.bestFor || `${product.name} is great for pre-workout refresh, afternoon reset, or a lighter soda alternative.` %>
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card h-100 shadow-sm product-info-card">
+              <div class="card-body">
+                <h2 class="h6 mb-3">Storage and Delivery</h2>
+                <p class="small text-muted mb-0 product-info-text">
+                  <%= product.storageInfo || "Keep in a cool, dry place. Refrigerate after opening. Typical delivery: 2-4 business days." %>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="mt-4 product-details-card product-reviews-section">
+        <div class="product-reviews-header">
+          <h2 class="h5 mb-1">Customer Reviews</h2>
+          <% const reviewCount = (product.reviews && product.reviews.length) ? product.reviews.length : 0; %>
+          <% const avgRating = reviewCount ? (product.reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviewCount) : 0; %>
+          <p class="mb-0 text-muted small">
+            <%= reviewCount ? `${avgRating.toFixed(1)}/5 average from ${reviewCount} review${reviewCount === 1 ? '' : 's'}` : "No reviews yet" %>
+          </p>
+        </div>
+        <% if (reviewCount) { %>
+        <div class="vstack gap-3">
+          <% product.reviews.forEach((review) => { %>
+          <article class="product-review-card">
+            <div class="product-review-head">
+              <div>
+                <h3 class="h6 mb-0 product-review-name"><%= review.user.name || review.user.email || "User" %></h3>
+                <% if (review.createdAt) { %>
+                <p class="product-review-date mb-0"><%= new Date(review.createdAt).toLocaleDateString("en-ZA", { year: "numeric", month: "short", day: "numeric" }) %></p>
+                <% } %>
+              </div>
+              <span class="product-review-rating">Rated <%= Number(review.rating || 0).toFixed(1) %>/5</span>
+            </div>
+            <% if (review.comment) { %>
+            <p class="mb-0 product-review-comment"><%= review.comment %></p>
+            <% } else { %>
+            <p class="mb-0 product-review-comment product-review-comment--muted">No written comment for this rating.</p>
+            <% } %>
+          </article>
+          <% }) %>
+        </div>
+        <% } %>
+      </section>
+    </div>
+  </section>
+</main>
+<script>
+  (() => {
+    const scrollKey = "addToCartScrollY";
+    const saved = window.sessionStorage.getItem(scrollKey);
+    if (saved) {
+      window.sessionStorage.removeItem(scrollKey);
+      const y = Number.parseInt(saved, 10);
+      if (Number.isFinite(y)) {
+        window.scrollTo(0, y);
+      }
+    }
+
+    const form = document.querySelector('form[action="/auth/cart/add"]');
+    if (!form) return;
+
+    form.addEventListener("submit", () => {
+      window.sessionStorage.setItem(scrollKey, String(window.scrollY || 0));
+    });
+  })();
+</script>
+<%- include("partials/footer") %>

@@ -1,0 +1,202 @@
+<%- include("partials/header", { title: "Edit Comp" }) %>
+<%- include("partials/navbar") %>
+<%- include("partials/admin-nav") %>
+
+<main class="container py-5 admin-shell">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">Edit Comp</h1>
+      <p class="text-secondary mb-0">
+        Edit public competitions copy only. Layout and structure stay fixed.
+      </p>
+    </div>
+  </div>
+
+  <%- include("partials/admin-floating-alert", { success, error }) %>
+
+  <form
+    action="/admin/competitions-content?_csrf=<%= encodeURIComponent(typeof csrfToken !== 'undefined' ? csrfToken : '') %>"
+    method="POST"
+    enctype="multipart/form-data"
+    class="vstack gap-3"
+    data-enter-submit="true"
+  >
+    <details class="admin-compact-details" open>
+      <summary>Hero</summary>
+      <div class="card card-body border-0 pt-2">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Badge</label>
+            <input class="form-control" name="heroBadge" value="<%= content.heroBadge %>" />
+          </div>
+          <div class="col-md-8">
+            <label class="form-label">Title</label>
+            <input class="form-control" name="heroTitle" value="<%= content.heroTitle %>" />
+          </div>
+          <div class="col-md-8">
+            <label class="form-label">Subtitle</label>
+            <textarea class="form-control" name="heroSubtitle" rows="2"><%= content.heroSubtitle %></textarea>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Upload Hero Image</label>
+            <input
+              class="form-control"
+              name="heroImage"
+              type="file"
+              accept="image/*"
+            />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Hero Image URL</label>
+            <input class="form-control" name="heroImageUrl" value="<%= content.heroImageUrl || '' %>" placeholder="/images/competition-hero.jpg" />
+          </div>
+          <div class="col-12">
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                name="heroImageRemove"
+                id="heroImageRemove"
+              />
+              <label class="form-check-label" for="heroImageRemove">
+                Remove hero image
+              </label>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <% if (content.heroImageUrl) { %>
+            <img
+              src="<%= content.heroImageUrl %>"
+              alt="Competition hero preview"
+              class="rounded border admin-image-frame w-100"
+              style="max-height: 160px; object-fit: cover;"
+              loading="lazy"
+              decoding="async"
+            />
+            <% } %>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Button Text</label>
+            <input class="form-control" name="heroCtaLabel" value="<%= content.heroCtaLabel %>" />
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Button URL</label>
+            <input class="form-control" name="heroCtaUrl" value="<%= content.heroCtaUrl %>" />
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details class="admin-compact-details">
+      <summary>Current Competition</summary>
+      <div class="card card-body border-0 pt-2">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Competition Name</label>
+            <input class="form-control" name="currentTitle" value="<%= content.currentTitle %>" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Prize</label>
+            <input class="form-control" name="prize" value="<%= content.prize %>" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Winner Announced Label</label>
+            <input class="form-control" name="winnerDateLabel" value="<%= content.winnerDateLabel %>" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Eligibility</label>
+            <textarea class="form-control" name="eligibility" rows="2"><%= content.eligibility %></textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Entry Rules (one per line)</label>
+            <textarea class="form-control" name="entryRulesText" rows="4" readonly><%= content.entryRulesText %></textarea>
+            <div class="form-text">
+              Managed from <strong>Management → Competition Rules</strong>.
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Terms (one per line)</label>
+            <textarea class="form-control" name="termsText" rows="5"><%= content.termsText %></textarea>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details class="admin-compact-details">
+      <summary>FAQ</summary>
+      <div class="card card-body border-0 pt-2">
+        <div class="row g-3">
+          <% [1,2,3].forEach((n) => { %>
+          <div class="col-md-6">
+            <label class="form-label">FAQ <%= n %> Question</label>
+            <input class="form-control" name="faq<%= n %>Question" value="<%= content[`faq${n}Question`] %>" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">FAQ <%= n %> Answer</label>
+            <textarea class="form-control" name="faq<%= n %>Answer" rows="2"><%= content[`faq${n}Answer`] %></textarea>
+          </div>
+          <% }) %>
+        </div>
+      </div>
+    </details>
+
+    <div class="d-flex justify-content-end">
+      <button type="submit" class="btn btn-primary">Save Competition Content</button>
+    </div>
+  </form>
+</main>
+
+<script>
+  (() => {
+    const form = document.querySelector('form[data-enter-submit="true"]');
+    if (!form) return;
+    const scrollKey = "admin-competitions-content-scroll-y";
+    const detailsStateKey = "admin-competitions-content-details-state";
+    const detailsList = Array.from(
+      form.querySelectorAll("details.admin-compact-details"),
+    );
+
+    const restoreDetailsState = () => {
+      const raw = sessionStorage.getItem(detailsStateKey);
+      if (!raw) return;
+      try {
+        const openStates = JSON.parse(raw);
+        detailsList.forEach((detail, index) => {
+          detail.open = Boolean(openStates[index]);
+        });
+      } catch (_) {
+        sessionStorage.removeItem(detailsStateKey);
+      }
+    };
+
+    const rememberDetailsState = () => {
+      const openStates = detailsList.map((detail) => Boolean(detail.open));
+      sessionStorage.setItem(detailsStateKey, JSON.stringify(openStates));
+    };
+
+    restoreDetailsState();
+    detailsList.forEach((detail) => {
+      detail.addEventListener("toggle", rememberDetailsState);
+    });
+
+    const savedScroll = sessionStorage.getItem(scrollKey);
+    if (savedScroll !== null) {
+      sessionStorage.removeItem(scrollKey);
+      const scrollY = Number.parseInt(savedScroll, 10);
+      if (Number.isFinite(scrollY)) {
+        window.scrollTo({ top: scrollY, behavior: "auto" });
+      }
+    }
+
+    const rememberScroll = () => {
+      sessionStorage.setItem(scrollKey, String(window.scrollY || 0));
+    };
+
+    form.addEventListener("submit", () => {
+      rememberDetailsState();
+      rememberScroll();
+    });
+  })();
+</script>
+
+<%- include("partials/footer") %>

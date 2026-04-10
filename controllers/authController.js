@@ -1,82 +1,554 @@
+const { prisma } = require("../prisma/lib/prisma");
 const bcrypt = require("bcrypt");
-const asyncHandler = require("../utils/asyncHandler");
-const userModel = require("../models/userModel");
+const crypto = require("crypto");
+const nodemailer = require("nodemailer");
+const { logger } = require("../lib/logger");
+const APPROVED_AFFILIATE_STATUS = "APPROVED";
+const PASSWORD_RESET_WINDOW_MS = 1000 * 60 * 60;
+const ADMIN_ROLES = new Set(["ADMIN", "OWNER", "STAFF"]);
 
-const MIN_PASSWORD_LEN = 6;
+const normalizeAffiliateStatus = (value) =>
+  (value || "").toString().trim().toUpperCase();
 
-exports.signup = asyncHandler(async (req, res) => {
-  const name = String(req.body.name || "").trim();
-  const email = userModel.normalizeEmail(req.body.email);
-  const password = String(req.body.password || "");
+const buildSessionUser = (user, isAdmin) => {
+  const affiliateProgramStatus = normalizeAffiliateStatus(
+    user.affiliateProgramStatus,
+  );
+  const role = (user.role || "USER").toString().toUpperCase();
 
-  if (!name) {
-    return res.redirect(
-      "/signup?error=" + encodeURIComponent("Name is required"),
-    );
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name || "",
+    isAdmin,
+    isOwner: role === "OWNER",
+    role,
+    isAffiliate: affiliateProgramStatus === APPROVED_AFFILIATE_STATUS,
+    affiliateProgramStatus: affiliateProgramStatus || "NONE",
+    affiliateCode: user.affiliateCode || null,
+  };
+};
+
+const getSmtpConfig = () => {
+  const host = (process.env.SMTP_HOST || "").trim();
+  const port = Number.parseInt(process.env.SMTP_PORT || "", 10);
+  const secure = String(process.env.SMTP_SECURE || "false").toLowerCase() === "true";
+  const user = (process.env.SMTP_USER || "").trim();
+  const pass = process.env.SMTP_PASS || "";
+  const from =
+    (process.env.CONTACT_FROM_EMAIL || "").trim() || "no-reply@clubzero.local";
+
+  return {
+    host,
+    port,
+    secure,
+    user,
+    pass,
+    from,
+    isConfigured: Boolean(host && Number.isInteger(port) && user && pass),
+  };
+};
+
+const hashResetToken = (token) =>
+  crypto.createHash("sha256").update(token).digest("hex");
+
+const hashInviteToken = (token) =>
+  crypto.createHash("sha256").update(token).digest("hex");
+
+const logAudit = async ({ action, actorUserId, targetUserId, metadata }) => {
+  try {
+    await prisma.authAuditLog.create({
+      data: {
+        action,
+        actorUserId: actorUserId || null,
+        targetUserId: targetUserId || null,
+        metadata: metadata || undefined,
+      },
+    });
+  } catch (error) {
+    logger.warn("audit_log_failed", { action, error: error.message });
   }
-  if (!email) {
-    return res.redirect(
-      "/signup?error=" + encodeURIComponent("Email is required"),
-    );
-  }
-  if (password.length < MIN_PASSWORD_LEN) {
-    return res.redirect(
-      "/signup?error=" +
-        encodeURIComponent("Password must be at least 6 characters"),
-    );
+};
+
+const buildPasswordResetUrl = (req, token) => {
+  const fromEnv = (process.env.PUBLIC_BASE_URL || "").trim();
+  const baseUrl = fromEnv
+    ? fromEnv.replace(/\/+$/, "")
+    : `${req.get("x-forwarded-proto") === "https" ? "https" : req.protocol}://${req.get("host")}`;
+
+  return `${baseUrl}/auth/reset-password?token=${encodeURIComponent(token)}`;
+};
+
+const getSessionTableRef = () => {
+  const schema = (process.env.DB_SCHEMA || "clubzero_setup").trim() || "clubzero_setup";
+  return `"${schema}"."user_sessions"`;
+};
+
+const invalidateUserSessions = async (userId) => {
+  if (!Number.isInteger(userId)) {
+    return;
   }
 
-  const existing = await userModel.getByEmail(email);
-  if (existing) {
-    return res.redirect(
-      "/signup?error=" + encodeURIComponent("Email already exists"),
-    );
+  const tableRef = getSessionTableRef();
+  await prisma.$executeRawUnsafe(
+    `DELETE FROM ${tableRef} WHERE (sess->'user'->>'id')::int = $1`,
+    userId,
+  );
+};
+
+const sendPasswordResetEmail = async ({ user, token, req }) => {
+  const smtp = getSmtpConfig();
+  if (!smtp.isConfigured) {
+    logger.warn("password_reset_smtp_not_configured", { userId: user.id });
+    return false;
   }
 
-  const hashedPassword = await bcrypt.hash(password, 10);
-
-  await userModel.create({
-    name,
-    email,
-    passwordHash: hashedPassword,
+  const transporter = nodemailer.createTransport({
+    host: smtp.host,
+    port: smtp.port,
+    secure: smtp.secure,
+    auth: {
+      user: smtp.user,
+      pass: smtp.pass,
+    },
   });
 
-  res.redirect("/login");
-});
+  const resetUrl = buildPasswordResetUrl(req, token);
 
-exports.login = asyncHandler(async (req, res) => {
-  const email = userModel.normalizeEmail(req.body.email);
-  const password = String(req.body.password || "");
+  await transporter.sendMail({
+    from: smtp.from,
+    to: user.email,
+    subject: "Reset your Club Zero password",
+    text: [
+      `Hi ${user.name || "there"},`,
+      "",
+      "We received a request to reset your Club Zero password.",
+      `Reset your password here: ${resetUrl}`,
+      "",
+      "This link expires in 1 hour. If you did not request this, you can ignore this email.",
+    ].join("\n"),
+  });
 
-  const user = await userModel.getByEmail(email);
-  if (!user) {
+  return true;
+};
+
+const getValidPasswordResetToken = async (token) => {
+  const tokenHash = hashResetToken(token);
+
+  return prisma.passwordResetToken.findFirst({
+    where: {
+      tokenHash,
+      usedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+    include: {
+      user: true,
+    },
+  });
+};
+
+exports.getSignup = (req, res) => {
+  res.render("auth/signup", {
+    error: req.query.error || null,
+    referralCode: req.query.ref || req.session?.refAffiliateCode || null,
+  });
+};
+
+exports.postSignup = async (req, res) => {
+  try {
+    const email = (req.body.email || "").trim().toLowerCase();
+    const password = req.body.password || "";
+    const name = (req.body.name || "").trim();
+
+    if (!email || !password || !name) {
+      return res.status(400).send("Name, email, and password are required.");
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const referralAffiliateUserId = Number.parseInt(
+      req.session?.refAffiliateUserId,
+      10,
+    );
+
+    let referredByAffiliateId = null;
+    if (Number.isInteger(referralAffiliateUserId)) {
+      const affiliateUser = await prisma.user.findUnique({
+        where: { id: referralAffiliateUserId },
+        select: { id: true, affiliateProgramStatus: true },
+      });
+
+      if (
+        affiliateUser &&
+        normalizeAffiliateStatus(affiliateUser.affiliateProgramStatus) ===
+          APPROVED_AFFILIATE_STATUS
+      ) {
+        referredByAffiliateId = affiliateUser.id;
+      }
+    }
+
+    await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        name,
+        referredByAffiliateId,
+      },
+    });
+    return res.redirect("/auth/login");
+  } catch (error) {
+    if (error?.code === "P2002") {
+      return res.redirect(
+        `/auth/signup?error=${encodeURIComponent("An account with this email already exists.")}`,
+      );
+    }
+
     return res.redirect(
-      "/login?error=" + encodeURIComponent("Invalid credentials"),
+      `/auth/signup?error=${encodeURIComponent("Unable to sign up right now. Please try again.")}`,
+    );
+  }
+};
+
+exports.getLogin = (req, res) => {
+  res.render("auth/login", {
+    error: req.query.error || null,
+    success: req.query.success || null,
+  });
+};
+
+exports.getForgotPassword = (req, res) => {
+  res.render("auth/forgot-password", {
+    error: req.query.error || null,
+    success: req.query.success || null,
+  });
+};
+
+exports.postForgotPassword = async (req, res) => {
+  const email = (req.body.email || "").trim().toLowerCase();
+  const successMessage =
+    "If an account exists for that email, a password reset link has been sent.";
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, name: true },
+    });
+
+    if (!user) {
+      return res.redirect(
+        `/auth/forgot-password?success=${encodeURIComponent(successMessage)}`,
+      );
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const tokenHash = hashResetToken(token);
+    const expiresAt = new Date(Date.now() + PASSWORD_RESET_WINDOW_MS);
+
+    await prisma.passwordResetToken.deleteMany({
+      where: { userId: user.id },
+    });
+
+    await prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash,
+        expiresAt,
+      },
+    });
+
+    try {
+      await sendPasswordResetEmail({ user, token, req });
+    } catch (error) {
+      logger.warn("password_reset_email_failed", {
+        userId: user.id,
+        error: error.message,
+      });
+    }
+
+    return res.redirect(
+      `/auth/forgot-password?success=${encodeURIComponent(successMessage)}`,
+    );
+  } catch (error) {
+    logger.warn("password_reset_request_failed", {
+      email,
+      error: error.message,
+    });
+    return res.redirect(
+      `/auth/forgot-password?error=${encodeURIComponent("Unable to process your request right now. Please try again.")}`,
+    );
+  }
+};
+
+exports.getResetPassword = async (req, res) => {
+  const token = (req.query.token || "").toString().trim();
+
+  if (!token) {
+    return res.render("auth/reset-password", {
+      error: "This password reset link is invalid or has expired.",
+      success: req.query.success || null,
+      token: "",
+      tokenValid: false,
+    });
+  }
+
+  const resetToken = await getValidPasswordResetToken(token);
+
+  return res.render("auth/reset-password", {
+    error: req.query.error || null,
+    success: req.query.success || null,
+    token,
+    tokenValid: Boolean(resetToken),
+  });
+};
+
+exports.postLogin = async (req, res) => {
+  try {
+    const email = (req.body.email || "").trim();
+    const password = req.body.password || "";
+    const ownerEmail = (process.env.OWNER_EMAIL || "")
+      .toLowerCase()
+      .trim();
+
+    const user = await prisma.user.findUnique({
+      where: {
+        email,
+      },
+    });
+
+    if (!user) {
+      return res.redirect(
+        `/auth/login?error=${encodeURIComponent("User not found.")}`,
+      );
+    }
+
+    const valid = await bcrypt.compare(password, user.password);
+
+    if (!valid) {
+      return res.redirect(
+        `/auth/login?error=${encodeURIComponent("Incorrect password.")}`,
+      );
+    }
+    const userEmail = (user.email || "").toLowerCase().trim();
+    let role = (user.role || "USER").toUpperCase();
+
+    if (ownerEmail && userEmail === ownerEmail && role !== "OWNER") {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { role: "OWNER" },
+      });
+      role = "OWNER";
+    }
+
+    const isAdmin = role === "OWNER" || role === "ADMIN";
+    req.session.user = {
+      ...buildSessionUser({ ...user, role }, isAdmin),
+    };
+    return req.session.save(() => {
+      res.redirect("/");
+    });
+  } catch (_error) {
+    return res.redirect(
+      `/auth/login?error=${encodeURIComponent("Database connection failed. Please try again.")}`,
+    );
+  }
+};
+
+exports.postResetPassword = async (req, res) => {
+  const token = (req.body.token || "").toString().trim();
+  const password = req.body.password || "";
+
+  try {
+    const resetToken = await getValidPasswordResetToken(token);
+
+    if (!resetToken) {
+      return res.redirect(
+        `/auth/reset-password?token=${encodeURIComponent(token)}&error=${encodeURIComponent("This password reset link is invalid or has expired.")}`,
+      );
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: resetToken.userId },
+        data: { password: hashedPassword },
+      }),
+      prisma.passwordResetToken.update({
+        where: { id: resetToken.id },
+        data: { usedAt: new Date() },
+      }),
+      prisma.passwordResetToken.deleteMany({
+        where: {
+          userId: resetToken.userId,
+          id: { not: resetToken.id },
+        },
+      }),
+    ]);
+    try {
+      await invalidateUserSessions(resetToken.userId);
+    } catch (error) {
+      logger.warn("password_reset_session_invalidation_failed", {
+        userId: resetToken.userId,
+        error: error.message,
+      });
+    }
+
+    return res.redirect(
+      `/auth/login?success=${encodeURIComponent("Your password has been reset. You can now log in.")}`,
+    );
+  } catch (error) {
+    logger.warn("password_reset_complete_failed", {
+      error: error.message,
+    });
+    return res.redirect(
+      `/auth/reset-password?token=${encodeURIComponent(token)}&error=${encodeURIComponent("Unable to reset your password right now. Please try again.")}`,
+    );
+  }
+};
+
+exports.getInvite = async (req, res) => {
+  const token = (req.params.token || "").toString().trim();
+  if (!token) {
+    return res.render("auth/invite", {
+      error: req.query.error || "This invite link is invalid or has expired.",
+      tokenValid: false,
+      token: "",
+      email: "",
+      role: "",
+      needsAccount: false,
+    });
+  }
+
+  const tokenHash = hashInviteToken(token);
+  const invite = await prisma.adminInvite.findFirst({
+    where: {
+      tokenHash,
+      acceptedAt: null,
+      revokedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+  });
+
+  if (!invite) {
+    return res.render("auth/invite", {
+      error: req.query.error || "This invite link is invalid or has expired.",
+      tokenValid: false,
+      token: "",
+      email: "",
+      role: "",
+      needsAccount: false,
+    });
+  }
+
+  const existingUser = await prisma.user.findUnique({
+    where: { email: invite.email },
+    select: { id: true },
+  });
+
+  return res.render("auth/invite", {
+    error: req.query.error || null,
+    tokenValid: true,
+    token,
+    email: invite.email,
+    role: invite.role,
+    needsAccount: !existingUser,
+  });
+};
+
+exports.postInviteAccept = async (req, res) => {
+  const token = (req.params.token || "").toString().trim();
+  if (!token) {
+    return res.redirect(
+      `/auth/login?error=${encodeURIComponent("Invite link is invalid or expired.")}`,
     );
   }
 
-  const isBcryptHash =
-    typeof user.PasswordHash === "string" && user.PasswordHash.startsWith("$2");
-  const isValid = isBcryptHash
-    ? await bcrypt.compare(password, user.PasswordHash)
-    : password === user.PasswordHash;
-  if (!isValid) {
+  const tokenHash = hashInviteToken(token);
+  const invite = await prisma.adminInvite.findFirst({
+    where: {
+      tokenHash,
+      acceptedAt: null,
+      revokedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+  });
+
+  if (!invite) {
     return res.redirect(
-      "/login?error=" + encodeURIComponent("Invalid credentials"),
+      `/auth/login?error=${encodeURIComponent("Invite link is invalid or expired.")}`,
     );
   }
 
-  if (!isBcryptHash) {
-    const newHash = await bcrypt.hash(password, 10);
-    await userModel.updatePasswordByEmail(email, newHash);
+  if (!ADMIN_ROLES.has(invite.role)) {
+    return res.redirect(
+      `/auth/login?error=${encodeURIComponent("Invite role is not valid.")}`,
+    );
   }
 
-  req.session.user = { email: user.Email, name: user.Name };
-  res.redirect("/");
-});
+  const email = invite.email.toLowerCase();
+  const existingUser = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  let userId = existingUser?.id || null;
+
+  if (!existingUser) {
+    const name = (req.body.name || "").trim();
+    const password = req.body.password || "";
+    const confirmPassword = req.body.confirmPassword || "";
+
+    if (!name || !password) {
+      return res.redirect(
+        `/auth/invite/${encodeURIComponent(token)}?error=${encodeURIComponent(
+          "Name and password are required.",
+        )}`,
+      );
+    }
+    if (password !== confirmPassword) {
+      return res.redirect(
+        `/auth/invite/${encodeURIComponent(token)}?error=${encodeURIComponent(
+          "Passwords do not match.",
+        )}`,
+      );
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const createdUser = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        name,
+        role: invite.role,
+      },
+    });
+    userId = createdUser.id;
+  } else {
+    await prisma.user.update({
+      where: { id: existingUser.id },
+      data: { role: invite.role },
+    });
+  }
+
+  await prisma.adminInvite.update({
+    where: { id: invite.id },
+    data: { acceptedAt: new Date() },
+  });
+
+  await logAudit({
+    action: "admin_invite_accepted",
+    actorUserId: userId,
+    targetUserId: userId,
+    metadata: { inviteId: invite.id, role: invite.role },
+  });
+
+  return res.redirect(
+    `/auth/login?success=${encodeURIComponent(
+      "Invite accepted. You can now log in.",
+    )}`,
+  );
+};
 
 exports.logout = (req, res) => {
   req.session.destroy(() => {
-    res.redirect("/login");
+    res.redirect("/");
   });
 };

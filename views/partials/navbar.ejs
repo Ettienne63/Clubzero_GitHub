@@ -1,74 +1,145 @@
-<nav id="main-navbar">
-  <ul class="nav-left">
-    <li><a href="/">Home</a></li>
-    <li><a href="/about">About</a></li>
-    <li><a href="/products">Products</a></li>
-  </ul>
-
-  <div class="logo">Sanzo</div>
-
-  <ul class="nav-right">
-    <li>
-      <form class="nav-search" action="/products" method="GET">
-        <input type="text" name="q" placeholder="Search products..." />
-        <button type="submit">Search</button>
+<% if (isPaystackTestMode) { %>
+<div class="alert alert-warning mb-0 text-center rounded-0">
+  Paystack test mode is enabled. No real payments will be processed.
+</div>
+<% } %>
+<nav
+  class="navbar navbar-expand-lg navbar-light bg-white sticky-top shadow-sm cz-navbar"
+>
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center gap-2 cz-brand" href="/">
+      <% if (navbarLogoUrl) { %>
+      <img
+        src="<%= navbarLogoUrl %>"
+        alt="Club Zero"
+        class="cz-brand-logo"
+        loading="eager"
+        decoding="async"
+      />
+      <% } else { %>
+      <span class="cz-brand-text">Club Zero</span>
+      <% } %>
+    </a>
+    <button
+      class="navbar-toggler d-lg-none"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#collapsibleNavId"
+      aria-controls="collapsibleNavId"
+      aria-expanded="false"
+      aria-label="Toggle navigation"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="collapsibleNavId">
+      <ul class="navbar-nav me-auto mt-3 mt-lg-0 cz-nav-main">
+        <li class="nav-item dropdown">
+          <a
+            class="nav-link dropdown-toggle cz-nav-link"
+            href="#"
+            role="button"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+          >
+            About Us
+          </a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="/about">About Us</a></li>
+            <li><a class="dropdown-item" href="/contact">Contact</a></li>
+            <% if (showCompetitionsNavItem !== false) { %>
+            <li><a class="dropdown-item" href="/competitions">Competitions</a></li>
+            <% } %>
+          </ul>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link cz-nav-link" href="/auth/products">Products</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link cz-nav-link" href="/store-locator"
+            >Store Locations</a
+          >
+        </li>
+      </ul>
+      <form
+        class="d-flex my-2 my-lg-0 cz-search"
+        action="/auth/products"
+        method="GET"
+      >
+        <input
+          class="form-control me-sm-2"
+          type="text"
+          name="search"
+          placeholder="Search products"
+          value="<%= typeof searchQuery !== 'undefined' ? searchQuery : '' %>"
+        />
+        <button class="btn my-2 my-sm-0 cz-search-btn" type="submit">
+          Search
+        </button>
       </form>
-    </li>
-    <li><a href="/cart">Cart</a></li>
-    <% if (isAdmin) { %>
-      <li><a href="/admin">Admin</a></li>
-    <% } %>
-    <% if (user) { %>
-      <li>
-        <form action="/auth/logout" method="POST" class="nav-logout-form">
-          <button type="submit" class="nav-logout-btn">Logout</button>
-        </form>
-      </li>
-    <% } else { %>
-      <li><a href="/login">Login</a></li>
-    <% } %>
-  </ul>
-
-  <div class="hamburger" id="hamburger">
-    <span></span>
-    <span></span>
-    <span></span>
-  </div>
-</nav>
-<nav id="scroll-navbar">
-  <ul class="nav-left">
-    <li><a href="/">Home</a></li>
-    <li><a href="/about">About</a></li>
-    <li><a href="/products">Products</a></li>
-  </ul>
-
-  <div class="logo">Sanzo</div>
-
-  <ul class="nav-right">
-    <li>
-      <form class="nav-search" action="/products" method="GET">
-        <input type="text" name="q" placeholder="Search products..." />
-        <button type="submit">Search</button>
-      </form>
-    </li>
-    <li><a href="/cart">Cart</a></li>
-    <% if (isAdmin) { %>
-      <li><a href="/admin">Admin</a></li>
-    <% } %>
-    <% if (user) { %>
-      <li>
-        <form action="/auth/logout" method="POST" class="nav-logout-form">
-          <button type="submit" class="nav-logout-btn">Logout</button>
-        </form>
-      </li>
-    <% } else { %>
-      <li><a href="/login">Login</a></li>
-    <% } %>
-  </ul>
-
-  <div class="hamburger" id="scroll-hamburger">
-    <span></span>
-    <span></span>
-    <span></span>
+      <ul
+        class="navbar-nav ms-lg-3 mt-3 mt-lg-0 align-items-lg-center gap-lg-2"
+      >
+        <% const isLoggedIn = typeof user !== "undefined" && Boolean(user); %>
+        <% const showAdmin = isLoggedIn && Boolean(user.isAdmin); %>
+        <% const
+        showGoalTracker = isLoggedIn && (Boolean(user.isAdmin) ||
+        String(user.email || "").toLowerCase().trim().endsWith("@clubzero.co.za")); %>
+        <% if
+        (isLoggedIn) { %>
+        <% if (showAdmin) { %>
+        <li class="nav-item">
+          <a class="nav-link cz-nav-link" href="/admin">Admin</a>
+        </li>
+        <% } %>
+        <li class="nav-item">
+          <a class="nav-link cz-nav-link cz-cart-btn" href="/auth/cart">
+            <span class="fw-semibold">Cart</span>
+            <% if (Number(cartCount || 0) > 0) { %>
+            <span class="badge rounded-pill text-bg-light text-primary"
+              ><%= Number(cartCount) %></span
+            >
+            <% } %>
+          </a>
+        </li>
+        <li class="nav-item dropdown">
+          <a
+            class="nav-link dropdown-toggle cz-nav-link"
+            href="#"
+            role="button"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+          >
+            Account
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="/auth/profile">Profile</a></li>
+            <li><a class="dropdown-item" href="/auth/orders">Orders</a></li>
+            <% if (showGoalTracker) { %>
+            <li><a class="dropdown-item" href="/auth/goals">Goal Tracker</a></li>
+            <% } %>
+            <li>
+              <% if (Boolean(user.isAffiliate)) { %>
+              <a class="dropdown-item" href="/auth/affiliate"
+                >Affiliate Dashboard</a
+              >
+              <% } else { %>
+              <a class="dropdown-item" href="/auth/affiliate/join"
+                >Become Affiliate</a
+              >
+              <% } %>
+            </li>
+            <li><hr class="dropdown-divider" /></li>
+            <li><a class="dropdown-item" href="/auth/logout">Logout</a></li>
+          </ul>
+        </li>
+        <% } else { %>
+        <li class="nav-item">
+          <a class="btn btn-outline-primary btn-sm px-3" href="/auth/login">
+            Login
+          </a>
+        </li>
+        <% } %>
+      </ul>
+    </div>
   </div>
 </nav>

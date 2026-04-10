@@ -1,0 +1,237 @@
+<%- include("partials/header", { title: "Affiliate Dashboard" }) %>
+<%- include("partials/navbar") %>
+
+<main class="cz-banded">
+  <section class="cz-band">
+    <div class="container cz-section affiliate-page">
+      <% if (success) { %>
+      <div class="alert alert-success"><%= success %></div>
+      <% } %>
+      <% if (error) { %>
+      <div class="alert alert-danger"><%= error %></div>
+      <% } %>
+
+      <div
+        class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4"
+      >
+        <div>
+          <p class="affiliate-kicker mb-2">User Affiliate Program</p>
+          <h1 class="h3 mb-1">Affiliate Earnings</h1>
+          <p class="text-muted mb-0">
+            Earnings are calculated from referred order amounts.
+          </p>
+          <p class="small text-muted mb-0">
+            Self-referrals are not eligible for commission.
+          </p>
+          <p class="small text-muted mb-0">
+            Code: <strong><%= affiliateState.affiliateCode %></strong>
+          </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <a href="/auth/products" class="btn btn-outline-primary">Order More</a>
+        </div>
+      </div>
+
+  <section class="row g-3 mb-4">
+    <div class="col-12">
+      <article class="card affiliate-stat-card">
+        <div
+          class="card-body d-flex flex-wrap align-items-center justify-content-between gap-2"
+        >
+          <div>
+            <p class="small text-uppercase fw-semibold text-muted mb-1">
+              Your Referral Link
+            </p>
+            <p class="mb-0">
+              <code><%= referralLink %></code>
+            </p>
+          </div>
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-primary"
+            onclick="
+              navigator.clipboard &&
+                navigator.clipboard.writeText('<%= referralLink %>')
+            "
+          >
+            Copy Link
+          </button>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-md-6 col-lg-3">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">
+            Referral Clicks
+          </p>
+          <p class="h4 mb-0"><%= stats.referralClicksCount %></p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-md-6 col-lg-3">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">
+            Referred Signups
+          </p>
+          <p class="h4 mb-0"><%= stats.referredSignupsCount %></p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-md-6 col-lg-3">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">
+            Paid Orders
+          </p>
+          <p class="h4 mb-0"><%= stats.totalOrders %></p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-md-6 col-lg-3">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">
+            Paid Cases
+          </p>
+          <p class="h4 mb-0"><%= stats.totalProductsOrdered %></p>
+          <p class="small text-muted mb-0">
+            <%= stats.totalProductsOrdered * 12 %> bottles
+          </p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-md-6 col-lg-3">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">
+            Paid Order Value
+          </p>
+          <p class="h4 mb-0">R<%= Number(stats.totalSpent).toFixed(2) %></p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-md-6 col-lg-3">
+      <article class="card h-100 affiliate-earnings-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold mb-2">
+            Paid Earnings (<%= Math.round(stats.affiliateRate * 100) %>%)
+          </p>
+          <p class="h4 mb-0">
+            R<%= Number(stats.estimatedEarnings).toFixed(2) %>
+          </p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-md-6 col-lg-3">
+      <article class="card h-100 affiliate-earnings-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold mb-2">Available Balance</p>
+          <p class="h4 mb-0">
+            R<%= Number(stats.availableBalance || 0).toFixed(2) %>
+          </p>
+          <p class="small text-muted mb-0">Use this on your next order</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="row g-3 mb-4">
+    <div class="col-12 col-lg-4">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">
+            How It Works
+          </p>
+          <p class="mb-2">Share your referral link with customers.</p>
+          <p class="mb-2">We track signups and orders from your link.</p>
+          <p class="mb-0">
+            Earn <%= Math.round(stats.affiliateRate * 100) %>% on referred order
+            totals.
+          </p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-lg-4">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">
+            Payout Timeline
+          </p>
+          <p class="mb-2">Orders are marked paid after payment.</p>
+          <p class="mb-2">
+            Paid earnings are added to your balance immediately.
+          </p>
+          <p class="mb-0">Use your available balance at checkout.</p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-lg-4">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">
+            Promotion Tips
+          </p>
+          <p class="mb-2">Add your link to social bios and email signatures.</p>
+          <p class="mb-2">Share product benefits and tasting notes.</p>
+          <p class="mb-0">Remind customers to use your link at signup.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+      <section class="card shadow-sm">
+        <div class="card-body">
+      <h2 class="h5 mb-3">Order Breakdown</h2>
+      <% if (!orders || orders.length === 0) { %>
+      <div class="alert alert-info mb-0">
+        No referred orders yet. Share your link to start earning.
+      </div>
+      <% } else { %>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead>
+            <tr>
+              <th scope="col">Order #</th>
+              <th scope="col">Customer</th>
+              <th scope="col">Date</th>
+              <th scope="col">Affiliate Status</th>
+              <th scope="col">Paid At</th>
+              <th scope="col">Order Total</th>
+              <th scope="col">Commission</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% orders.forEach((order) => { %>
+            <tr>
+              <td><%= order.id %></td>
+              <td>
+                <%= order.user?.name || order.user?.email || "Customer" %>
+              </td>
+              <td><%= new Date(order.createdAt).toLocaleDateString() %></td>
+              <td>
+                <% if (order.affiliateStatus === "pending") { %>
+                <span class="badge text-bg-warning">Pending</span>
+                <% } else { %>
+                <span class="badge text-bg-success">Paid</span>
+                <% } %>
+              </td>
+              <td>
+                <%= order.affiliatePaidAt ? new Date(order.affiliatePaidAt).toLocaleString() : "-" %>
+              </td>
+              <td>R<%= Number(order.total).toFixed(2) %></td>
+              <td>R<%= Number(order.commission).toFixed(2) %></td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% } %>
+    </div>
+      </section>
+    </div>
+  </section>
+</main>
+
+<%- include("partials/footer") %>

@@ -1,0 +1,215 @@
+<% if (products && products.length > 0) { %>
+  <% products.forEach((product) => { %>
+  <% const productHistory = websiteHistoryByProductId && websiteHistoryByProductId[product.id] ? websiteHistoryByProductId[product.id] : []; %>
+  <div class="modal fade" id="websiteHistoryModal-<%= product.id %>" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title fs-5"><%= product.name %> History</h2>
+          <div class="d-flex align-items-center gap-2 ms-auto">
+            <a
+              href="/admin/inventory/history/export?scope=website&entityId=<%= product.id %>"
+              class="btn btn-outline-success btn-sm"
+            >
+              Export Excel
+            </a>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+        </div>
+        <div class="modal-body">
+          <% if (!productHistory.length) { %>
+          <p class="text-muted mb-0">No history yet for this product.</p>
+          <% } else { %>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Action</th>
+                  <th>Reason</th>
+                  <th>Change</th>
+                  <th>User</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% productHistory.forEach((entry, entryIndex) => { %>
+                    <% const actionKey = String(entry.action || "").toUpperCase(); %>
+                    <% const actionBadgeClass = actionKey === "ADD_STOCK"
+                      ? "text-bg-success"
+                      : actionKey === "REMOVE_STOCK"
+                        ? "text-bg-danger"
+                        : actionKey === "SET_STOCK"
+                          ? "text-bg-primary"
+                          : actionKey === "CREATE"
+                            ? "text-bg-info"
+                            : actionKey === "DELETE"
+                              ? "text-bg-secondary"
+                              : "text-bg-light text-dark"; %>
+                    <% const changeValue = Number.isFinite(Number(entry.changeQuantity))
+                      ? Number(entry.changeQuantity)
+                      : null; %>
+                    <% const changeClass = changeValue === null
+                      ? "text-muted"
+                      : changeValue > 0
+                        ? "text-success"
+                        : changeValue < 0
+                          ? "text-danger"
+                          : "text-muted"; %>
+                    <% const changeLabel = changeValue === null
+                      ? "-"
+                      : changeValue > 0
+                        ? `+${changeValue}`
+                        : `${changeValue}`; %>
+                <tr
+                  data-history-row
+                  class="<%= entryIndex >= 5 ? 'd-none' : '' %>"
+                >
+                  <td><%= new Date(entry.createdAt).toLocaleString() %></td>
+                      <td>
+                        <span class="badge <%= actionBadgeClass %> inventory-action-badge">
+                          <%= actionKey.replace(/_/g, " ") %>
+                        </span>
+                      </td>
+                      <td><%= entry.reason ? entry.reason.replace(/_/g, " ") : "-" %></td>
+                      <td>
+                        <div><%= entry.previousQuantity ?? "-" %> -> <%= entry.newQuantity ?? "-" %></div>
+                        <div class="small fw-semibold <%= changeClass %>">
+                          <%= changeLabel %>
+                        </div>
+                      </td>
+                      <td><%= entry.actorEmail || "-" %></td>
+                </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+          <% if (productHistory.length > 5) { %>
+          <div class="mt-2">
+            <button
+              type="button"
+              class="btn btn-outline-secondary btn-sm"
+              data-history-load-more
+              data-history-step="5"
+              data-history-initial="5"
+            >
+              Load more
+            </button>
+          </div>
+          <% } %>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+  <% }) %>
+<% } %>
+
+<% if (suppliers && suppliers.length > 0) { %>
+  <% suppliers.forEach((supplier) => { %>
+    <% if (supplier.customProducts && supplier.customProducts.length > 0) { %>
+      <% supplier.customProducts.forEach((customProduct) => { %>
+      <% const customHistory = customHistoryByProductId && customHistoryByProductId[customProduct.id] ? customHistoryByProductId[customProduct.id] : []; %>
+      <div class="modal fade" id="supplierCustomHistoryModal-<%= customProduct.id %>" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2 class="modal-title fs-5"><%= customProduct.name %> History</h2>
+              <div class="d-flex align-items-center gap-2 ms-auto">
+                <a
+                  href="/admin/inventory/history/export?scope=supplier-custom&entityId=<%= customProduct.id %>"
+                  class="btn btn-outline-success btn-sm"
+                >
+                  Export Excel
+                </a>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+            </div>
+            <div class="modal-body">
+              <% if (!customHistory.length) { %>
+              <p class="text-muted mb-0">No history yet for this supplier product.</p>
+              <% } else { %>
+              <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Action</th>
+                      <th>Reason</th>
+                      <th>Change</th>
+                      <th>User</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% customHistory.forEach((entry, entryIndex) => { %>
+                    <% const actionKey = String(entry.action || "").toUpperCase(); %>
+                    <% const actionBadgeClass = actionKey === "ADD_STOCK"
+                      ? "text-bg-success"
+                      : actionKey === "REMOVE_STOCK"
+                        ? "text-bg-danger"
+                        : actionKey === "SET_STOCK"
+                          ? "text-bg-primary"
+                          : actionKey === "CREATE"
+                            ? "text-bg-info"
+                            : actionKey === "DELETE"
+                              ? "text-bg-secondary"
+                              : "text-bg-light text-dark"; %>
+                    <% const changeValue = Number.isFinite(Number(entry.changeQuantity))
+                      ? Number(entry.changeQuantity)
+                      : null; %>
+                    <% const changeClass = changeValue === null
+                      ? "text-muted"
+                      : changeValue > 0
+                        ? "text-success"
+                        : changeValue < 0
+                          ? "text-danger"
+                          : "text-muted"; %>
+                    <% const changeLabel = changeValue === null
+                      ? "-"
+                      : changeValue > 0
+                        ? `+${changeValue}`
+                        : `${changeValue}`; %>
+                    <tr
+                      data-history-row
+                      class="<%= entryIndex >= 5 ? 'd-none' : '' %>"
+                    >
+                      <td><%= new Date(entry.createdAt).toLocaleString() %></td>
+                      <td>
+                        <span class="badge <%= actionBadgeClass %> inventory-action-badge">
+                          <%= actionKey.replace(/_/g, " ") %>
+                        </span>
+                      </td>
+                      <td><%= entry.reason ? entry.reason.replace(/_/g, " ") : "-" %></td>
+                      <td>
+                        <div><%= entry.previousQuantity ?? "-" %> -> <%= entry.newQuantity ?? "-" %></div>
+                        <div class="small fw-semibold <%= changeClass %>">
+                          <%= changeLabel %>
+                        </div>
+                      </td>
+                      <td><%= entry.actorEmail || "-" %></td>
+                    </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              </div>
+              <% if (customHistory.length > 5) { %>
+              <div class="mt-2">
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary btn-sm"
+                  data-history-load-more
+                  data-history-step="5"
+                  data-history-initial="5"
+                >
+                  Load more
+                </button>
+              </div>
+              <% } %>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+      <% }) %>
+    <% } %>
+  <% }) %>
+<% } %>

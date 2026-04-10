@@ -1,0 +1,66 @@
+<script>
+  (() => {
+    const stateKey = <%- JSON.stringify(typeof stateKey === "string" ? stateKey : "adminUiState") %>;
+    const formSelector = <%- JSON.stringify(typeof formSelector === "string" ? formSelector : "form") %>;
+    const forms = document.querySelectorAll(formSelector);
+    const autoSubmitToggleId = <%- JSON.stringify(typeof autoSubmitToggleId === "string" ? autoSubmitToggleId : null) %>;
+    const autoSubmitFormId = <%- JSON.stringify(typeof autoSubmitFormId === "string" ? autoSubmitFormId : null) %>;
+    const skipModalRestoreOnSuccess = <%- JSON.stringify(typeof skipModalRestoreOnSuccess !== "undefined" ? Boolean(skipModalRestoreOnSuccess) : false) %>;
+
+    if (autoSubmitToggleId && autoSubmitFormId) {
+      const toggleInput = document.getElementById(autoSubmitToggleId);
+      const toggleForm = document.getElementById(autoSubmitFormId);
+      if (toggleInput && toggleForm) {
+        toggleInput.addEventListener("change", () => {
+          toggleForm.submit();
+        });
+      }
+    }
+
+    forms.forEach((form) => {
+      form.addEventListener("submit", () => {
+        const modalEl = form.closest(".modal");
+        const state = {
+          scrollY: window.scrollY || 0,
+          modalId: modalEl ? modalEl.id : null,
+        };
+        window.sessionStorage.setItem(stateKey, JSON.stringify(state));
+      });
+    });
+
+    window.addEventListener("load", () => {
+      const rawState = window.sessionStorage.getItem(stateKey);
+      if (!rawState) {
+        return;
+      }
+
+      window.sessionStorage.removeItem(stateKey);
+
+      let state = null;
+      try {
+        state = JSON.parse(rawState);
+      } catch (_error) {
+        return;
+      }
+
+      if (Number.isFinite(state?.scrollY)) {
+        window.scrollTo(0, state.scrollY);
+      }
+
+      if (skipModalRestoreOnSuccess) {
+        const params = new URLSearchParams(window.location.search || "");
+        if (params.has("success")) {
+          return;
+        }
+      }
+
+      if (state?.modalId && window.bootstrap?.Modal) {
+        const modalElement = document.getElementById(state.modalId);
+        if (modalElement) {
+          const modal = window.bootstrap.Modal.getOrCreateInstance(modalElement);
+          modal.show();
+        }
+      }
+    });
+  })();
+</script>

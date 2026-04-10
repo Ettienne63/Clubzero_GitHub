@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="csrf-token"
+      content="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>"
+    />
+    <link rel="icon" type="image/avif" href="/images/ClubZero_logo.png" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <% if (typeof preloadImageUrl !== "undefined" && preloadImageUrl) { %>
+    <link rel="preload" as="image" href="<%= preloadImageUrl %>" />
+    <% } %>
+
+    <title><%= typeof title !== "undefined" ? title : "App" %></title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="/style.css?v=scene-20260325-76" />
+  </head>
+  <body data-site-theme="<%= siteTheme || 'sunset' %>">

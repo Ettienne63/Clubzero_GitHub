@@ -1,0 +1,589 @@
+<%- include("partials/header", { title: "Promotion Discounts" }) %>
+<%- include("partials/navbar") %>
+<%- include("partials/admin-nav") %>
+
+<main class="container py-5 admin-shell">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">Promotion Discounts</h1>
+      <p class="text-muted mb-0">
+        Manage discount behavior for products during promotions.
+      </p>
+    </div>
+    <a href="/admin/promo-content" class="btn btn-outline-primary">
+      Edit Promotion Content
+    </a>
+  </div>
+
+  <%- include("partials/admin-floating-alert", { success, error }) %>
+
+  <section class="card mb-4">
+    <div class="card-body">
+      <h2 class="h5 mb-3">Promotion Visibility</h2>
+      <form action="/admin/promo/toggle" method="POST" id="promoToggleForm">
+        <div class="form-check form-switch mb-2">
+          <input
+            id="promoEnabled"
+            name="promoEnabled"
+            class="form-check-input"
+            type="checkbox"
+            <%= promoSettings?.enabled ? "checked" : "" %>
+          />
+          <label class="form-check-label" for="promoEnabled">
+            Show promotion on homepage
+          </label>
+        </div>
+      </form>
+      <% if (!promoSettings?.enabled) { %>
+      <div class="small text-muted">
+        Promotion content is currently hidden. You can still prepare discounts below.
+      </div>
+      <% } %>
+    </div>
+  </section>
+
+  <section class="card mb-4">
+    <div class="card-body">
+      <h2 class="h5 mb-3">Countdown Chip</h2>
+      <form action="/admin/promo/countdown" method="POST" id="promoCountdownForm">
+        <div class="form-check form-switch mb-3">
+          <input
+            id="promoCountdownEnabled"
+            name="promoCountdownEnabled"
+            class="form-check-input"
+            type="checkbox"
+            <%= promoSettings?.countdownEnabled ? "checked" : "" %>
+            <%= promoSettings?.enabled ? "" : "disabled" %>
+          />
+          <label class="form-check-label" for="promoCountdownEnabled">
+            Show countdown chip next to "Limited Offer" badge
+          </label>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="promoCountdownPrefix" class="form-label">Countdown Prefix</label>
+            <input
+              id="promoCountdownPrefix"
+              name="promoCountdownPrefix"
+              class="form-control"
+              value="<%= promoSettings?.countdownPrefix || 'Ends in' %>"
+              placeholder="Ends in"
+              <%= promoSettings?.enabled ? "" : "disabled" %>
+            />
+          </div>
+          <div class="col-md-6">
+            <label for="promoCountdownEndDate" class="form-label">Countdown End Date</label>
+            <input
+              id="promoCountdownEndDate"
+              name="promoCountdownEndDate"
+              type="date"
+              class="form-control"
+              value="<%= promoSettings?.countdownEndDate || '' %>"
+              <%= promoSettings?.enabled ? "" : "disabled" %>
+            />
+          </div>
+        </div>
+        <% if (!promoSettings?.enabled) { %>
+        <div class="small text-muted mt-2">
+          Countdown is inactive because promotion visibility is off.
+        </div>
+        <% } %>
+      </form>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h5 mb-0">Product Discounts</h2>
+        <span class="text-muted small">Percentage off each product</span>
+      </div>
+      <div id="discountsSaveStatus" class="fw-semibold small text-muted mb-2"></div>
+      <div class="alert alert-info py-2">
+        <div class="form-check form-switch mb-0">
+          <input
+            id="discountsEnabled"
+            name="discountsEnabled"
+            class="form-check-input"
+            type="checkbox"
+            form="discountsForm"
+            <%= promoSettings?.discountsEnabled && promoSettings?.enabled ? "checked" : "" %>
+            <%= promoSettings?.enabled ? "" : "disabled" %>
+          />
+          <label class="form-check-label" for="discountsEnabled">
+            Enable product discounts
+          </label>
+        </div>
+        <% if (!promoSettings?.enabled) { %>
+        <div class="small text-muted mt-1">
+          Discounts are disabled because the main promotion toggle is off.
+        </div>
+        <% } %>
+        <% if (promoSettings?.enabled && !promoSettings?.discountsEnabled) { %>
+        <div class="small text-muted mt-1">
+          All product discounts have been switched off.
+        </div>
+        <% } %>
+      </div>
+      <% if (!products || products.length === 0) { %>
+      <p class="text-muted mb-0">No products found yet.</p>
+      <% } else { %>
+      <form action="/admin/promo/discounts" method="POST" id="discountsForm">
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th scope="col">Product</th>
+                <th scope="col">Current Price</th>
+                <th scope="col">Discounted Price</th>
+                <th scope="col">Discount %</th>
+                <th scope="col">Enabled</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% products.forEach((product) => { %>
+              <% const discountPercent = Number(product.discountPercent || 0); %>
+              <% const discountsActive = promoSettings?.enabled && promoSettings?.discountsEnabled && product.discountEnabled !== false; %>
+              <% const discountedPrice = discountsActive && discountPercent > 0 ? Number(product.price) * (1 - discountPercent / 100) : Number(product.price); %>
+              <tr data-product-row data-price="<%= Number(product.price) %>">
+                <td>
+                  <div class="d-flex align-items-center gap-3">
+                    <img
+                      src="<%= product.imageUrl %>"
+                      alt="<%= product.name %>"
+                      class="rounded border admin-image-frame"
+                      style="width: 56px; height: 56px"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                    <div>
+                      <div class="fw-semibold"><%= product.name %></div>
+                      <div class="small text-muted">
+                        <%= product.isActive ? "Visible" : "Hidden" %>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td>R<%= Number(product.price).toFixed(2) %></td>
+                <td>
+                  <span
+                    class="<%= discountsActive && discountPercent > 0 ? 'price-discounted' : '' %>"
+                    data-discounted-price
+                  >
+                    R<%= Number(discountedPrice).toFixed(2) %>
+                  </span>
+                  <div class="small text-muted" data-discount-status>
+                    <%= discountsActive ? "" : "Disabled" %>
+                  </div>
+                </td>
+                <td style="max-width: 140px">
+                  <input
+                    name="discountPercent_<%= product.id %>"
+                    type="number"
+                    min="0"
+                    max="90"
+                    step="0.1"
+                    class="form-control"
+                    value="<%= product.discountPercent || 0 %>"
+                    data-discount-input
+                  />
+                </td>
+                <td>
+                  <div class="form-check form-switch">
+                    <input
+                      type="hidden"
+                      name="discountEnabled_<%= product.id %>"
+                      value="off"
+                    />
+                    <input
+                      id="discountEnabled_<%= product.id %>"
+                      name="discountEnabled_<%= product.id %>"
+                      class="form-check-input"
+                      type="checkbox"
+                      value="on"
+                      <%= product.discountEnabled !== false ? "checked" : "" %>
+                      <%= promoSettings?.enabled && promoSettings?.discountsEnabled ? "" : "disabled" %>
+                    />
+                  </div>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+        <hr class="my-4" />
+        <div
+          class="rounded border p-3"
+          data-mix-lab-row
+          data-price="<%= Number(mixLabSettings?.baseCasePrice || 0) %>"
+          data-has-fixed-price="<%= mixLabSettings?.hasFixedPrice ? 'true' : 'false' %>"
+        >
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h3 class="h6 mb-0">Mix Lab Discount</h3>
+            <span class="text-muted small">Build Your Own 12-Pack</span>
+          </div>
+          <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+              <label class="form-label mb-1">Current Price</label>
+              <div class="fw-semibold" data-mix-lab-current-price>
+                <% if (mixLabSettings?.hasFixedPrice) { %>
+                R<%= Number(mixLabSettings.baseCasePrice || 0).toFixed(2) %>
+                <% } else { %>
+                Not set in Product Settings
+                <% } %>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label mb-1">Discounted Price</label>
+              <div
+                class="<%= mixLabSettings?.discountActive && Number(mixLabSettings?.discountPercent || 0) > 0 ? 'price-discounted fw-semibold' : 'fw-semibold' %>"
+                data-mix-lab-discounted-price
+              >
+                <% if (mixLabSettings?.hasFixedPrice) { %>
+                R<%= Number(mixLabSettings?.discountedCasePrice || 0).toFixed(2) %>
+                <% } else { %>
+                Set Mix Lab price first
+                <% } %>
+              </div>
+              <div class="small text-muted" data-mix-lab-discount-status>
+                <%= mixLabSettings?.discountActive ? "" : "Disabled" %>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <label for="mixLabDiscountPercent" class="form-label mb-1">Discount %</label>
+              <input
+                id="mixLabDiscountPercent"
+                name="mixLabDiscountPercent"
+                type="number"
+                min="0"
+                max="90"
+                step="0.1"
+                class="form-control"
+                value="<%= Number(mixLabSettings?.discountPercent || 0) %>"
+              />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label mb-1 d-block">Enabled</label>
+              <div class="form-check form-switch">
+                <input type="hidden" name="mixLabDiscountEnabled" value="off" />
+                <input
+                  id="mixLabDiscountEnabled"
+                  name="mixLabDiscountEnabled"
+                  class="form-check-input"
+                  type="checkbox"
+                  value="on"
+                  <%= mixLabSettings?.discountEnabled !== false ? "checked" : "" %>
+                  <%= promoSettings?.enabled && promoSettings?.discountsEnabled ? "" : "disabled" %>
+                />
+                <label class="form-check-label" for="mixLabDiscountEnabled">
+                  Apply Mix Lab discount
+                </label>
+              </div>
+            </div>
+          </div>
+          <p class="small text-muted mb-0 mt-2">
+            Mix Lab base price is managed in Product Settings.
+          </p>
+        </div>
+      </form>
+      <% } %>
+    </div>
+  </section>
+</main>
+
+<script>
+  (() => {
+    const toggle = document.getElementById("promoEnabled");
+    const form = document.getElementById("promoToggleForm");
+    if (!toggle || !form) return;
+    const scrollKey = "adminPromoScrollY";
+
+    const restoreScroll = () => {
+      const saved = window.sessionStorage.getItem(scrollKey);
+      if (!saved) return;
+      window.sessionStorage.removeItem(scrollKey);
+      const y = Number.parseInt(saved, 10);
+      if (Number.isFinite(y)) {
+        window.scrollTo(0, y);
+      }
+    };
+
+    const persistScroll = () => {
+      window.sessionStorage.setItem(scrollKey, String(window.scrollY || 0));
+    };
+
+    restoreScroll();
+    form.addEventListener("submit", persistScroll);
+
+    toggle.addEventListener("change", () => {
+      persistScroll();
+      form.requestSubmit();
+    });
+  })();
+</script>
+
+<script>
+  (() => {
+    const form = document.getElementById("promoCountdownForm");
+    if (!form) return;
+    const scrollKey = "adminPromoScrollY";
+
+    const restoreScroll = () => {
+      const saved = window.sessionStorage.getItem(scrollKey);
+      if (!saved) return;
+      window.sessionStorage.removeItem(scrollKey);
+      const y = Number.parseInt(saved, 10);
+      if (Number.isFinite(y)) {
+        window.scrollTo(0, y);
+      }
+    };
+
+    const persistScroll = () => {
+      window.sessionStorage.setItem(scrollKey, String(window.scrollY || 0));
+    };
+
+    restoreScroll();
+    form.addEventListener("submit", persistScroll);
+
+    const autoSubmitOnChange = [
+      "promoCountdownEnabled",
+      "promoCountdownEndDate",
+    ];
+
+    autoSubmitOnChange.forEach((id) => {
+      const input = document.getElementById(id);
+      if (!input) return;
+      input.addEventListener("change", () => {
+        persistScroll();
+        form.requestSubmit();
+      });
+    });
+
+    const prefix = document.getElementById("promoCountdownPrefix");
+    if (prefix) {
+      prefix.addEventListener("blur", () => {
+        persistScroll();
+        form.requestSubmit();
+      });
+    }
+  })();
+</script>
+
+<script>
+  (() => {
+    const form = document.getElementById("discountsForm");
+    if (!form) return;
+
+    const token = document
+      .querySelector('meta[name="csrf-token"]')
+      ?.getAttribute("content");
+    let saveTimer = null;
+    const debounceMs = 600;
+
+    const statusEl = document.getElementById("discountsSaveStatus");
+    const setStatus = (message, kind = "info") => {
+      if (!statusEl) return;
+      statusEl.textContent = message || "";
+      const baseClass = "fw-semibold small mb-2";
+      if (kind === "error") {
+        statusEl.className = `${baseClass} text-danger`;
+        return;
+      }
+      if (message?.toLowerCase().includes("discounts on")) {
+        statusEl.className = `${baseClass} text-success`;
+        return;
+      }
+      if (message?.toLowerCase().includes("discounts off")) {
+        statusEl.className = `${baseClass} text-warning`;
+        return;
+      }
+      statusEl.className = `${baseClass} text-muted`;
+    };
+
+    const submitDiscounts = async () => {
+      if (saveTimer) {
+        clearTimeout(saveTimer);
+      }
+
+      const rawData = new FormData(form);
+      const globalToggle = document.getElementById("discountsEnabled");
+      if (globalToggle) {
+        rawData.set("discountsEnabled", globalToggle.checked ? "on" : "off");
+      }
+      if (token) {
+        rawData.set("_csrf", token);
+      }
+      const formData = new URLSearchParams();
+      rawData.forEach((value, key) => {
+        formData.append(key, value);
+      });
+
+      try {
+        setStatus("Saving...");
+        const response = await fetch(form.action, {
+          method: "POST",
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            "X-CSRF-Token": token || "",
+            Accept: "application/json",
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+          },
+          credentials: "same-origin",
+          body: formData.toString(),
+        });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) {
+          setStatus(payload?.message || "Save failed.", "error");
+          return;
+        }
+        const extra =
+          typeof payload?.discountsEnabled === "boolean"
+            ? ` (discounts ${payload.discountsEnabled ? "on" : "off"})`
+            : "";
+        setStatus(
+          extra
+            ? `Discounts ${payload.discountsEnabled ? "on" : "off"}.`
+            : payload?.message || "Saved.",
+        );
+      } catch {
+        setStatus("Save failed.", "error");
+      }
+    };
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      submitDiscounts();
+    });
+
+    const autoSaveInputs = form.querySelectorAll(
+      'input[type="checkbox"], input[type="number"]',
+    );
+    autoSaveInputs.forEach((input) => {
+      const handler = () => {
+        if (input.type === "number") {
+          if (saveTimer) {
+            clearTimeout(saveTimer);
+          }
+          saveTimer = setTimeout(() => {
+            submitDiscounts();
+          }, debounceMs);
+          updateDiscountTable();
+          return;
+        }
+
+        submitDiscounts();
+        updateDiscountTable();
+      };
+
+      input.addEventListener(
+        input.type === "number" ? "input" : "change",
+        handler,
+      );
+    });
+
+    const globalToggle = document.getElementById("discountsEnabled");
+    if (globalToggle) {
+      globalToggle.addEventListener("change", () => {
+        const productToggles = form.querySelectorAll(
+          'input[type="checkbox"][id^="discountEnabled_"]',
+        );
+        const mixLabToggle = document.getElementById("mixLabDiscountEnabled");
+        if (!globalToggle.checked) {
+          productToggles.forEach((toggle) => {
+            toggle.checked = false;
+            toggle.disabled = true;
+          });
+          if (mixLabToggle) {
+            mixLabToggle.checked = false;
+            mixLabToggle.disabled = true;
+          }
+        } else {
+          productToggles.forEach((toggle) => {
+            toggle.disabled = false;
+          });
+          if (mixLabToggle) {
+            mixLabToggle.disabled = false;
+          }
+        }
+        submitDiscounts();
+        updateDiscountTable();
+      });
+    }
+
+    const updateDiscountTable = () => {
+      const globalToggle = document.getElementById("discountsEnabled");
+      const globalOn = Boolean(globalToggle?.checked);
+      const rows = form.querySelectorAll("[data-product-row]");
+      const mixLabRow = form.querySelector("[data-mix-lab-row]");
+
+      rows.forEach((row) => {
+        const price = Number(row.getAttribute("data-price") || 0);
+        const percentInput = row.querySelector("[data-discount-input]");
+        const enabledToggle = row.querySelector(
+          'input[type="checkbox"][id^="discountEnabled_"]',
+        );
+        const discountedEl = row.querySelector("[data-discounted-price]");
+        const statusEl = row.querySelector("[data-discount-status]");
+
+        const percent = Math.max(
+          0,
+          Math.min(90, Number(percentInput?.value || 0)),
+        );
+        const enabled = globalOn && Boolean(enabledToggle?.checked);
+        const discounted = enabled && percent > 0 ? price * (1 - percent / 100) : price;
+
+        if (discountedEl) {
+          discountedEl.textContent = `R${discounted.toFixed(2)}`;
+          discountedEl.classList.toggle(
+            "price-discounted",
+            enabled && percent > 0,
+          );
+        }
+        if (statusEl) {
+          statusEl.textContent = enabled ? "" : "Disabled";
+        }
+      });
+
+      if (mixLabRow) {
+        const hasFixedPrice =
+          mixLabRow.getAttribute("data-has-fixed-price") === "true";
+        const price = Number(mixLabRow.getAttribute("data-price") || 0);
+        const percentInput = document.getElementById("mixLabDiscountPercent");
+        const enabledToggle = document.getElementById("mixLabDiscountEnabled");
+        const discountedEl = mixLabRow.querySelector(
+          "[data-mix-lab-discounted-price]",
+        );
+        const statusEl = mixLabRow.querySelector("[data-mix-lab-discount-status]");
+
+        const percent = Math.max(
+          0,
+          Math.min(90, Number(percentInput?.value || 0)),
+        );
+        const enabled = globalOn && Boolean(enabledToggle?.checked);
+        const discounted =
+          enabled && percent > 0 ? price * (1 - percent / 100) : price;
+
+        if (discountedEl) {
+          if (!hasFixedPrice || !Number.isFinite(price) || price <= 0) {
+            discountedEl.textContent = "Set Mix Lab price first";
+            discountedEl.classList.remove("price-discounted");
+          } else {
+            discountedEl.textContent = `R${discounted.toFixed(2)}`;
+            discountedEl.classList.toggle(
+              "price-discounted",
+              enabled && percent > 0,
+            );
+          }
+        }
+
+        if (statusEl) {
+          statusEl.textContent = enabled ? "" : "Disabled";
+        }
+      }
+    };
+
+    updateDiscountTable();
+  })();
+</script>
+
+<%- include("partials/footer") %>

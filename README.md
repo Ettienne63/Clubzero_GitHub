@@ -1,31 +1,127 @@
-# Sanzo E-commerce
+# Club Zero Website
 
-**Quick Start**
+Express + EJS ecommerce app for Club Zero with products, cart, checkout, orders, affiliate tracking, and contact forms.
 
-1. Install and open Docker Desktop.
-2. Create your local env file:
-   `Copy-Item .env.example .env`
-3. Edit `.env` and set real secrets:
-   - `SESSION_SECRET` should be unique per developer.
-   - `DB_PASSWORD` should be unique`.
-4. Start everything:
-   `docker compose up -d --build`
-5. Open the app:
-   `http://localhost:9000`
+## Local Setup
 
-**Notes**
+1. Install dependencies:
 
-- `.env.example` is a template. The app reads only `.env`.
-- The backend connects to SQL Server at host `db` on port `1433`.
-- If the database does not exist yet, create it by running `db/setup.sql` against the `db` service.
-- You do not need to rebuild for README changes. Rebuild only when code, dependencies, or the Dockerfile changes.
+```bash
+npm install
+```
 
-**Connect With SSMS / Azure Data Studio**
-Use these values when connecting:
+2. Create your environment file:
 
-- Server name: `localhost,14330`
-- Authentication: `SQL Server Authentication`
-- Username/Login: `sa`
-- Password: your `DB_PASSWORD` from `.env`
-- Database name: leave blank (or `SanzoDB` after it exists)
-- Encryption: set to Optional/Off and enable “Trust server certificate”
+```bash
+copy .env.example .env
+```
+
+3. Fill in the required values in `.env`:
+
+- `DATABASE_URL`
+- `SESSION_SECRET`
+
+4. Start the app:
+
+```bash
+npm run dev
+```
+
+## Environment Variables
+
+### Required
+
+- `DATABASE_URL`: PostgreSQL connection string used by Prisma and the session store.
+- `SESSION_SECRET`: Strong secret used to sign sessions. This must be at least 24 characters and cannot be `dev-secret`.
+
+### Common Optional
+
+- `NODE_ENV`: Use `production` in production.
+- `PORT`: HTTP port. Defaults to `3000`.
+- `DB_SCHEMA`: PostgreSQL schema for Prisma and session storage. Defaults to `clubzero_setup`.
+- `TRUST_PROXY`: Set this when running behind a reverse proxy or platform load balancer so secure cookies and client IPs behave correctly.
+- `SESSION_COOKIE_NAME`: Session cookie name. Defaults to `clubzero.sid`.
+- `UPLOAD_DIR`: Override local upload storage path.
+- `PUBLIC_BASE_URL`: Base URL used for building absolute links in emails (like password resets).
+
+### Contact Email
+
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_SECURE`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `CONTACT_TO_EMAIL`
+- `CONTACT_FROM_EMAIL`
+- `ORDER_NOTIFICATION_EMAIL`: Optional internal recipient for new order emails (defaults to `CONTACT_TO_EMAIL`).
+
+If SMTP is not configured, contact messages are still saved to the database but notification emails are skipped.
+
+### Abandoned Cart Reminders (Optional)
+
+- `ABANDONED_CART_ENABLED`: Set `true` to enable the scheduler.
+- `ABANDONED_CART_DELAY_HOURS`: How long after cart activity to send the first reminder. Default `24`.
+- `ABANDONED_CART_RESEND_HOURS`: Minimum hours between reminders. Default `72`.
+- `ABANDONED_CART_MAX_SENDS`: Maximum reminders per cart. Default `2`.
+- `ABANDONED_CART_INTERVAL_MINUTES`: Scheduler interval. Default `30`.
+- `ABANDONED_CART_BATCH`: Max users processed per run. Default `50`.
+
+### Alerts
+
+- `ALERT_WEBHOOK_URL`: Optional webhook endpoint for critical error alerts.
+
+## Paystack Setup Checklist
+
+1. Create a Paystack account and get your API keys.
+2. Add these to `.env`:
+   - `PAYSTACK_SECRET_KEY=sk_test_...` (use `sk_live_...` in production)
+   - `PAYSTACK_PUBLIC_KEY=pk_test_...` (optional, for future inline checkout)
+   - `PAYSTACK_CALLBACK_URL=https://your-domain.com/auth/checkout/paystack` (optional)
+3. Configure the Paystack dashboard:
+   - **Webhook URL**: `https://your-domain.com/webhooks/paystack`
+   - **Callback URL** (optional): `https://your-domain.com/auth/checkout/paystack`
+4. For local testing, use a public tunnel (ngrok or Cloudflare Tunnel) so Paystack can reach your webhook.
+
+Notes:
+- Orders start in `PENDING_PAYMENT` and become `PAID` after Paystack confirms.
+- Invoices are created and emailed after payment succeeds.
+
+## Production Notes
+
+### Security
+
+- The app will refuse to boot if `DATABASE_URL` or `SESSION_SECRET` is missing.
+- The app will refuse to boot if `SESSION_SECRET` is weak or still set to `dev-secret`.
+- Sessions are stored in PostgreSQL, not in process memory.
+- Session cookies use `httpOnly` and `sameSite=lax`, and `secure` is enabled automatically when `NODE_ENV=production`.
+- CSRF protection is enforced for all non-GET requests.
+- Rate limits are applied to login, signup, checkout, and contact form submission.
+- `helmet` is enabled for baseline security headers.
+
+### Reverse Proxy
+
+If you deploy behind Nginx, Fly, Render, Railway, or another proxy, set:
+
+```env
+NODE_ENV=production
+TRUST_PROXY=true
+```
+
+Without `TRUST_PROXY`, secure cookies may not behave correctly behind HTTPS termination.
+
+### Logging And Alerts
+
+- Requests are logged in structured JSON.
+- Request failures, unhandled promise rejections, and uncaught exceptions are logged as structured errors.
+- If `ALERT_WEBHOOK_URL` is configured, critical failures are posted to that webhook.
+
+## Verification
+
+Basic syntax checks used after the security changes:
+
+```bash
+node --check app.js
+node --check middleware/security.js
+node --check lib/pgSessionStore.js
+node --check controllers/contactController.js
+```

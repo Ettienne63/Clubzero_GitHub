@@ -1,0 +1,325 @@
+<%- include("partials/header", { title: "Affiliate Stats" }) %>
+<%- include("partials/navbar") %>
+<%- include("partials/admin-nav") %>
+
+<main class="container py-5 admin-shell">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+      <h1 class="h3 mb-1">Affiliate Admin</h1>
+      <p class="text-muted mb-0">
+        Commission, orders, and referral traffic in one view.
+      </p>
+    </div>
+  </div>
+
+  <%- include("partials/admin-floating-alert", { success, error }) %>
+
+  <section class="card mb-4">
+    <div class="card-body">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+          <h2 class="h5 mb-1">Commission Rate</h2>
+          <p class="text-muted mb-0">Update the affiliate commission percentage.</p>
+        </div>
+      </div>
+      <form class="row g-2 align-items-end mt-2" action="/admin/affiliate/rate" method="POST">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <div class="col-12 col-sm-4 col-md-3">
+          <label for="affiliateRatePercent" class="form-label">Commission %</label>
+          <input
+            id="affiliateRatePercent"
+            name="affiliateRatePercent"
+            type="number"
+            min="0"
+            max="50"
+            step="0.1"
+            class="form-control"
+            value="<%= (affiliateRate * 100).toFixed(2) %>"
+            required
+          />
+        </div>
+        <div class="col-12 col-sm-auto">
+          <button type="submit" class="btn btn-primary">Update Rate</button>
+        </div>
+        <div class="col-12">
+          <p class="small text-muted mb-0">
+            Allowed range: 0% to 50%. Changes apply to new orders.
+          </p>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div>
+      <h2 class="h5 mb-1">Performance Window</h2>
+      <p class="text-muted mb-0">Filter all stats and tables by date range.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a
+        class="btn btn-sm <%= rangeKey === '7' ? 'btn-primary' : 'btn-outline-primary' %>"
+        href="/admin/affiliate/stats?days=7"
+      >Last 7 Days</a>
+      <a
+        class="btn btn-sm <%= rangeKey === '30' ? 'btn-primary' : 'btn-outline-primary' %>"
+        href="/admin/affiliate/stats?days=30"
+      >Last 30 Days</a>
+      <a
+        class="btn btn-sm <%= rangeKey === '90' ? 'btn-primary' : 'btn-outline-primary' %>"
+        href="/admin/affiliate/stats?days=90"
+      >Last 90 Days</a>
+      <a
+        class="btn btn-sm <%= rangeKey === 'all' ? 'btn-primary' : 'btn-outline-primary' %>"
+        href="/admin/affiliate/stats?days=all"
+      >All Time</a>
+    </div>
+  </div>
+
+  <section class="row g-3 mb-4">
+    <div class="col-12 col-md-6 col-xl-3">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Affiliate Rate</p>
+          <p class="h4 mb-0"><%= Math.round(affiliateRate * 100) %>%</p>
+          <p class="small text-muted mb-0">Per referred order</p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Total Orders</p>
+          <p class="h4 mb-0"><%= summary.totalOrders %></p>
+          <p class="small text-muted mb-0">With an affiliate referrer</p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Total Cases Sold</p>
+          <p class="h4 mb-0"><%= summary.totalItemsSold %></p>
+          <p class="small text-muted mb-0"><%= summary.totalItemsSold * 12 %> bottles</p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Total Commission</p>
+          <p class="h4 mb-0">R<%= Number(summary.totalCommission).toFixed(2) %></p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Paid</p>
+          <p class="h4 mb-0"><%= summary.paidCount %></p>
+          <p class="small text-muted mb-0">R<%= Number(summary.paidCommission).toFixed(2) %></p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Affiliate Signups</p>
+          <p class="h4 mb-0"><%= affiliateSignups %></p>
+          <p class="small text-muted mb-0">Users credited to affiliates</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div>
+      <h2 class="h5 mb-1">Affiliate Click Insights</h2>
+      <p class="text-muted mb-0">How affiliate links are performing in the wild.</p>
+    </div>
+  </div>
+
+  <section class="row g-3 mb-4">
+    <div class="col-12 col-md-6 col-xl-3">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Clicks (Selected Range)</p>
+          <p class="h4 mb-0"><%= clickSummary.totalClicks %></p>
+          <p class="small text-muted mb-0">Referral link clicks in this window</p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Unique Sessions</p>
+          <p class="h4 mb-0"><%= clickSummary.uniqueSessions %></p>
+          <p class="small text-muted mb-0">Approx. unique visits (session-based)</p>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <article class="card h-100 affiliate-stat-card">
+        <div class="card-body">
+          <p class="small text-uppercase fw-semibold text-muted mb-2">Affiliates w/ Clicks</p>
+          <p class="h4 mb-0"><%= clickSummary.uniqueAffiliates %></p>
+          <p class="small text-muted mb-0">Affiliates who drove traffic</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="row g-4">
+    <div class="col-12 col-lg-6">
+      <article class="card h-100">
+        <div class="card-body">
+          <h2 class="h5 mb-1">Top Landing Pages</h2>
+          <p class="small text-muted mb-3">
+            Where affiliate traffic lands most often.
+          </p>
+          <% if (!topLandingPaths.length) { %>
+          <div class="alert alert-info mb-0">No clicks tracked yet.</div>
+          <% } else { %>
+          <div class="table-responsive">
+            <table class="table mb-0">
+              <thead>
+                <tr>
+                  <th scope="col">Path</th>
+                  <th scope="col" class="text-end">Clicks</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% topLandingPaths.forEach((entry) => { %>
+                <tr>
+                  <td><code><%= entry.path %></code></td>
+                  <td class="text-end"><%= entry.count %></td>
+                </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+          <% } %>
+        </div>
+      </article>
+    </div>
+    <div class="col-12 col-lg-6">
+      <article class="card h-100">
+        <div class="card-body">
+          <h2 class="h5 mb-1">Top Referrers</h2>
+          <p class="small text-muted mb-3">
+            External sources driving affiliate traffic (social, email, etc.).
+          </p>
+          <% if (!topReferrers.length) { %>
+          <div class="alert alert-info mb-0">No referrers tracked yet.</div>
+          <% } else { %>
+          <div class="table-responsive">
+            <table class="table mb-0">
+              <thead>
+                <tr>
+                  <th scope="col">Referrer</th>
+                  <th scope="col" class="text-end">Clicks</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% topReferrers.forEach((entry) => { %>
+                <tr>
+                  <td>
+                    <span class="text-truncate d-inline-block" style="max-width: 280px;">
+                      <%= entry.referrer %>
+                    </span>
+                  </td>
+                  <td class="text-end"><%= entry.count %></td>
+                </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+          <% } %>
+        </div>
+      </article>
+    </div>
+    <div class="col-12">
+      <article class="card">
+        <div class="card-body">
+          <div class="row g-4">
+            <div class="col-12 col-xl-6">
+              <h2 class="h5 mb-1">Top Affiliates by Clicks</h2>
+              <p class="small text-muted mb-3">
+                Affiliates ranked by referral click volume.
+              </p>
+              <% if (!topAffiliates.length) { %>
+              <div class="alert alert-info mb-0">No affiliate traffic yet.</div>
+              <% } else { %>
+              <div class="table-responsive">
+                <table class="table mb-0">
+                  <thead>
+                    <tr>
+                      <th scope="col">Affiliate</th>
+                      <th scope="col">Code</th>
+                      <th scope="col" class="text-end">Clicks</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% topAffiliates.forEach((entry) => { %>
+                    <tr>
+                      <td>
+                        <div class="fw-semibold">
+                          <%= entry.affiliate.name || entry.affiliate.email || "Unknown" %>
+                        </div>
+                        <% if (entry.affiliate.email) { %>
+                        <div class="small text-muted"><%= entry.affiliate.email %></div>
+                        <% } %>
+                      </td>
+                      <td><%= entry.affiliate.affiliateCode || "-" %></td>
+                      <td class="text-end"><%= entry.count %></td>
+                    </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              </div>
+              <% } %>
+            </div>
+            <div class="col-12 col-xl-6">
+              <h2 class="h5 mb-1">Top Affiliates by Revenue</h2>
+              <p class="small text-muted mb-3">
+                Paid order revenue attributed to each affiliate.
+              </p>
+              <% if (!topAffiliatesByRevenue.length) { %>
+              <div class="alert alert-info mb-0">No paid affiliate orders yet.</div>
+              <% } else { %>
+              <div class="table-responsive">
+                <table class="table mb-0">
+                  <thead>
+                    <tr>
+                      <th scope="col">Affiliate</th>
+                      <th scope="col">Code</th>
+                      <th scope="col" class="text-end">Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% topAffiliatesByRevenue.forEach((entry) => { %>
+                    <tr>
+                      <td>
+                        <div class="fw-semibold">
+                          <%= entry.affiliate.name || entry.affiliate.email || "Unknown" %>
+                        </div>
+                        <% if (entry.affiliate.email) { %>
+                        <div class="small text-muted"><%= entry.affiliate.email %></div>
+                        <% } %>
+                      </td>
+                      <td><%= entry.affiliate.affiliateCode || "-" %></td>
+                      <td class="text-end">R<%= Number(entry.totalRevenue).toFixed(2) %></td>
+                    </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              </div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+</main>
+
+<%- include("partials/footer") %>

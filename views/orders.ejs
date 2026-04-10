@@ -1,0 +1,101 @@
+<%- include("partials/header", { title: "Order History" }) %>
+<%- include("partials/navbar") %>
+
+<main class="cz-banded">
+  <section class="cz-band">
+    <div class="container cz-section">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">Order History</h1>
+        <a href="/auth/products" class="btn btn-outline-secondary">Shop More</a>
+      </div>
+
+      <% if (!orders || orders.length === 0) { %>
+      <div class="alert alert-info mb-0">
+        No orders yet. Place your first order from the cart page.
+      </div>
+      <% } else { %>
+      <div class="vstack gap-3">
+        <% orders.forEach((order) => { %>
+        <article class="card shadow-sm">
+          <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between gap-2 mb-3">
+          <div>
+            <h2 class="h5 mb-1">Order #<%= order.id %></h2>
+            <p class="text-muted mb-0">
+              <%= new Date(order.createdAt).toLocaleString() %>
+            </p>
+          </div>
+          <div class="text-end">
+            <span class="badge text-bg-primary"><%= order.status %></span>
+            <% if (order.invoice) { %>
+            <div class="mt-2">
+              <span class="badge text-bg-secondary"><%= order.invoiceStatus %></span>
+            </div>
+            <% } %>
+            <p class="fw-bold mb-0 mt-2">
+              R<%= Number(order.total).toFixed(2) %>
+            </p>
+          </div>
+        </div>
+
+        <ul class="list-group list-group-flush">
+          <% order.orderItems.forEach((item) => { %>
+          <% const customEntries = Array.isArray(item.customPackConfig) ? item.customPackConfig : []; %>
+          <li class="list-group-item d-flex justify-content-between px-0">
+            <span
+              ><%= item.productName %>
+              x
+              <%= item.quantity %> case<%= item.quantity === 1 ? "" : "s" %> (<%= item.quantity * 12 %> bottles)
+              <% if (item.isCustomPack && customEntries.length) { %>
+              <span class="d-block small text-muted"><%= customEntries.map((entry) => `${entry.productName || "Flavour"} (${entry.bottlesPerPack})`).join(", ") %></span>
+              <% } %>
+            </span
+            >
+            <span>R<%= Number(item.subtotal).toFixed(2) %></span>
+          </li>
+          <% }) %>
+        </ul>
+
+        <hr />
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+          <p class="mb-0 small text-muted">
+          Deliver to: <%= order.deliveryName %>, <%= order.deliveryAddressLine1
+          %><% if (order.deliveryAddressLine2) { %>, <%=
+          order.deliveryAddressLine2 %><% } %>, <%= order.deliveryCity %>, <%=
+          order.deliveryState %> <%= order.deliveryPostalCode %>, <%=
+          order.deliveryCountry %>.
+          </p>
+          <div class="d-flex gap-2 flex-wrap">
+            <% if (order.status === "PAYMENT_FAILED" || order.status === "PENDING_PAYMENT") { %>
+            <form action="/auth/orders/<%= order.id %>/pay" method="POST">
+              <button type="submit" class="btn btn-sm btn-primary">
+                Retry Payment
+              </button>
+            </form>
+            <% } %>
+            <% if (order.invoice) { %>
+            <a
+              href="/auth/orders/<%= order.id %>/invoice"
+              class="btn btn-sm btn-outline-primary"
+            >
+              View Invoice
+            </a>
+            <a
+              href="/auth/orders/<%= order.id %>/invoice?download=1"
+              class="btn btn-sm btn-outline-secondary"
+            >
+              Download Invoice
+            </a>
+            <% } %>
+          </div>
+        </div>
+      </div>
+        </article>
+        <% }) %>
+      </div>
+      <% } %>
+    </div>
+  </section>
+</main>
+
+<%- include("partials/footer") %>

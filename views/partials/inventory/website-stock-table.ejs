@@ -1,0 +1,172 @@
+  <section class="card mb-4">
+    <div class="card-body">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h2 class="h5 mb-0">Website Stock (Live Store)</h2>
+        <button
+          type="button"
+          class="btn btn-outline-secondary btn-sm"
+          id="toggleBottleStock"
+          data-show-label="Show bottle stock"
+          data-hide-label="Hide bottle stock"
+          aria-pressed="false"
+        >
+          Show bottle stock
+        </button>
+      </div>
+      <div class="alert alert-info py-2 small" role="alert">
+        <strong>Stock actions:</strong> Use <strong>Add</strong> to increase stock by the entered amount.
+        Use <strong>Remove</strong> to decrease stock by the entered amount.
+      </div>
+      <% if (!products || products.length === 0) { %>
+      <p class="text-muted mb-0">No products found.</p>
+      <% } else { %>
+      <div class="table-responsive inventory-table-wrap">
+        <table class="table align-middle inventory-sticky-table inventory-responsive-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Status</th>
+              <th>Current Stock</th>
+              <th>Low Threshold</th>
+              <th>Priority</th>
+              <th>Show On Card</th>
+              <th style="min-width: 240px">Adjust Stock</th>
+              <th>History</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% products.forEach((product) => { %>
+            <tr class="<%= product.stockPriority.rank === 3 ? 'table-danger' : (product.stockPriority.rank === 2 ? 'table-warning' : '') %>">
+              <td data-label="Product">
+                <strong class="d-none d-md-inline"><%= product.name %></strong>
+                <button
+                  type="button"
+                  class="btn btn-link p-0 text-start d-md-none inventory-mobile-edit-trigger"
+                  data-bs-toggle="modal"
+                  data-bs-target="#websiteMobileEditModal-<%= product.id %>"
+                >
+                  <%= product.name %>
+                </button>
+              </td>
+              <td data-label="Status">
+                <span class="badge <%= product.isActive ? 'text-bg-success' : 'text-bg-secondary' %>">
+                  <%= product.isActive ? "Visible" : "Hidden" %>
+                </span>
+              </td>
+              <td data-label="Current Stock">
+                <strong><%= Number(product.websiteStock || 0) %></strong>
+                <% const totalBottleStock = (Number(product.websiteStock || 0) * 12) + Number(product.looseBottleStock || 0); %>
+                <div class="small text-muted d-none" data-bottle-stock>
+                  Bottle stock: <%= totalBottleStock %>
+                </div>
+              </td>
+              <td data-label="Low Threshold" class="inventory-mobile-inline-control">
+                <form
+                  action="/admin/inventory/products/<%= product.id %>/threshold"
+                  method="POST"
+                  class="d-flex gap-2 align-items-center"
+                  data-auto-submit-threshold
+                >
+                  <input
+                    name="lowStockThreshold"
+                    type="number"
+                    min="0"
+                    step="1"
+                    class="form-control form-control-sm"
+                    value="<%= Number(product.lowStockThreshold || 0) %>"
+                    required
+                    style="max-width: 90px"
+                    data-threshold-input
+                  />
+                </form>
+              </td>
+              <td data-label="Priority">
+                <span class="badge <%= product.stockPriority.badgeClass %>">
+                  <%= product.stockPriority.label %>
+                </span>
+              </td>
+              <td data-label="Show On Card" class="inventory-mobile-inline-control">
+                <form
+                  action="/admin/inventory/products/<%= product.id %>/stock-visibility"
+                  method="POST"
+                  class="d-flex align-items-center gap-2"
+                >
+                  <input type="hidden" name="showStockOnCard" value="off" />
+                  <div class="form-check form-switch m-0">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      role="switch"
+                      id="showStockOnCard-<%= product.id %>"
+                      name="showStockOnCard"
+                      data-auto-submit="stock-visibility"
+                      <%= product.showStockOnCard === true ? "checked" : "" %>
+                    />
+                  </div>
+                </form>
+              </td>
+              <td data-label="Adjust Stock" class="inventory-mobile-inline-control">
+                <form
+                  action="/admin/inventory/website-stock/<%= product.id %>"
+                  method="POST"
+                  class="d-flex gap-2 align-items-center"
+                >
+                  <input
+                    name="stockValue"
+                    type="number"
+                    min="0"
+                    step="1"
+                    class="form-control form-control-sm"
+                    value="0"
+                    required
+                    style="max-width: 90px"
+                  />
+                  <select
+                    name="reason"
+                    class="form-select form-select-sm"
+                    style="max-width: 170px"
+                    required
+                  >
+                    <option value="">Reason</option>
+                    <% (stockMovementReasonOptions || []).forEach((reasonOption) => { %>
+                    <option value="<%= reasonOption %>"><%= reasonOption.replace(/_/g, " ") %></option>
+                    <% }) %>
+                  </select>
+                  <button
+                    type="submit"
+                    name="action"
+                    value="add"
+                    class="btn btn-primary btn-sm"
+                  >
+                    Add
+                  </button>
+                  <button
+                    type="submit"
+                    name="action"
+                    value="remove"
+                    class="btn btn-danger btn-sm"
+                    <%= Number(product.websiteStock || 0) <= 0 ? "disabled" : "" %>
+                  >
+                    Remove
+                  </button>
+                </form>
+              </td>
+              <td data-label="History" class="inventory-mobile-inline-control">
+                <% const productHistory = websiteHistoryByProductId && websiteHistoryByProductId[product.id] ? websiteHistoryByProductId[product.id] : []; %>
+                <button
+                  type="button"
+                  class="btn btn-link btn-sm px-0"
+                  data-bs-toggle="modal"
+                  data-bs-target="#websiteHistoryModal-<%= product.id %>"
+                >
+                  View (<%= productHistory.length %>)
+                </button>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% } %>
+    </div>
+  </section>

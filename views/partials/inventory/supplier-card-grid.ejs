@@ -1,0 +1,188 @@
+  <section class="mb-4">
+    <h2 class="h5 mb-3">Add Private Seller</h2>
+    <button
+      type="button"
+      class="card w-100 text-start border-2 border-dashed bg-light"
+      data-bs-toggle="modal"
+      data-bs-target="#addPrivateSupplierModal"
+      style="border-style: dashed;"
+    >
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <h3 class="h6 mb-1">Privately Owned (No Store Location)</h3>
+          <p class="text-muted mb-0 small">Use for individual sellers without a registered store location.</p>
+        </div>
+        <span class="btn btn-outline-success btn-sm">Open Form</span>
+      </div>
+    </button>
+  </section>
+
+  <section class="mb-4">
+    <div class="alert alert-light border mb-0 small" role="note">
+      <strong>Note:</strong>
+      Add normal suppliers through <a href="/admin/locations">Store Locations</a>. Use this block only for private sellers without a fixed store location.
+    </div>
+  </section>
+
+  <section>
+    <% const privateSellerTag = "[private seller - no store location]"; %>
+    <% const allSuppliers = suppliers || []; %>
+    <% const activeSuppliers = allSuppliers.filter((supplier) => supplier.isActive !== false); %>
+    <% const inactiveSuppliers = allSuppliers.filter((supplier) => supplier.isActive === false); %>
+    <% const privateSuppliers = activeSuppliers.filter((supplier) => String(supplier.notes || "").toLowerCase().includes(privateSellerTag)); %>
+    <% const storeSuppliers = activeSuppliers.filter((supplier) => !String(supplier.notes || "").toLowerCase().includes(privateSellerTag)); %>
+    <div class="d-flex justify-content-between align-items-center mb-3 gap-3 flex-wrap">
+      <h2 class="h5 mb-0">Supplier Stock Sections</h2>
+      <div class="d-flex align-items-center gap-2 ms-auto inventory-supplier-search-wrap">
+        <span class="badge text-bg-secondary"><%= activeSuppliers.length %> active suppliers</span>
+        <input
+          id="supplierSearchInput"
+          type="search"
+          class="form-control inventory-supplier-search-input"
+          placeholder="Search for supplier"
+          autocomplete="off"
+        />
+      </div>
+    </div>
+
+    <% if (activeSuppliers.length === 0) { %>
+    <p class="text-muted">No suppliers added yet. Add store-based suppliers in Store Locations or add a private seller above.</p>
+    <% } else { %>
+    <div class="mb-4">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <h3 class="h6 mb-0">Suppliers With Store Location</h3>
+        <span class="badge text-bg-light border"><%= storeSuppliers.length %></span>
+      </div>
+      <% if (storeSuppliers.length === 0) { %>
+      <p class="text-muted small mb-0">No store-location suppliers yet.</p>
+      <% } else { %>
+      <div class="row g-3">
+        <% storeSuppliers.forEach((supplier) => { %>
+        <% const supplierSearchText = [
+          supplier.name,
+          supplier.contactName,
+          supplier.contactEmail,
+          supplier.contactPhone,
+          supplier.notes,
+          ...(supplier.customProducts || []).map((product) => product.name),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase(); %>
+        <div
+          class="col-12 col-md-6 col-lg-4"
+          data-supplier-card
+          data-supplier-search="<%= supplierSearchText %>"
+        >
+          <button
+            type="button"
+            class="card w-100 text-start h-100"
+            data-bs-toggle="modal"
+            data-bs-target="#supplierModal-<%= supplier.id %>"
+          >
+            <div class="card-body">
+              <h3 class="h6 mb-1"><%= supplier.name %></h3>
+              <p class="text-muted mb-2 small">
+                <%= supplier.contactName || 'No contact name' %>
+              </p>
+              <p class="text-muted mb-0 small">
+                Supplier-only products: <%= supplier.customProducts ? supplier.customProducts.length : 0 %>
+              </p>
+              <span class="badge <%= supplier.supplierPriority.badgeClass %> mt-2">
+                <%= supplier.supplierPriority.label %>
+              </span>
+            </div>
+          </button>
+        </div>
+        <% }) %>
+      </div>
+      <% } %>
+    </div>
+
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <h3 class="h6 mb-0">Privately Owned (No Store Location)</h3>
+        <span class="badge text-bg-light border"><%= privateSuppliers.length %></span>
+      </div>
+      <% if (privateSuppliers.length === 0) { %>
+      <p class="text-muted small mb-0">No private sellers yet.</p>
+      <% } else { %>
+      <div class="row g-3">
+        <% privateSuppliers.forEach((supplier) => { %>
+        <% const supplierSearchText = [
+          supplier.name,
+          supplier.contactName,
+          supplier.contactEmail,
+          supplier.contactPhone,
+          supplier.notes,
+          ...(supplier.customProducts || []).map((product) => product.name),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase(); %>
+        <div
+          class="col-12 col-md-6 col-lg-4"
+          data-supplier-card
+          data-supplier-search="<%= supplierSearchText %>"
+        >
+          <button
+            type="button"
+            class="card w-100 text-start h-100"
+            data-bs-toggle="modal"
+            data-bs-target="#supplierModal-<%= supplier.id %>"
+          >
+            <div class="card-body">
+              <h3 class="h6 mb-1"><%= supplier.name %></h3>
+              <p class="text-muted mb-2 small">
+                <%= supplier.contactName || 'No contact name' %>
+              </p>
+              <p class="text-muted mb-0 small">
+                Supplier-only products: <%= supplier.customProducts ? supplier.customProducts.length : 0 %>
+              </p>
+              <span class="badge <%= supplier.supplierPriority.badgeClass %> mt-2">
+                <%= supplier.supplierPriority.label %>
+              </span>
+            </div>
+          </button>
+        </div>
+        <% }) %>
+      </div>
+      <% } %>
+    </div>
+
+    <p class="text-muted mt-3 d-none" id="supplierSearchEmptyState">
+      No suppliers match your search.
+    </p>
+    <% if (inactiveSuppliers.length > 0) { %>
+    <div class="mt-4">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <h3 class="h6 mb-0">Not Used (Inactive)</h3>
+        <span class="badge text-bg-light border"><%= inactiveSuppliers.length %></span>
+      </div>
+      <div class="row g-3">
+        <% inactiveSuppliers.forEach((supplier) => { %>
+        <div class="col-12 col-md-6 col-lg-4">
+          <div class="card h-100 border-secondary-subtle">
+            <div class="card-body">
+              <h4 class="h6 mb-1"><%= supplier.name %></h4>
+              <p class="text-muted small mb-2">
+                <%= supplier.contactName || 'No contact name' %>
+              </p>
+              <p class="text-muted small mb-3">
+                Supplier-only products: <%= supplier.customProducts ? supplier.customProducts.length : 0 %>
+              </p>
+              <form action="/admin/inventory/suppliers/<%= supplier.id %>/restore" method="POST">
+                <button type="submit" class="btn btn-outline-primary btn-sm">
+                  Restore Supplier
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+        <% }) %>
+      </div>
+    </div>
+    <% } %>
+    <% } %>
+  </section>
+</main>

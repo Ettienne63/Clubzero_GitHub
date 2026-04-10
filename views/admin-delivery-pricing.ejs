@@ -1,0 +1,152 @@
+<%- include("partials/header", { title: "Delivery Pricing" }) %>
+<%- include("partials/navbar") %>
+<%- include("partials/admin-nav") %>
+
+<main class="container py-5 admin-shell">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">Delivery Pricing</h1>
+      <p class="text-muted mb-0">Set one fixed delivery fee for all checkout orders.</p>
+    </div>
+  </div>
+
+  <%- include("partials/admin-floating-alert", { success, error }) %>
+
+  <section class="card">
+    <div class="card-body">
+      <form action="/admin/delivery-pricing" method="POST" class="row g-3">
+        <div class="col-12">
+          <div class="form-check form-switch">
+            <input type="hidden" name="deliveryPricingEnabled" value="off" />
+            <input
+              id="deliveryPricingEnabled"
+              name="deliveryPricingEnabled"
+              class="form-check-input"
+              type="checkbox"
+              value="on"
+              <%= formData?.enabled ? "checked" : "" %>
+            />
+            <label class="form-check-label" for="deliveryPricingEnabled">
+              Enable delivery fee
+            </label>
+          </div>
+          <div class="mt-2 small">
+            Current status:
+            <span
+              id="deliveryPricingCurrentStatus"
+              class="<%= formData?.enabled ? 'text-success' : 'text-danger' %> fw-semibold"
+            >
+              <%= formData?.enabled ? "Enabled" : "Disabled" %>
+            </span>
+          </div>
+          <div id="deliveryPricingToggleStatus" class="small text-muted mt-1"></div>
+        </div>
+
+        <div class="col-md-6">
+          <label for="fixedFee" class="form-label">Fixed Delivery Fee (R)</label>
+          <input
+            id="fixedFee"
+            name="fixedFee"
+            type="number"
+            step="0.01"
+            min="0"
+            class="form-control"
+            value="<%= Number(formData?.fixedFee || 0).toFixed(2) %>"
+            required
+          />
+          <div class="form-text">Example: enter <code>50</code> to charge R50 on every order.</div>
+        </div>
+        <div class="col-md-6">
+          <label for="freeDeliveryThreshold" class="form-label">Free Delivery Threshold (R)</label>
+          <input
+            id="freeDeliveryThreshold"
+            name="freeDeliveryThreshold"
+            type="number"
+            step="0.01"
+            min="0"
+            class="form-control"
+            value="<%= Number(formData?.freeDeliveryThreshold || 600).toFixed(2) %>"
+            required
+          />
+          <div class="form-text">
+            Orders with products subtotal at or above this amount get free delivery.
+            Set <code>0</code> to disable this rule.
+          </div>
+        </div>
+
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary">Save Delivery Pricing</button>
+        </div>
+      </form>
+    </div>
+  </section>
+</main>
+
+<script>
+  (() => {
+    const toggle = document.getElementById("deliveryPricingEnabled");
+    const currentStatus = document.getElementById("deliveryPricingCurrentStatus");
+    const toggleStatus = document.getElementById("deliveryPricingToggleStatus");
+    const token = document
+      .querySelector('meta[name="csrf-token"]')
+      ?.getAttribute("content");
+    if (!toggle || !currentStatus) return;
+
+    const setStatusText = (enabled) => {
+      currentStatus.textContent = enabled ? "Enabled" : "Disabled";
+      currentStatus.classList.toggle("text-success", enabled);
+      currentStatus.classList.toggle("text-danger", !enabled);
+    };
+
+    const setToggleMessage = (message, kind = "muted") => {
+      if (!toggleStatus) return;
+      toggleStatus.textContent = message || "";
+      toggleStatus.className =
+        kind === "error" ? "small text-danger mt-1" : "small text-muted mt-1";
+    };
+
+    toggle.addEventListener("change", async () => {
+      const nextEnabled = Boolean(toggle.checked);
+      const previousEnabled = !nextEnabled;
+      toggle.disabled = true;
+      setToggleMessage("Saving...");
+
+      try {
+        const body = new URLSearchParams();
+        body.set("deliveryPricingEnabled", nextEnabled ? "on" : "off");
+        if (token) {
+          body.set("_csrf", token);
+        }
+
+        const response = await fetch("/admin/delivery-pricing/toggle", {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+            "X-Requested-With": "XMLHttpRequest",
+            "X-CSRF-Token": token || "",
+          },
+          credentials: "same-origin",
+          body: body.toString(),
+        });
+
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || !payload?.success) {
+          throw new Error(payload?.message || "Unable to save toggle.");
+        }
+
+        setStatusText(Boolean(payload.enabled));
+        toggle.checked = Boolean(payload.enabled);
+        setToggleMessage(payload.message || "Saved.");
+      } catch (error) {
+        toggle.checked = previousEnabled;
+        setStatusText(previousEnabled);
+        setToggleMessage(error.message || "Unable to save toggle.", "error");
+      } finally {
+        toggle.disabled = false;
+      }
+    });
+  })();
+</script>
+
+<%- include("partials/footer") %>

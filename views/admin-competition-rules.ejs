@@ -1,0 +1,690 @@
+<%- include("partials/header", { title: "Competition Rules" }) %>
+<%- include("partials/navbar") %>
+<%- include("partials/admin-nav") %>
+
+<main class="container py-5 admin-shell">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">Competition Rules</h1>
+      <p class="text-muted mb-0">Manage visibility, entry weighting, and winner draw from one place.</p>
+    </div>
+  </div>
+
+  <%- include("partials/admin-floating-alert", { success, error }) %>
+
+  <section class="card mb-4 competition-action-card competition-action-card--start">
+    <div class="card-body">
+      <p class="competition-action-kicker mb-1">Launch</p>
+      <h2 class="h5 mb-1">Start New Competition</h2>
+      <p class="text-muted mb-3">Set end date/time and reset points window in one action.</p>
+
+      <form id="startNewCompetitionForm" class="row g-3 competition-action-form">
+        <div class="col-md-8 competition-action-field">
+          <label for="newCompetitionEndsAtLocal" class="form-label">Competition End Date (SAST)</label>
+          <input
+            id="newCompetitionEndsAtLocal"
+            name="endsAtLocal"
+            type="date"
+            class="form-control"
+            value="<%= drawDefaults?.endsAtDateValue || '' %>"
+            required
+          />
+          <div class="form-text">Competition closes automatically at 23:59 SAST on this date.</div>
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+          <button id="startNewCompetitionBtn" type="submit" class="btn btn-danger w-100 competition-action-btn competition-action-btn--primary">
+            Start New Competition
+          </button>
+        </div>
+      </form>
+      <div id="startNewCompetitionStatus" class="small text-muted mt-2"></div>
+    </div>
+  </section>
+
+  <section class="card mb-4 competition-action-card competition-action-card--update">
+    <div class="card-body">
+      <p class="competition-action-kicker mb-1">Active Window</p>
+      <h2 class="h5 mb-1">Current Competition</h2>
+      <p class="text-muted mb-3">Adjust only the current competition end date/time.</p>
+
+      <form id="currentCompetitionEndForm" class="row g-3 competition-action-form">
+        <div class="col-md-8 competition-action-field">
+          <label for="currentCompetitionEndsAtLocal" class="form-label">Current Competition End Date (SAST)</label>
+          <input
+            id="currentCompetitionEndsAtLocal"
+            name="endsAtLocal"
+            type="date"
+            class="form-control"
+            value="<%= drawDefaults?.endsAtDateValue || '' %>"
+            required
+          />
+          <div class="form-text">Closes at 23:59 SAST on this date. Start date and points window stay unchanged.</div>
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+          <div class="w-100 d-grid gap-2">
+            <button id="currentCompetitionEndBtn" type="submit" class="btn btn-outline-primary w-100 competition-action-btn competition-action-btn--secondary">
+              Update Current End Date
+            </button>
+            <button id="endCompetitionNowBtn" type="button" class="btn btn-outline-danger w-100 competition-action-btn">
+              End Competition Now
+            </button>
+          </div>
+        </div>
+      </form>
+      <div id="currentCompetitionEndStatus" class="small text-muted mt-2"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-body">
+      <form action="/admin/competition-rules" method="POST" class="row g-3">
+        <div class="col-12">
+          <div class="border rounded p-3">
+            <h2 class="h6 mb-3">Status</h2>
+
+            <div class="form-check form-switch">
+              <input type="hidden" name="comingSoonEnabled" value="off" />
+              <input
+              id="comingSoonEnabled"
+              name="comingSoonEnabled"
+              class="form-check-input"
+              type="checkbox"
+              value="on"
+              <%= formData?.comingSoonEnabled ? "checked" : "" %>
+            />
+            <label class="form-check-label" for="comingSoonEnabled">
+              Pause Entries
+            </label>
+          </div>
+          <div class="mt-2 small">
+            Current status:
+            <span
+              id="competitionComingSoonCurrentStatus"
+              class="<%= formData?.comingSoonEnabled ? 'text-danger' : 'text-success' %> fw-semibold"
+            >
+              <%= formData?.comingSoonEnabled ? "Paused" : "Live" %>
+            </span>
+          </div>
+            <div id="competitionComingSoonToggleStatus" class="small text-muted mt-1"></div>
+          </div>
+        </div>
+
+        <div class="col-12">
+          <h2 class="h6 mb-1">Entry Weighting</h2>
+          <p class="text-muted small mb-0">Higher points increase winner odds in the weighted draw.</p>
+        </div>
+
+        <div class="col-md-6">
+          <label for="tierOneMinSubtotal" class="form-label">Tier 1 Minimum Subtotal (R)</label>
+          <input
+            id="tierOneMinSubtotal"
+            name="tierOneMinSubtotal"
+            type="number"
+            step="0.01"
+            min="0"
+            class="form-control"
+            value="<%= Number(formData?.tierOneMinSubtotal || 400).toFixed(2) %>"
+            required
+          />
+          <div class="form-text">Orders at/above this amount qualify.</div>
+        </div>
+
+        <div class="col-md-6">
+          <label for="tierOneEntries" class="form-label">Tier 1 Entries</label>
+          <input
+            id="tierOneEntries"
+            name="tierOneEntries"
+            type="number"
+            step="1"
+            min="0"
+            class="form-control"
+            value="<%= Number(formData?.tierOneEntries || 1) %>"
+            required
+          />
+          <div class="form-text">Points awarded at Tier 1.</div>
+        </div>
+
+        <div class="col-md-6">
+          <label for="tierTwoMinSubtotal" class="form-label">Tier 2 Minimum Subtotal (R)</label>
+          <input
+            id="tierTwoMinSubtotal"
+            name="tierTwoMinSubtotal"
+            type="number"
+            step="0.01"
+            min="0"
+            class="form-control"
+            value="<%= Number(formData?.tierTwoMinSubtotal || 800).toFixed(2) %>"
+            required
+          />
+          <div class="form-text">Higher-value threshold.</div>
+        </div>
+
+        <div class="col-md-6">
+          <label for="tierTwoEntries" class="form-label">Tier 2 Entries</label>
+          <input
+            id="tierTwoEntries"
+            name="tierTwoEntries"
+            type="number"
+            step="1"
+            min="0"
+            class="form-control"
+            value="<%= Number(formData?.tierTwoEntries || 3) %>"
+            required
+          />
+          <div class="form-text">Points awarded at Tier 2.</div>
+        </div>
+
+        <div class="col-md-6">
+          <label for="affiliateBonusEntries" class="form-label">Affiliate Bonus Entries</label>
+          <input
+            id="affiliateBonusEntries"
+            name="affiliateBonusEntries"
+            type="number"
+            step="1"
+            min="0"
+            class="form-control"
+            value="<%= Number(formData?.affiliateBonusEntries || 1) %>"
+            required
+          />
+          <div class="form-text">Bonus points if affiliate code is used.</div>
+        </div>
+
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary">Save Rules</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="card mt-4">
+    <div class="card-body">
+      <h2 class="h5 mb-1">Winner Draw</h2>
+      <p class="text-muted mb-3">
+        Manual weighted draw using points in the active competition window.
+      </p>
+
+      <form id="drawWinnerForm" class="row g-3">
+        <div class="col-md-4">
+          <button id="drawWinnerBtn" type="submit" class="btn btn-primary w-100">
+            Draw Random Winner
+          </button>
+        </div>
+      </form>
+
+      <div id="drawWinnerStatus" class="small text-muted mt-2"></div>
+      <div id="drawWinnerResult" class="alert alert-info mt-3 mb-0 d-none"></div>
+    </div>
+  </section>
+
+  <section class="card mt-4">
+    <div class="card-body">
+      <h2 class="h5 mb-1">User Points</h2>
+      <p class="text-muted mb-3">Window: competition start to countdown end.</p>
+
+      <div class="row g-2 mb-3">
+        <div class="col-md-4">
+          <div class="border rounded p-2">
+            <div class="small text-muted">Total Points</div>
+            <div class="fw-semibold"><%= Number(pointsWindow?.stats?.totalPoints || 0) %></div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="border rounded p-2">
+            <div class="small text-muted">Unique Entrants</div>
+            <div class="fw-semibold"><%= Number(pointsWindow?.stats?.uniqueEntrants || 0) %></div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="border rounded p-2">
+            <div class="small text-muted">Qualifying Orders</div>
+            <div class="fw-semibold"><%= Number(pointsWindow?.stats?.qualifyingOrders || 0) %></div>
+          </div>
+        </div>
+      </div>
+
+      <details>
+        <summary class="fw-semibold">View User Points Table</summary>
+        <div class="mt-3">
+          <% if (pointsWindow?.entrants?.length) { %>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th scope="col">User</th>
+                  <th scope="col">Email</th>
+                  <th scope="col" class="text-end">Points</th>
+                  <th scope="col" class="text-end">Qualifying Orders</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% pointsWindow.entrants.forEach((entrant) => { %>
+                <tr>
+                  <td><%= entrant.name || "Unnamed customer" %></td>
+                  <td><%= entrant.email || "-" %></td>
+                  <td class="text-end fw-semibold"><%= Number(entrant.points || 0) %></td>
+                  <td class="text-end"><%= Number(entrant.qualifyingOrders || 0) %></td>
+                </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+          <% } else { %>
+          <p class="text-muted mb-0">No user points yet for the current draw window.</p>
+          <% } %>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="card mt-4">
+    <div class="card-body">
+      <h2 class="h5 mb-1">Recent Winners</h2>
+      <p class="text-muted mb-3">Latest manual draw results.</p>
+
+      <% if (recentWinners?.length) { %>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th scope="col">Drawn At</th>
+              <th scope="col">Winner</th>
+              <th scope="col">Email</th>
+              <th scope="col" class="text-end">Points</th>
+              <th scope="col" class="text-end">Ticket</th>
+              <th scope="col" class="text-end">Order</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% recentWinners.forEach((winner) => { %>
+            <tr>
+              <td>
+                <%= winner?.drawnAtIso
+                  ? new Date(winner.drawnAtIso).toLocaleString("en-ZA", { timeZone: "Africa/Johannesburg" })
+                  : "-" %>
+              </td>
+              <td><%= winner?.name || "Unnamed customer" %></td>
+              <td><%= winner?.email || "-" %></td>
+              <td class="text-end"><%= Number(winner?.points || 0) %></td>
+              <td class="text-end"><%= Number(winner?.ticketNumber || 0) %> / <%= Number(winner?.totalEntries || 0) %></td>
+              <td class="text-end">#<%= Number(winner?.orderId || 0) %></td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% } else { %>
+      <p class="text-muted mb-0">No winners have been drawn yet.</p>
+      <% } %>
+    </div>
+  </section>
+</main>
+
+<script>
+  (() => {
+    const toggle = document.getElementById("comingSoonEnabled");
+    const currentStatus = document.getElementById("competitionComingSoonCurrentStatus");
+    const toggleStatus = document.getElementById("competitionComingSoonToggleStatus");
+    const drawWinnerForm = document.getElementById("drawWinnerForm");
+    const drawWinnerBtn = document.getElementById("drawWinnerBtn");
+    const drawWinnerStatus = document.getElementById("drawWinnerStatus");
+    const drawWinnerResult = document.getElementById("drawWinnerResult");
+    const startNewCompetitionForm = document.getElementById("startNewCompetitionForm");
+    const startNewCompetitionBtn = document.getElementById("startNewCompetitionBtn");
+    const startNewCompetitionStatus = document.getElementById("startNewCompetitionStatus");
+    const newCompetitionEndsAtLocal = document.getElementById("newCompetitionEndsAtLocal");
+    const currentCompetitionEndForm = document.getElementById("currentCompetitionEndForm");
+    const currentCompetitionEndBtn = document.getElementById("currentCompetitionEndBtn");
+    const endCompetitionNowBtn = document.getElementById("endCompetitionNowBtn");
+    const currentCompetitionEndStatus = document.getElementById("currentCompetitionEndStatus");
+    const currentCompetitionEndsAtLocal = document.getElementById("currentCompetitionEndsAtLocal");
+    const countdownEndIso = <%- JSON.stringify(drawDefaults?.countdownEndIso || "") %>;
+    const initialDrawReady = <%- JSON.stringify(Boolean(drawDefaults?.drawReady)) %>;
+    const serverCsrfToken = <%- JSON.stringify(typeof csrfToken !== "undefined" ? csrfToken : "") %>;
+    const token = document
+      .querySelector('meta[name="csrf-token"]')
+      ?.getAttribute("content") || serverCsrfToken;
+
+    if (!toggle || !currentStatus) return;
+
+    const setStatusText = (enabled) => {
+      currentStatus.textContent = enabled ? "Paused" : "Live";
+      currentStatus.classList.toggle("text-danger", enabled);
+      currentStatus.classList.toggle("text-success", !enabled);
+    };
+
+    const setToggleMessage = (message, kind = "muted") => {
+      if (!toggleStatus) return;
+      toggleStatus.textContent = message || "";
+      toggleStatus.className =
+        kind === "error" ? "small text-danger mt-1" : "small text-muted mt-1";
+    };
+    const setStartNewCompetitionStatus = (message, kind = "muted") => {
+      if (!startNewCompetitionStatus) return;
+      startNewCompetitionStatus.textContent = message || "";
+      startNewCompetitionStatus.className =
+        kind === "error" ? "small text-danger mt-2" : "small text-muted mt-2";
+    };
+    const setCurrentCompetitionEndStatus = (message, kind = "muted") => {
+      if (!currentCompetitionEndStatus) return;
+      currentCompetitionEndStatus.textContent = message || "";
+      currentCompetitionEndStatus.className =
+        kind === "error" ? "small text-danger mt-2" : "small text-muted mt-2";
+    };
+
+    toggle.addEventListener("change", async () => {
+      const nextEnabled = Boolean(toggle.checked);
+      const previousEnabled = !nextEnabled;
+      toggle.disabled = true;
+      setToggleMessage("Saving...");
+
+      try {
+        const body = new URLSearchParams();
+        body.set("comingSoonEnabled", nextEnabled ? "on" : "off");
+        if (token) {
+          body.set("_csrf", token);
+        }
+
+        const response = await fetch("/admin/competition-rules/toggle-coming-soon", {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+            "X-Requested-With": "XMLHttpRequest",
+            "X-CSRF-Token": token || "",
+          },
+          credentials: "same-origin",
+          body: body.toString(),
+        });
+
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || !payload?.success) {
+          throw new Error(payload?.message || "Unable to save toggle.");
+        }
+
+        setStatusText(Boolean(payload.comingSoonEnabled));
+        toggle.checked = Boolean(payload.comingSoonEnabled);
+        setToggleMessage(payload.message || "Saved.");
+      } catch (error) {
+        toggle.checked = previousEnabled;
+        setStatusText(previousEnabled);
+        setToggleMessage(error.message || "Unable to save toggle.", "error");
+      } finally {
+        toggle.disabled = false;
+      }
+    });
+
+    if (startNewCompetitionForm && startNewCompetitionBtn && newCompetitionEndsAtLocal) {
+      startNewCompetitionForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const endsAtValue = String(newCompetitionEndsAtLocal.value || "").trim();
+        if (!endsAtValue) {
+          setStartNewCompetitionStatus("Please choose a valid end date and time.", "error");
+          return;
+        }
+
+        const confirmed = window.confirm(
+          "Start a new competition? This will reset the points window.",
+        );
+        if (!confirmed) {
+          return;
+        }
+
+        startNewCompetitionBtn.disabled = true;
+        setStartNewCompetitionStatus("Starting new competition...");
+        try {
+          const body = new URLSearchParams();
+          body.set("endsAtLocal", endsAtValue);
+          if (token) {
+            body.set("_csrf", token);
+          }
+
+          const response = await fetch("/admin/competition-rules/start-new", {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+              "X-Requested-With": "XMLHttpRequest",
+              "X-CSRF-Token": token || "",
+            },
+            credentials: "same-origin",
+            body: body.toString(),
+          });
+
+          const payload = await response.json().catch(() => null);
+          if (!response.ok || !payload?.success) {
+            throw new Error(payload?.message || "Unable to start new competition.");
+          }
+
+          setStartNewCompetitionStatus(payload.message || "New competition started.");
+          window.setTimeout(() => window.location.reload(), 700);
+        } catch (error) {
+          setStartNewCompetitionStatus(
+            error.message || "Unable to start new competition.",
+            "error",
+          );
+        } finally {
+          startNewCompetitionBtn.disabled = false;
+        }
+      });
+    }
+
+    if (currentCompetitionEndForm && currentCompetitionEndBtn && currentCompetitionEndsAtLocal) {
+      currentCompetitionEndForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const endsAtValue = String(currentCompetitionEndsAtLocal.value || "").trim();
+        if (!endsAtValue) {
+          setCurrentCompetitionEndStatus("Please choose a valid end date and time.", "error");
+          return;
+        }
+
+        currentCompetitionEndBtn.disabled = true;
+        setCurrentCompetitionEndStatus("Updating current competition end date...");
+        try {
+          const body = new URLSearchParams();
+          body.set("endsAtLocal", endsAtValue);
+          if (token) {
+            body.set("_csrf", token);
+          }
+
+          const response = await fetch("/admin/competition-rules/current-end", {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+              "X-Requested-With": "XMLHttpRequest",
+              "X-CSRF-Token": token || "",
+            },
+            credentials: "same-origin",
+            body: body.toString(),
+          });
+
+          const payload = await response.json().catch(() => null);
+          if (!response.ok || !payload?.success) {
+            throw new Error(payload?.message || "Unable to update current competition end date.");
+          }
+
+          setCurrentCompetitionEndStatus(payload.message || "Current competition end date updated.");
+          window.setTimeout(() => window.location.reload(), 700);
+        } catch (error) {
+          setCurrentCompetitionEndStatus(
+            error.message || "Unable to update current competition end date.",
+            "error",
+          );
+        } finally {
+          currentCompetitionEndBtn.disabled = false;
+        }
+      });
+    }
+
+    if (endCompetitionNowBtn) {
+      endCompetitionNowBtn.addEventListener("click", async () => {
+        const confirmed = window.confirm(
+          "End the competition now? This will close entries immediately.",
+        );
+        if (!confirmed) {
+          return;
+        }
+
+        endCompetitionNowBtn.disabled = true;
+        if (currentCompetitionEndBtn) {
+          currentCompetitionEndBtn.disabled = true;
+        }
+        setCurrentCompetitionEndStatus("Ending competition...");
+
+        try {
+          const body = new URLSearchParams();
+          if (token) {
+            body.set("_csrf", token);
+          }
+
+          const response = await fetch("/admin/competition-rules/end-now", {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+              "X-Requested-With": "XMLHttpRequest",
+              "X-CSRF-Token": token || "",
+            },
+            credentials: "same-origin",
+            body: body.toString(),
+          });
+
+          const payload = await response.json().catch(() => null);
+          if (!response.ok || !payload?.success) {
+            throw new Error(payload?.message || "Unable to end competition.");
+          }
+
+          setCurrentCompetitionEndStatus(payload.message || "Competition ended.");
+          window.setTimeout(() => window.location.reload(), 700);
+        } catch (error) {
+          setCurrentCompetitionEndStatus(
+            error.message || "Unable to end competition.",
+            "error",
+          );
+        } finally {
+          endCompetitionNowBtn.disabled = false;
+          if (currentCompetitionEndBtn) {
+            currentCompetitionEndBtn.disabled = false;
+          }
+        }
+      });
+    }
+
+    const setDrawWinnerStatus = (message, kind = "muted") => {
+      if (!drawWinnerStatus) return;
+      drawWinnerStatus.textContent = message || "";
+      drawWinnerStatus.className =
+        kind === "error" ? "small text-danger mt-2" : "small text-muted mt-2";
+    };
+
+    const showDrawWinnerResult = (payload) => {
+      if (!drawWinnerResult) return;
+      if (!payload) {
+        drawWinnerResult.classList.add("d-none");
+        drawWinnerResult.textContent = "";
+        return;
+      }
+
+      const lines = [
+        `Winner: ${payload.winner?.name || "Unnamed customer"} (${payload.winner?.email || "No email"})`,
+        `Order ID: #${payload.orderId}`,
+        `Winning ticket: ${payload.ticketNumber} of ${payload.stats?.totalEntries || 0}`,
+        `Winner points in draw window: ${payload.winner?.points || payload.entriesForWinningOrder || 0}`,
+        `Qualifying orders: ${payload.stats?.qualifyingOrders || 0}`,
+        `Unique entrants: ${payload.stats?.uniqueEntrants || 0}`,
+      ];
+      drawWinnerResult.textContent = lines.join(" | ");
+      drawWinnerResult.classList.remove("d-none");
+    };
+
+    if (!drawWinnerForm || !drawWinnerBtn) return;
+
+    const getDrawReadyState = () => {
+      if (!countdownEndIso) {
+        return {
+          ready: false,
+          message: "Draw is not ready. Set a valid countdown end date/time in Competition Rules.",
+          kind: "error",
+        };
+      }
+
+      const endMs = new Date(countdownEndIso).getTime();
+      if (Number.isNaN(endMs)) {
+        return {
+          ready: false,
+          message: "Draw is not ready. Countdown end date/time is invalid.",
+          kind: "error",
+        };
+      }
+
+      if (Date.now() >= endMs) {
+        return {
+          ready: true,
+          message: "Draw is ready. You can manually draw a winner now.",
+          kind: "muted",
+        };
+      }
+
+      return {
+        ready: false,
+        message: `Draw will be ready once the countdown ends at ${new Date(endMs).toLocaleString("en-ZA", { timeZone: "Africa/Johannesburg" })} SAST.`,
+        kind: "muted",
+      };
+    };
+
+    const syncDrawAvailability = () => {
+      const state = getDrawReadyState();
+      drawWinnerBtn.disabled = !state.ready;
+      setDrawWinnerStatus(state.message, state.kind);
+    };
+
+    syncDrawAvailability();
+    if (!initialDrawReady) {
+      window.setInterval(syncDrawAvailability, 15000);
+    }
+
+    drawWinnerForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      syncDrawAvailability();
+      if (drawWinnerBtn.disabled) {
+        return;
+      }
+      drawWinnerBtn.disabled = true;
+      setDrawWinnerStatus("Drawing winner...");
+      showDrawWinnerResult(null);
+
+      try {
+        const body = new URLSearchParams();
+        if (token) {
+          body.set("_csrf", token);
+        }
+
+        const response = await fetch("/admin/competition-rules/draw-winner", {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+            "X-Requested-With": "XMLHttpRequest",
+            "X-CSRF-Token": token || "",
+          },
+          credentials: "same-origin",
+          body: body.toString(),
+        });
+
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || !payload?.success || !payload?.result) {
+          throw new Error(payload?.message || "Unable to draw a winner.");
+        }
+
+        showDrawWinnerResult(payload.result);
+        setDrawWinnerStatus(payload.message || "Winner drawn.");
+      } catch (error) {
+        setDrawWinnerStatus(error.message || "Unable to draw winner.", "error");
+      } finally {
+        syncDrawAvailability();
+      }
+    });
+  })();
+</script>
+
+<%- include("partials/footer") %>

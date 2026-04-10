@@ -1,0 +1,160 @@
+<%- include("partials/header", { title: "Admin Team" }) %>
+<%- include("partials/navbar") %>
+<%- include("partials/admin-nav") %>
+
+<main class="container py-5 admin-shell">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+      <h1 class="h3 mb-1">Admin Team</h1>
+      <p class="text-muted mb-0">Invite admins and manage team roles.</p>
+    </div>
+  </div>
+
+  <%- include("partials/admin-floating-alert", { success, error }) %>
+
+  <% if (inviteLink) { %>
+  <div class="alert alert-warning" role="alert">
+    Email is not configured. Share this invite link manually:
+    <div class="mt-2">
+      <code><%= inviteLink %></code>
+    </div>
+  </div>
+  <% } %>
+
+  <section class="card mb-4">
+    <div class="card-body">
+      <h2 class="h5 mb-3">Invite Team Member</h2>
+      <form class="row g-3" action="/admin/team/invite" method="POST">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <div class="col-md-6">
+          <label for="inviteEmail" class="form-label">Email</label>
+          <input
+            id="inviteEmail"
+            name="email"
+            type="email"
+            class="form-control"
+            required
+          />
+        </div>
+        <div class="col-md-4">
+          <label for="inviteRole" class="form-label">Role</label>
+          <select id="inviteRole" name="role" class="form-select" required>
+            <option value="ADMIN">Admin</option>
+            <option value="STAFF">Staff</option>
+          </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+          <button type="submit" class="btn btn-primary w-100">Send Invite</button>
+        </div>
+      </form>
+      <p class="small text-muted mt-2 mb-0">
+        Invites expire in 48 hours. Only Owners can manage team roles.
+      </p>
+    </div>
+  </section>
+
+  <section class="card mb-4">
+    <div class="card-body">
+      <h2 class="h5 mb-3">Pending Invites</h2>
+      <% if (!invites.length) { %>
+      <div class="alert alert-info mb-0">No pending invites.</div>
+      <% } else { %>
+      <div class="table-responsive">
+        <table class="table mb-0">
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Expires</th>
+              <th class="text-end">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% invites.forEach((invite) => { %>
+            <tr>
+              <td><%= invite.email %></td>
+              <td><%= invite.role %></td>
+              <td><%= new Date(invite.expiresAt).toLocaleString() %></td>
+              <td class="text-end">
+                <div class="d-inline-flex gap-2">
+                  <form action="/admin/team/invite/<%= invite.id %>/resend" method="POST">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                    <button class="btn btn-sm btn-outline-primary" type="submit">
+                      Resend
+                    </button>
+                  </form>
+                  <form action="/admin/team/invite/<%= invite.id %>/revoke" method="POST">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                    <button class="btn btn-sm btn-outline-danger" type="submit">
+                      Revoke
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% } %>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-body">
+      <h2 class="h5 mb-3">Team Members</h2>
+      <div class="table-responsive">
+        <table class="table mb-0">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th class="text-end">Change Role</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% users.filter((member) => member.role !== "OWNER").forEach((member) => { %>
+            <tr>
+              <td><%= member.name || "-" %></td>
+              <td><%= member.email %></td>
+              <td><%= member.role %></td>
+              <td class="text-end">
+                <% if (member.role === "OWNER") { %>
+                <span class="text-muted small">Owner</span>
+                <% } else { %>
+                <div class="d-flex justify-content-end gap-2 flex-wrap">
+                  <form
+                    class="d-flex gap-2"
+                    action="/admin/team/user/<%= member.id %>/role"
+                    method="POST"
+                  >
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                    <select name="role" class="form-select form-select-sm" style="max-width: 140px;">
+                      <option value="ADMIN" <%= member.role === "ADMIN" ? "selected" : "" %>>Admin</option>
+                      <option value="STAFF" <%= member.role === "STAFF" ? "selected" : "" %>>Staff</option>
+                      <option value="USER" <%= member.role === "USER" ? "selected" : "" %>>User</option>
+                    </select>
+                    <button class="btn btn-sm btn-outline-primary" type="submit">
+                      Update
+                    </button>
+                  </form>
+                  <form action="/admin/team/user/<%= member.id %>/revoke" method="POST">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                    <button class="btn btn-sm btn-outline-danger" type="submit">
+                      Revoke Access
+                    </button>
+                  </form>
+                </div>
+                <% } %>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<%- include("partials/footer") %>

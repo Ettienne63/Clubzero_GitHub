@@ -1,0 +1,48 @@
+<% if (success || error) { %>
+<div
+  class="admin-floating-alert <%= error ? 'is-error' : 'is-success' %>"
+  role="status"
+  aria-live="polite"
+  data-admin-floating-alert
+  style="position:fixed;right:16px;bottom:16px;z-index:2140;width:min(420px,calc(100vw - 24px));display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:12px;border:1px solid <%= error ? 'rgba(220,53,69,0.65)' : 'rgba(25,135,84,0.6)' %>;background:#ffffff;color:#111827;box-shadow:0 12px 30px rgba(0,0,0,0.2);"
+>
+  <div class="admin-floating-alert__body">
+    <strong class="admin-floating-alert__title"><%= error ? "Update failed" : "Saved" %></strong>
+    <div class="admin-floating-alert__message"><%= error || success %></div>
+  </div>
+  <button
+    type="button"
+    class="admin-floating-alert__close"
+    aria-label="Dismiss alert"
+    data-admin-floating-alert-close
+  >
+    &times;
+  </button>
+</div>
+<script>
+  (function () {
+    const alertEl = document.querySelector("[data-admin-floating-alert]");
+    if (!alertEl) return;
+
+    const closeBtn = alertEl.querySelector("[data-admin-floating-alert-close]");
+    let hideTimer = null;
+
+    const closeAlert = function () {
+      alertEl.classList.add("is-hiding");
+      window.setTimeout(function () {
+        if (alertEl && alertEl.parentNode) {
+          alertEl.parentNode.removeChild(alertEl);
+        }
+      }, 180);
+    };
+
+    hideTimer = window.setTimeout(closeAlert, 7000);
+    if (closeBtn) {
+      closeBtn.addEventListener("click", function () {
+        if (hideTimer) window.clearTimeout(hideTimer);
+        closeAlert();
+      });
+    }
+  })();
+</script>
+<% } %>

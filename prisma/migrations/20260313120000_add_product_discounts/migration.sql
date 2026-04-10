@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Product"
+ADD COLUMN "discountPercent" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN "discountEnabled" BOOLEAN NOT NULL DEFAULT true;

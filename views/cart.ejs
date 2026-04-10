@@ -1,0 +1,310 @@
+<%- include("partials/header", { title: "Your Cart" }) %>
+<%- include("partials/navbar") %>
+
+<main class="cz-banded cart-page">
+  <section class="cz-band">
+    <div class="container cz-section">
+      <div class="d-flex justify-content-between align-items-center mb-4 cart-top-header">
+        <div class="d-flex align-items-center gap-2">
+          <h1 class="h3 mb-0">Your Cart</h1>
+          <% if (Number(totalCases || 0) > 0) { %>
+          <span class="badge rounded-pill text-bg-primary"><%= Number(totalCases) %> case(s)</span>
+          <% } %>
+        </div>
+        <a href="/auth/products" class="btn btn-outline-primary">Continue Shopping</a>
+      </div>
+
+      <% if (success) { %>
+      <div class="alert alert-success"><%= success %></div>
+      <% } %>
+
+      <% if (error) { %>
+      <div class="alert alert-danger"><%= error %></div>
+      <% } %>
+      <div class="alert alert-danger d-none" role="alert" id="cart-inline-error"></div>
+
+      <% if (!cartItems || cartItems.length === 0) { %>
+      <div class="alert alert-info mb-0">
+        Your cart is empty. Add products from the products page.
+      </div>
+      <% } else { %>
+      <% if (hasUnavailableItems) { %>
+      <div class="alert alert-warning">
+        Some items in your cart are hidden and cannot be checked out.
+      </div>
+      <% } %>
+      <div class="d-flex justify-content-end mb-3">
+        <% if (!hasUnavailableItems) { %>
+        <a href="/auth/checkout" class="btn btn-primary">Proceed to Checkout</a>
+        <% } %>
+      </div>
+      <div class="table-responsive cz-panel cz-panel-tight cart-table-wrap">
+        <table class="table align-middle mb-0">
+      <thead>
+        <tr>
+          <th scope="col">Product</th>
+          <th scope="col">Price (Per Case)</th>
+          <th scope="col">Cases</th>
+          <th scope="col">Subtotal</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% cartItems.forEach((item) => { %>
+        <% const isCustomPack = item.isCustomPack === true; %>
+        <% const discountPercent = !isCustomPack ? Number(item.product?.discountPercent || 0) : 0; %>
+        <% const hasDiscount = !isCustomPack && Boolean(discountsEnabled) && item.product?.discountEnabled !== false && discountPercent > 0; %>
+        <% const discountedPrice = !isCustomPack ? (hasDiscount ? Number(item.product?.price || 0) * (1 - discountPercent / 100) : Number(item.product?.price || 0)) : Number(item.unitPrice || 0); %>
+        <% const availableStock = !isCustomPack ? Number(item.availableCases || 0) : 999; %>
+        <% const canIncreaseQuantity = !isCustomPack ? (availableStock > Number(item.quantity || 0)) : true; %>
+        <tr data-cart-item-row="<%= item.id %>">
+          <td data-label="Product">
+            <div class="d-flex align-items-center gap-3">
+              <% if (!isCustomPack) { %>
+              <img
+                src="<%= item.product?.imageUrl || '/images/6e2b972b-4a66-45ab-a9f6-a16e0d0d7b05.avif' %>"
+                alt="<%= item.product?.name || 'Product' %>"
+                class="cart-product-thumb rounded"
+                style="width: 72px; height: 72px"
+                loading="lazy"
+                decoding="async"
+              />
+              <% } else { %>
+              <div class="cart-product-thumb rounded d-flex align-items-center justify-content-center bg-light border" style="width: 72px; height: 72px">
+                <span class="small fw-semibold text-center">Mix<br />12</span>
+              </div>
+              <% } %>
+              <div>
+                <div class="fw-semibold"><%= item.displayName || item.product?.name || "Item" %></div>
+                <% if (isCustomPack && Array.isArray(item.customPackEntries) && item.customPackEntries.length) { %>
+                <div class="text-muted small">
+                  <%= item.customPackEntries.map((entry) => `${entry.productName} (${entry.bottlesPerPack})`).join(", ") %>
+                </div>
+                <% } %>
+                <% if (item.isUnavailable) { %>
+                <div class="small text-danger">Unavailable</div>
+                <% } %>
+              </div>
+            </div>
+          </td>
+          <td data-label="Price (Per Case)">
+            <% if (hasDiscount) { %>
+            <span class="price-discounted">R<%= Number(discountedPrice).toFixed(2) %></span>
+            <span class="price-original ms-1">R<%= Number(item.product?.price || 0).toFixed(2) %></span>
+            <% } else { %>
+            R<%= Number(item.product?.price || 0).toFixed(2) %>
+            <% } %>
+          </td>
+          <td data-label="Cases">
+            <div class="cart-qty-stack">
+              <form
+                action="/auth/cart/<%= item.id %>/update"
+                method="POST"
+                class="cart-qty-form"
+                data-cart-update-form
+              >
+                <input
+                  type="number"
+                  name="quantity"
+                  min="1"
+                  max="<%= Math.max(1, availableStock) %>"
+                  value="<%= item.quantity %>"
+                  class="form-control cart-qty-input"
+                />
+              </form>
+              <div
+                class="small text-muted cart-qty-meta"
+                data-bottles-count
+              >
+                <%= item.bottles || (item.quantity * 12) %> bottles
+              </div>
+            </div>
+          </td>
+          <td data-label="Subtotal" data-subtotal-cell>
+            R<%= Number(item.subtotal || (Number(discountedPrice) * item.quantity)).toFixed(2) %>
+          </td>
+          <td data-label="Actions">
+            <form action="/auth/cart/<%= item.id %>/delete" method="POST">
+              <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+            </form>
+            <% if (!isCustomPack) { %>
+            <div
+              class="small cart-stock-note mt-1 <%= canIncreaseQuantity ? 'invisible' : '' %>"
+              data-max-stock-note
+            >
+              Stock limit reached
+            </div>
+            <% } %>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+      <tfoot>
+        <tr>
+          <th colspan="3" class="text-end">Total</th>
+          <th id="cart-total-cell">R<%= Number(total).toFixed(2) %></th>
+          <th></th>
+        </tr>
+      </tfoot>
+        </table>
+      </div>
+      <div class="cart-mobile-total d-md-none mt-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="fw-semibold">Total</span>
+          <span class="fw-bold" id="cart-total-mobile">R<%= Number(total).toFixed(2) %></span>
+        </div>
+      </div>
+      <% } %>
+    </div>
+  </section>
+</main>
+
+<script>
+  (() => {
+    const updateForms = document.querySelectorAll("[data-cart-update-form]");
+    if (!updateForms.length) return;
+
+    const totalCell = document.getElementById("cart-total-cell");
+    const totalMobile = document.getElementById("cart-total-mobile");
+    const inlineError = document.getElementById("cart-inline-error");
+    const csrfToken = document
+      .querySelector('meta[name="csrf-token"]')
+      ?.getAttribute("content");
+    const formatCurrency = (amount) => `R${Number(amount).toFixed(2)}`;
+    const showInlineError = (message) => {
+      if (!inlineError) return;
+      inlineError.textContent = message || "Unable to update cart item.";
+      inlineError.classList.remove("d-none");
+    };
+    const clearInlineError = () => {
+      if (!inlineError) return;
+      inlineError.textContent = "";
+      inlineError.classList.add("d-none");
+    };
+
+    updateForms.forEach((form) => {
+      const quantityInput = form.querySelector('input[name="quantity"]');
+      if (!quantityInput) return;
+      const row = form.closest("[data-cart-item-row]");
+      const maxStockNote = row?.querySelector("[data-max-stock-note]");
+
+      const refreshMaxStockNote = () => {
+        if (!maxStockNote) return;
+        const maxValue = Number.parseInt(quantityInput.getAttribute("max"), 10);
+        const quantityValue = Number.parseInt(quantityInput.value, 10) || 0;
+        const hasReachedMax = Number.isInteger(maxValue) && quantityValue >= maxValue;
+        maxStockNote.classList.toggle("invisible", !hasReachedMax);
+      };
+
+      let timerId = null;
+
+      const submitUpdate = async () => {
+        const maxValue = Number.parseInt(quantityInput.getAttribute("max"), 10);
+        const minValue = Number.parseInt(quantityInput.getAttribute("min"), 10) || 1;
+        const parsedValue = Number.parseInt(quantityInput.value, 10);
+        const normalizedValue = Number.isInteger(parsedValue) ? parsedValue : minValue;
+        const clampedValue = Number.isInteger(maxValue)
+          ? Math.min(Math.max(normalizedValue, minValue), maxValue)
+          : Math.max(normalizedValue, minValue);
+        quantityInput.value = String(clampedValue);
+        refreshMaxStockNote();
+
+        const formData = new URLSearchParams();
+        formData.set("quantity", quantityInput.value);
+
+        quantityInput.disabled = true;
+
+        try {
+          clearInlineError();
+          const response = await fetch(form.action, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+              "X-Requested-With": "XMLHttpRequest",
+              "X-CSRF-Token": csrfToken || "",
+              Accept: "application/json",
+            },
+            body: formData.toString(),
+          });
+
+          if (!response.ok) {
+            const message = await response.text();
+            throw new Error(message || "Unable to update cart item.");
+          }
+
+          const payload = await response.json();
+          if (!payload || payload.success !== true) {
+            throw new Error("Invalid update response.");
+          }
+
+          if (payload.removed) {
+            window.location.reload();
+            return;
+          }
+
+          if (row) {
+            const bottles = row.querySelector("[data-bottles-count]");
+            const subtotalCell = row.querySelector("[data-subtotal-cell]");
+            if (bottles) {
+              bottles.textContent = `${payload.bottles} bottles`;
+            }
+            if (subtotalCell) {
+              subtotalCell.textContent = formatCurrency(payload.subtotal);
+            }
+          }
+
+          quantityInput.value = payload.quantity;
+          refreshMaxStockNote();
+          if (totalCell) {
+            totalCell.textContent = formatCurrency(payload.total);
+          }
+          if (totalMobile) {
+            totalMobile.textContent = formatCurrency(payload.total);
+          }
+
+          const cartLink = document.querySelector('a[href="/auth/cart"]');
+          if (cartLink) {
+            const badge = cartLink.querySelector(".badge");
+            const cartCount = Number(payload.cartCount || 0);
+            if (cartCount > 0) {
+              if (badge) {
+                badge.textContent = String(cartCount);
+              } else {
+                const newBadge = document.createElement("span");
+                newBadge.className = "badge rounded-pill text-bg-light text-primary";
+                newBadge.textContent = String(cartCount);
+                cartLink.appendChild(newBadge);
+              }
+            } else if (badge) {
+              badge.remove();
+            }
+          }
+
+        } catch (error) {
+          showInlineError(error.message || "Unable to update cart item.");
+        } finally {
+          quantityInput.disabled = false;
+        }
+      };
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        submitUpdate();
+      });
+
+      quantityInput.addEventListener("input", () => {
+        refreshMaxStockNote();
+        if (timerId) {
+          clearTimeout(timerId);
+        }
+        timerId = setTimeout(() => {
+          form.requestSubmit();
+        }, 250);
+      });
+
+      refreshMaxStockNote();
+    });
+  })();
+</script>
+
+<%- include("partials/footer") %>

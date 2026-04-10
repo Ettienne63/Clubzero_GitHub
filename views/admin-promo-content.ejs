@@ -1,0 +1,264 @@
+<%- include("partials/header", { title: "Edit Promotion" }) %>
+<%- include("partials/navbar") %>
+<%- include("partials/admin-nav") %>
+
+<main class="container py-5 admin-shell">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">Edit Promotion</h1>
+      <p class="text-muted mb-0">
+        Manage the promotion content shown on the home page.
+      </p>
+    </div>
+  </div>
+
+  <%- include("partials/admin-floating-alert", { success, error }) %>
+
+  <% if (!promoSettings?.enabled) { %>
+  <div class="alert alert-warning" role="alert">
+    Promotion visibility is off. Turn it on from <strong>Management → Promotions</strong>.
+  </div>
+  <% } %>
+
+  <section class="card mb-4">
+    <div class="card-body">
+      <h2 class="h5 mb-3">Promotion Content</h2>
+      <form
+        action="/admin/promo"
+        method="POST"
+        enctype="multipart/form-data"
+        class="admin-compact-form admin-promo-form"
+        id="promoSettingsForm"
+      >
+        <input type="hidden" name="promoReturnTo" value="/admin/promo-content" />
+
+        <div class="admin-compact-row">
+          <div class="admin-compact-field">
+            <label for="promoBadge" class="form-label">Badge</label>
+            <input
+              id="promoBadge"
+              name="promoBadge"
+              class="form-control"
+              value="<%= promoSettings?.badge || '' %>"
+              placeholder="Limited Offer"
+            />
+          </div>
+          <div class="admin-compact-field">
+            <label for="promoTitle" class="form-label">Title</label>
+            <input
+              id="promoTitle"
+              name="promoTitle"
+              class="form-control"
+              value="<%= promoSettings?.title || '' %>"
+              placeholder="Seasonal Promo Drop"
+            />
+          </div>
+        </div>
+
+        <div class="admin-compact-row">
+          <div class="admin-compact-field">
+            <label for="promoSubtitle" class="form-label">Subtitle</label>
+            <input
+              id="promoSubtitle"
+              name="promoSubtitle"
+              class="form-control"
+              value="<%= promoSettings?.subtitle || '' %>"
+              placeholder="Bright flavor, limited pricing."
+            />
+            <label for="promoFinePrint" class="form-label mt-3">Fine Print</label>
+            <input
+              id="promoFinePrint"
+              name="promoFinePrint"
+              class="form-control"
+              value="<%= promoSettings?.finePrint || '' %>"
+              placeholder="Available while supplies last."
+            />
+          </div>
+          <div class="admin-compact-field">
+            <label for="promoBody" class="form-label">Body</label>
+            <textarea
+              id="promoBody"
+              name="promoBody"
+              class="form-control"
+              rows="3"
+            ><%= promoSettings?.body || '' %></textarea>
+          </div>
+        </div>
+
+        <details class="admin-compact-details">
+          <summary>CTA Buttons</summary>
+          <div class="admin-compact-row">
+            <div class="admin-compact-field">
+              <label for="promoCtaLabel" class="form-label">Main Button Text</label>
+              <input
+                id="promoCtaLabel"
+                name="promoCtaLabel"
+                class="form-control"
+                value="<%= promoSettings?.ctaLabel || '' %>"
+                placeholder="Shop the promo"
+              />
+              <div class="form-text">
+                This is the main button text shown on the promotion.
+              </div>
+            </div>
+            <div class="admin-compact-field">
+              <label for="promoCtaUrlPreset" class="form-label">Main Button Link</label>
+              <input
+                id="promoCtaUrl"
+                name="promoCtaUrl"
+                type="hidden"
+                value="<%= promoSettings?.ctaUrl || '' %>"
+              />
+              <div class="form-text">
+                Current URL:
+                <strong id="promoCtaUrlPreview"
+                  ><%= promoSettings?.ctaUrl || "Not set" %></strong
+                >
+              </div>
+              <select
+                id="promoCtaUrlPreset"
+                class="form-select mt-2"
+                aria-label="Primary CTA preset"
+              >
+                <option value="">Select a page...</option>
+                <option value="/auth/products">Products</option>
+                <option value="/about">About</option>
+                <option value="/contact">Contact</option>
+                <option value="/auth/affiliate/join">Become Affiliate</option>
+                <option value="/auth/affiliate">Affiliate Dashboard</option>
+                <option value="/auth/login">Login</option>
+                <option value="/auth/signup">Sign Up</option>
+              </select>
+            </div>
+            <div class="admin-compact-field">
+              <label for="promoSecondaryLabel" class="form-label">
+                Second Button Text
+              </label>
+              <input
+                id="promoSecondaryLabel"
+                name="promoSecondaryLabel"
+                class="form-control"
+                value="<%= promoSettings?.secondaryLabel || '' %>"
+                placeholder="Learn more"
+              />
+              <div class="form-text">
+                Optional secondary button text shown next to the main CTA.
+              </div>
+            </div>
+            <div class="admin-compact-field">
+              <label for="promoSecondaryUrlPreset" class="form-label">
+                Second Button Link
+              </label>
+              <input
+                id="promoSecondaryUrl"
+                name="promoSecondaryUrl"
+                type="hidden"
+                value="<%= promoSettings?.secondaryUrl || '' %>"
+              />
+              <div class="form-text">
+                Current URL:
+                <strong id="promoSecondaryUrlPreview"
+                  ><%= promoSettings?.secondaryUrl || "Not set" %></strong
+                >
+              </div>
+              <select
+                id="promoSecondaryUrlPreset"
+                class="form-select mt-2"
+                aria-label="Secondary CTA preset"
+              >
+                <option value="">Select a page...</option>
+                <option value="/auth/products">Products</option>
+                <option value="/about">About</option>
+                <option value="/contact">Contact</option>
+                <option value="/auth/affiliate/join">Become Affiliate</option>
+                <option value="/auth/affiliate">Affiliate Dashboard</option>
+                <option value="/auth/login">Login</option>
+                <option value="/auth/signup">Sign Up</option>
+              </select>
+            </div>
+          </div>
+        </details>
+
+        <details class="admin-compact-details">
+          <summary>Promotion Image</summary>
+          <div class="admin-compact-row">
+            <div class="admin-compact-field">
+              <label for="promoImage" class="form-label">Upload Image</label>
+              <input
+                id="promoImage"
+                name="promoImage"
+                type="file"
+                class="form-control"
+                accept="image/*"
+              />
+            </div>
+            <div class="admin-compact-field">
+              <label for="promoImageUrl" class="form-label">Image URL</label>
+              <input
+                id="promoImageUrl"
+                name="promoImageUrl"
+                class="form-control"
+                value="<%= promoSettings?.imageUrl || '' %>"
+                placeholder="https://..."
+              />
+            </div>
+          </div>
+          <div class="form-check">
+            <input
+              id="promoImageRemove"
+              name="promoImageRemove"
+              class="form-check-input"
+              type="checkbox"
+            />
+            <label class="form-check-label" for="promoImageRemove">
+              Remove promo image
+            </label>
+          </div>
+          <% if (promoSettings?.imageUrl) { %>
+          <div class="mt-3">
+            <img
+              src="<%= promoSettings.imageUrl %>"
+              alt="Promotion preview"
+              class="rounded border admin-image-frame"
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+          <% } %>
+        </details>
+
+        <div class="admin-compact-actions">
+          <button type="submit" class="btn btn-primary">
+            Save Promotion
+          </button>
+        </div>
+      </form>
+    </div>
+  </section>
+</main>
+
+<script>
+  const bindPreset = (selectId, inputId, previewId) => {
+    const select = document.getElementById(selectId);
+    const input = document.getElementById(inputId);
+    const preview = document.getElementById(previewId);
+    if (!select || !input) return;
+    select.addEventListener("change", () => {
+      if (select.value) {
+        input.value = select.value;
+        if (preview) {
+          preview.textContent = select.value;
+        }
+      }
+    });
+  };
+
+  bindPreset("promoCtaUrlPreset", "promoCtaUrl", "promoCtaUrlPreview");
+  bindPreset(
+    "promoSecondaryUrlPreset",
+    "promoSecondaryUrl",
+    "promoSecondaryUrlPreview",
+  );
+</script>
+
+<%- include("partials/footer") %>

@@ -1,3 +1,115 @@
-<footer>
-  <p>&copy; 2026 MyStore</p>
+<script
+  src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"
+  integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r"
+  crossorigin="anonymous"
+></script>
+<script
+  src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js"
+  integrity="sha384-G/EV+4j2dNv+tEPo3++6LCgdCROaejBqfUeNjuKAiuXbjrxilcCdDz6ZAVfHWe1Y"
+  crossorigin="anonymous"
+></script>
+<script>
+  (() => {
+    const token = document
+      .querySelector('meta[name="csrf-token"]')
+      ?.getAttribute("content");
+
+    if (!token) {
+      return;
+    }
+
+    const appendTokenToUrl = (value) => {
+      if (!value) {
+        return value;
+      }
+
+      try {
+        const url = new URL(value, window.location.origin);
+        url.searchParams.set("_csrf", token);
+        return `${url.pathname}${url.search}${url.hash}`;
+      } catch {
+        return value;
+      }
+    };
+
+    document
+      .querySelectorAll('form[method="POST"], form[method="post"]')
+      .forEach((form) => {
+        let csrfField = form.querySelector('input[name="_csrf"]');
+        if (!csrfField) {
+          csrfField = document.createElement("input");
+          csrfField.type = "hidden";
+          csrfField.name = "_csrf";
+          form.appendChild(csrfField);
+        }
+
+        csrfField.value = token;
+
+        const isMultipart =
+          String(form.getAttribute("enctype") || "").toLowerCase() ===
+          "multipart/form-data";
+
+        if (isMultipart) {
+          form.action = appendTokenToUrl(form.action);
+          form
+            .querySelectorAll('button[formaction], input[formaction]')
+            .forEach((submitter) => {
+              submitter.setAttribute(
+                "formaction",
+                appendTokenToUrl(submitter.getAttribute("formaction")),
+              );
+            });
+        }
+      });
+  })();
+</script>
+<footer class="footer">
+  <div class="container footer-shell">
+    <div class="footer-brand">
+      <div class="footer-logo">Club Zero</div>
+      <p class="footer-tagline">
+        Sparkling hydration made for everyday balance, delivered with care.
+      </p>
+    </div>
+
+    <div class="footer-col">
+      <h3 class="footer-title">Explore</h3>
+      <a href="/about" class="footer-link">About</a>
+      <a href="/competitions" class="footer-link">Competitions</a>
+      <a href="/contact" class="footer-link">Contact</a>
+      <a href="/store-locator" class="footer-link">Store Locator</a>
+    </div>
+
+    <div class="footer-col">
+      <h3 class="footer-title">Shop</h3>
+      <a href="/auth/products" class="footer-link">Products</a>
+      <a href="/auth/cart" class="footer-link">Cart</a>
+      <a href="/auth/orders" class="footer-link">Orders</a>
+    </div>
+
+    <div class="footer-col">
+      <h3 class="footer-title">Partners</h3>
+      <a href="/auth/affiliate/join" class="footer-link">Become Affiliate</a>
+      <a href="/contact" class="footer-link">Become a Stockist</a>
+    </div>
+
+    <div class="footer-col">
+      <h3 class="footer-title">Socials</h3>
+      <a
+        href="https://www.instagram.com/clubzeroza?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="
+        class="footer-social-chip"
+        target="_blank"
+        rel="noreferrer"
+      >
+        Instagram
+      </a>
+    </div>
+  </div>
+
+  <div class="container footer-bottom">
+    <span>&copy; <%= new Date().getFullYear() %> Club Zero</span>
+    <span class="footer-note">Crafted in South Africa</span>
+  </div>
 </footer>
+</body>
+</html>
