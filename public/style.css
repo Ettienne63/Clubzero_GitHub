@@ -4640,8 +4640,17 @@ body[data-site-theme] .thank-you-review-btn.active {
 
 .competition-hero h1,
 .competition-hero span {
-  color: #e2e8f0 !important;
-  text-shadow: 0 1px 6px rgba(2, 6, 23, 0.3);
+  color: #ffffff !important;
+  text-shadow: none !important;
+}
+
+.competition-hero .competition-pill,
+.competition-hero .competition-entry-counter__label,
+.competition-hero .competition-entry-counter__value,
+.competition-hero .competition-entry-counter__meta,
+.competition-hero .competition-entry-counter__link {
+  color: #ffffff !important;
+  text-shadow: none !important;
 }
 
 .competition-hero .display-5 {
