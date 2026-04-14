@@ -7,6 +7,12 @@ const {
   getCompetitionEntryRules,
   saveCompetitionEntryRules,
 } = require("../lib/competitionEntryRules");
+const {
+  setAutoWinnerDrawState,
+  getAutoWinnerDrawState,
+  resolveWinnerRevealAt,
+  resolveWinnerRevealLabel,
+} = require("../lib/competitionWinnerDraw");
 const { prisma } = require("../prisma/lib/prisma");
 const { logger } = require("../lib/logger");
 const {
@@ -339,7 +345,11 @@ const buildPublicPageModel = (content) => {
       prize: content.prize,
       deadlineLabel: resolveDeadlineLabel(content.endsAtIso, content.deadlineLabel),
       endsAtIso: content.endsAtIso,
-      winnerDateLabel: content.winnerDateLabel,
+      winnerDateLabel: resolveWinnerRevealLabel(
+        content.endsAtIso,
+        content.winnerRevealAtIso,
+        content.winnerDateLabel,
+      ),
       eligibility: content.eligibility,
       entryRules,
     },
@@ -361,8 +371,22 @@ exports.getCompetitionsPage = async (_req, res) => {
   const contentWithRuleText = {
     ...content,
     entryRulesText: buildEntryRulesTextFromRules(rules),
+    winnerDateLabel: resolveWinnerRevealLabel(
+      content.endsAtIso,
+      content.winnerRevealAtIso,
+      content.winnerDateLabel,
+    ),
   };
   const pageModel = buildPublicPageModel(contentWithRuleText);
+  const revealAt = resolveWinnerRevealAt(
+    pageModel.currentCompetition.endsAtIso,
+    content.winnerRevealAtIso,
+  );
+  const autoWinnerState = await getAutoWinnerDrawState();
+  const revealReady =
+    Boolean(revealAt) && Date.now() >= new Date(revealAt).getTime();
+  const publicWinner =
+    revealReady && autoWinnerState?.winner ? autoWinnerState.winner : null;
   const competitionEndsAt = new Date(pageModel.currentCompetition.endsAtIso);
   const competitionStartsAt = resolveCompetitionStartAt(content);
   const hasValidEndAt = !Number.isNaN(competitionEndsAt.getTime());
@@ -429,6 +453,12 @@ exports.getCompetitionsPage = async (_req, res) => {
 
   return res.render("competitions", {
     ...pageModel,
+    winnerReveal: {
+      revealAtIso: revealAt ? new Date(revealAt).toISOString() : "",
+      revealLabel: pageModel.currentCompetition.winnerDateLabel,
+      revealReady,
+      winner: publicWinner,
+    },
     entryCounter,
     competitionRules: rules,
     competitionHasEnded: isCompetitionExpired,
@@ -446,6 +476,9 @@ exports.getAdminCompetitionRulesPage = async (req, res) => {
     ? rawEndsAtIso.replace(/([+-]\d{2}:\d{2}|Z)$/i, "").slice(0, 16)
     : "";
   const endsAtDateValue = formatDateInput(rawEndsAtIso);
+  const revealDateValue = formatDateInput(
+    content?.winnerRevealAtIso || resolveWinnerRevealAt(content?.endsAtIso),
+  );
   const effectiveStartAt = resolveCompetitionStartAt(content);
   const competitionStartsAtLocalValue =
     formatSastDateTimeLocalValue(effectiveStartAt);
@@ -476,6 +509,7 @@ exports.getAdminCompetitionRulesPage = async (req, res) => {
     drawDefaults: {
       endsAtLocalValue,
       endsAtDateValue,
+      revealDateValue,
       competitionStartsAtLocalValue,
       drawFromDate: formatDateInput(drawStartAt),
       drawToDate: formatDateInput(content?.endsAtIso),
@@ -594,6 +628,12 @@ exports.drawAdminCompetitionWinner = async (req, res) => {
       drawToDate: formatDateInput(competitionEndAt),
       drawFromDateTime: formatDateTimeDisplay(drawStartAt),
       drawToDateTime: formatDateTimeDisplay(competitionEndAt),
+      revealAtDateTime: formatDateTimeDisplay(
+        resolveWinnerRevealAt(
+          content.endsAtIso,
+          content.winnerRevealAtIso,
+        ) || competitionEndAt,
+      ),
     },
   };
 
@@ -609,6 +649,27 @@ exports.drawAdminCompetitionWinner = async (req, res) => {
     });
   } catch (error) {
     logger.warn("competition_recent_winner_store_failed", {
+      error: error.message,
+    });
+  }
+
+  try {
+    await setAutoWinnerDrawState({
+      competitionEndsAtIso: content.endsAtIso,
+      drawAtIso: competitionEndAt.toISOString(),
+      revealAtIso:
+        resolveWinnerRevealAt(
+          content.endsAtIso,
+          content.winnerRevealAtIso,
+        )?.toISOString() || "",
+      drawnAtIso: winnerPayload.drawnAtIso,
+      winner: winnerPayload.winner,
+      ticketNumber: winnerPayload.ticketNumber,
+      orderId: winnerPayload.orderId,
+      stats: winnerPayload.stats,
+    });
+  } catch (error) {
+    logger.warn("competition_winner_state_store_failed", {
       error: error.message,
     });
   }
@@ -739,6 +800,8 @@ exports.startAdminCompetitionWindow = async (req, res) => {
       endsAtIso,
       deadlineLabel: resolveDeadlineLabel(endsAtIso, content.deadlineLabel),
       competitionStartsAtIso: formatSastIso(new Date()),
+      winnerRevealAtIso:
+        resolveWinnerRevealAt(endsAtIso)?.toISOString() || content.winnerRevealAtIso,
     });
 
     await saveCompetitionEntryRules({
@@ -804,6 +867,8 @@ exports.updateAdminCompetitionCurrentEnd = async (req, res) => {
       ...content,
       endsAtIso,
       deadlineLabel: resolveDeadlineLabel(endsAtIso, content.deadlineLabel),
+      winnerRevealAtIso:
+        resolveWinnerRevealAt(endsAtIso)?.toISOString() || content.winnerRevealAtIso,
     });
 
     const message = "Current competition end date updated.";
@@ -828,6 +893,67 @@ exports.updateAdminCompetitionCurrentEnd = async (req, res) => {
   }
 };
 
+exports.updateAdminCompetitionRevealDate = async (req, res) => {
+  const wantsJson =
+    req.xhr || (req.get("Accept") || "").includes("application/json");
+  const revealDateInput = trimText(req.body?.revealDateLocal);
+  const winnerRevealAtIso = normalizeEndDateToSast2359Iso(revealDateInput);
+
+  if (!revealDateInput || !winnerRevealAtIso) {
+    const message = "Please provide a valid public reveal date.";
+    if (wantsJson) {
+      return res.status(400).json({ success: false, message });
+    }
+    return res.redirect(
+      `/admin/competition-rules?error=${encodeURIComponent(message)}`,
+    );
+  }
+
+  try {
+    const content = await getCompetitionContentSettings();
+    const revealAt = new Date(winnerRevealAtIso);
+    const endAt = new Date(content?.endsAtIso || "");
+    if (
+      !Number.isNaN(endAt.getTime()) &&
+      revealAt.getTime() < endAt.getTime()
+    ) {
+      const message =
+        "Public reveal date cannot be earlier than the competition end date.";
+      if (wantsJson) {
+        return res.status(400).json({ success: false, message });
+      }
+      return res.redirect(
+        `/admin/competition-rules?error=${encodeURIComponent(message)}`,
+      );
+    }
+
+    await saveCompetitionContentSettings({
+      ...content,
+      winnerRevealAtIso,
+    });
+
+    const message = "Public reveal date updated.";
+    if (wantsJson) {
+      return res.json({
+        success: true,
+        message,
+        winnerRevealAtIso,
+      });
+    }
+    return res.redirect(
+      `/admin/competition-rules?success=${encodeURIComponent(message)}`,
+    );
+  } catch (error) {
+    const message = error.message || "Unable to update public reveal date.";
+    if (wantsJson) {
+      return res.status(400).json({ success: false, message });
+    }
+    return res.redirect(
+      `/admin/competition-rules?error=${encodeURIComponent(message)}`,
+    );
+  }
+};
+
 exports.endAdminCompetitionNow = async (req, res) => {
   const wantsJson =
     req.xhr || (req.get("Accept") || "").includes("application/json");
@@ -843,6 +969,8 @@ exports.endAdminCompetitionNow = async (req, res) => {
       ...content,
       endsAtIso: nowIso,
       deadlineLabel: resolveDeadlineLabel(nowIso, content.deadlineLabel),
+      winnerRevealAtIso:
+        resolveWinnerRevealAt(nowIso)?.toISOString() || content.winnerRevealAtIso,
     });
 
     await saveCompetitionEntryRules({
@@ -887,6 +1015,8 @@ exports.setAdminCompetitionEndNowForTest = async (req, res) => {
       ...content,
       endsAtIso,
       deadlineLabel: resolveDeadlineLabel(endsAtIso, content.deadlineLabel),
+      winnerRevealAtIso:
+        resolveWinnerRevealAt(endsAtIso)?.toISOString() || content.winnerRevealAtIso,
     });
 
     const message = "Competition end set to now for testing.";

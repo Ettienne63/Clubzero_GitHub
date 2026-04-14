@@ -75,6 +75,39 @@
     </div>
   </section>
 
+  <section class="card mb-4 competition-action-card competition-action-card--update">
+    <div class="card-body">
+      <p class="competition-action-kicker mb-1">Public Reveal</p>
+      <h2 class="h5 mb-1">Winner Reveal Date</h2>
+      <p class="text-muted mb-3">Set when the winner becomes visible on the public competition page.</p>
+
+      <form id="competitionRevealDateForm" class="row g-3 competition-action-form">
+        <div class="col-md-8 competition-action-field">
+          <label for="competitionRevealDateLocal" class="form-label">Public Reveal Date (SAST)</label>
+          <input
+            id="competitionRevealDateLocal"
+            name="revealDateLocal"
+            type="date"
+            class="form-control"
+            value="<%= drawDefaults?.revealDateValue || '' %>"
+            required
+          />
+          <div class="form-text">Reveal happens at 23:59 SAST on this date.</div>
+          <div class="alert alert-warning mt-2 mb-0 py-2 small" role="note">
+            Default behavior: reveal date is automatically set to 3 days after the competition end date.
+            You can override it here.
+          </div>
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+          <button id="competitionRevealDateBtn" type="submit" class="btn btn-outline-primary w-100 competition-action-btn competition-action-btn--secondary">
+            Update Reveal Date
+          </button>
+        </div>
+      </form>
+      <div id="competitionRevealDateStatus" class="small text-muted mt-2"></div>
+    </div>
+  </section>
+
   <section class="card">
     <div class="card-body">
       <form action="/admin/competition-rules" method="POST" class="row g-3">
@@ -279,7 +312,7 @@
   <section class="card mt-4">
     <div class="card-body">
       <h2 class="h5 mb-1">Recent Winners</h2>
-      <p class="text-muted mb-3">Latest manual draw results.</p>
+      <p class="text-muted mb-3">Latest draw results.</p>
 
       <% if (recentWinners?.length) { %>
       <div class="table-responsive">
@@ -337,6 +370,10 @@
     const endCompetitionNowBtn = document.getElementById("endCompetitionNowBtn");
     const currentCompetitionEndStatus = document.getElementById("currentCompetitionEndStatus");
     const currentCompetitionEndsAtLocal = document.getElementById("currentCompetitionEndsAtLocal");
+    const competitionRevealDateForm = document.getElementById("competitionRevealDateForm");
+    const competitionRevealDateBtn = document.getElementById("competitionRevealDateBtn");
+    const competitionRevealDateStatus = document.getElementById("competitionRevealDateStatus");
+    const competitionRevealDateLocal = document.getElementById("competitionRevealDateLocal");
     const countdownEndIso = <%- JSON.stringify(drawDefaults?.countdownEndIso || "") %>;
     const initialDrawReady = <%- JSON.stringify(Boolean(drawDefaults?.drawReady)) %>;
     const serverCsrfToken = <%- JSON.stringify(typeof csrfToken !== "undefined" ? csrfToken : "") %>;
@@ -368,6 +405,12 @@
       if (!currentCompetitionEndStatus) return;
       currentCompetitionEndStatus.textContent = message || "";
       currentCompetitionEndStatus.className =
+        kind === "error" ? "small text-danger mt-2" : "small text-muted mt-2";
+    };
+    const setCompetitionRevealDateStatus = (message, kind = "muted") => {
+      if (!competitionRevealDateStatus) return;
+      competitionRevealDateStatus.textContent = message || "";
+      competitionRevealDateStatus.className =
         kind === "error" ? "small text-danger mt-2" : "small text-muted mt-2";
     };
 
@@ -566,6 +609,55 @@
           if (currentCompetitionEndBtn) {
             currentCompetitionEndBtn.disabled = false;
           }
+        }
+      });
+    }
+
+    if (competitionRevealDateForm && competitionRevealDateBtn && competitionRevealDateLocal) {
+      competitionRevealDateForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const revealDateValue = String(competitionRevealDateLocal.value || "").trim();
+        if (!revealDateValue) {
+          setCompetitionRevealDateStatus("Please choose a valid public reveal date.", "error");
+          return;
+        }
+
+        competitionRevealDateBtn.disabled = true;
+        setCompetitionRevealDateStatus("Updating public reveal date...");
+
+        try {
+          const body = new URLSearchParams();
+          body.set("revealDateLocal", revealDateValue);
+          if (token) {
+            body.set("_csrf", token);
+          }
+
+          const response = await fetch("/admin/competition-rules/reveal-date", {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+              "X-Requested-With": "XMLHttpRequest",
+              "X-CSRF-Token": token || "",
+            },
+            credentials: "same-origin",
+            body: body.toString(),
+          });
+
+          const payload = await response.json().catch(() => null);
+          if (!response.ok || !payload?.success) {
+            throw new Error(payload?.message || "Unable to update public reveal date.");
+          }
+
+          setCompetitionRevealDateStatus(payload.message || "Public reveal date updated.");
+          window.setTimeout(() => window.location.reload(), 700);
+        } catch (error) {
+          setCompetitionRevealDateStatus(
+            error.message || "Unable to update public reveal date.",
+            "error",
+          );
+        } finally {
+          competitionRevealDateBtn.disabled = false;
         }
       });
     }

@@ -126,8 +126,8 @@
                   <p class="competition-detail-value mb-0"><%= currentCompetition.deadlineLabel %></p>
                 </div>
                 <div class="competition-detail-item">
-                  <p class="competition-detail-label mb-1">Winner Announced</p>
-                  <p class="competition-detail-value mb-0"><%= currentCompetition.winnerDateLabel %></p>
+                  <p class="competition-detail-label mb-1">Winner Reveal</p>
+                  <p class="competition-detail-value mb-0"><%= winnerReveal?.revealLabel || currentCompetition.winnerDateLabel %></p>
                 </div>
               </div>
             </div>
@@ -135,6 +135,24 @@
               <div class="competition-detail-item competition-detail-item--full">
                 <p class="competition-detail-label mb-1">Eligibility</p>
                 <p class="competition-detail-value mb-0"><%= currentCompetition.eligibility %></p>
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="competition-detail-item competition-detail-item--full">
+                <p class="competition-detail-label mb-1">
+                  <%= winnerReveal?.revealReady ? "Winner Revealed" : "Winner Status" %>
+                </p>
+                <p class="competition-detail-value mb-0">
+                  <% if (winnerReveal?.revealReady && winnerReveal?.winner?.name) { %>
+                  <%= winnerReveal.winner.name %>
+                  <% } else if (winnerReveal?.revealReady && competitionHasEnded) { %>
+                  Winner announcement pending. Draw has not completed yet.
+                  <% } else if (competitionHasEnded) { %>
+                  Winner has been drawn privately. Public reveal on <%= winnerReveal?.revealLabel || currentCompetition.winnerDateLabel %>.
+                  <% } else { %>
+                  Winner will be drawn privately when the competition ends.
+                  <% } %>
+                </p>
               </div>
             </div>
           </div>

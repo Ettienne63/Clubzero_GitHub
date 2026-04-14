@@ -45,12 +45,59 @@ const { getHomeHeroSettings } = require("./lib/homeHeroSettings");
 const { getHomeTextSettings } = require("./lib/homeTextSettings");
 const { getSiteTheme } = require("./lib/themeSettings");
 const { getCompetitionEntryRules } = require("./lib/competitionEntryRules");
+const { getCompetitionContentSettings } = require("./lib/competitionContentSettings");
+const { startCompetitionWinnerDrawScheduler } = require("./lib/competitionWinnerDraw");
 const { startAbandonedCartScheduler } = require("./lib/abandonedCart");
 const {
   startDailyOutOfStockSummaryScheduler,
 } = require("./lib/outOfStockSummary");
 const { prisma } = require("./prisma/lib/prisma");
 const APPROVED_AFFILIATE_STATUS = "APPROVED";
+const COMPETITION_BANNER_TIME_ZONE = "Africa/Johannesburg";
+
+const formatCompetitionBannerDateTime = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const formatted = new Intl.DateTimeFormat("en-ZA", {
+    timeZone: COMPETITION_BANNER_TIME_ZONE,
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+
+  return `${formatted} SAST`;
+};
+
+const resolveCompetitionBanner = (content = {}) => {
+  const title = String(content.currentTitle || "").trim();
+  const endsAtIso = String(content.endsAtIso || "").trim();
+  const startsAtIso = String(content.competitionStartsAtIso || "").trim();
+  const endsAt = new Date(endsAtIso);
+
+  if (!title || Number.isNaN(endsAt.getTime())) {
+    return null;
+  }
+
+  const now = Date.now();
+  const startsAt = startsAtIso ? new Date(startsAtIso) : null;
+  const hasStarted = !startsAt || Number.isNaN(startsAt.getTime()) || now >= startsAt.getTime();
+  const hasNotEnded = now <= endsAt.getTime();
+
+  if (!hasStarted || !hasNotEnded) {
+    return null;
+  }
+
+  return {
+    title,
+    endLabel: formatCompetitionBannerDateTime(endsAt),
+  };
+};
 
 const config = loadConfig();
 
@@ -219,6 +266,7 @@ app.use(async (req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.cartCount = 0;
   res.locals.showCompetitionsNavItem = true;
+  res.locals.currentCompetitionBanner = null;
   const [siteThemeResult, homeHeroResult] = await Promise.allSettled([
     getSiteTheme(),
     getHomeHeroSettings(),
@@ -229,14 +277,31 @@ app.use(async (req, res, next) => {
     homeHeroResult.status === "fulfilled"
       ? String(homeHeroResult.value?.logoUrl || "").trim()
       : "";
-  try {
-    const competitionRules = await getCompetitionEntryRules();
+  const [competitionRulesResult, competitionContentResult] =
+    await Promise.allSettled([
+      getCompetitionEntryRules(),
+      getCompetitionContentSettings(),
+    ]);
+  if (competitionRulesResult.status === "fulfilled") {
     res.locals.showCompetitionsNavItem = !Boolean(
-      competitionRules?.hideCompetitionsPage,
+      competitionRulesResult.value?.hideCompetitionsPage,
     );
-  } catch (error) {
+  } else {
     logger.warn("competition_nav_visibility_load_failed", {
-      error: error.message,
+      error: competitionRulesResult.reason?.message || "Unknown error",
+    });
+  }
+  if (
+    req.path === "/" &&
+    competitionContentResult.status === "fulfilled"
+  ) {
+    const competitionBanner = resolveCompetitionBanner(
+      competitionContentResult.value,
+    );
+    res.locals.currentCompetitionBanner = competitionBanner;
+  } else if (competitionContentResult.status === "rejected") {
+    logger.warn("competition_banner_load_failed", {
+      error: competitionContentResult.reason?.message || "Unknown error",
     });
   }
 
@@ -282,7 +347,7 @@ app.use(async (req, res, next) => {
 });
 
 app.get("/", async (_req, res) => {
-  const [rawReviews, promoSettings, homeHero, homeText] = await Promise.all([
+  const [rawReviews, promoSettings, homeHero, homeText, competitionContent] = await Promise.all([
     prisma.review.findMany({
     where: {
       rating: { gte: 4 },
@@ -298,6 +363,7 @@ app.get("/", async (_req, res) => {
     getPromoSettings(),
     getHomeHeroSettings(),
     getHomeTextSettings(),
+    getCompetitionContentSettings(),
   ]);
 
   const testimonials = rawReviews.map((review) => ({
@@ -322,6 +388,7 @@ app.get("/", async (_req, res) => {
     promoSettings,
     homeHero,
     homeText,
+    competitionBanner: resolveCompetitionBanner(competitionContent),
   });
 });
 app.get("/about", asyncHandler(aboutController.getAboutPage));
@@ -420,6 +487,11 @@ app.post(
   "/admin/competition-rules/current-end",
   requireAdmin,
   asyncHandler(competitionController.updateAdminCompetitionCurrentEnd),
+);
+app.post(
+  "/admin/competition-rules/reveal-date",
+  requireAdmin,
+  asyncHandler(competitionController.updateAdminCompetitionRevealDate),
 );
 app.post(
   "/admin/competition-rules/end-now",
@@ -556,7 +628,13 @@ app.post(
 app.post(
   "/admin/about-content",
   requireAdmin,
-  upload.single("aboutIntroImage"),
+  upload.fields([
+    { name: "aboutIntroImage", maxCount: 1 },
+    { name: "teamMember1Image", maxCount: 1 },
+    { name: "teamMember2Image", maxCount: 1 },
+    { name: "teamMember3Image", maxCount: 1 },
+    { name: "teamMember4Image", maxCount: 1 },
+  ]),
   asyncHandler(aboutController.updateAdminAboutContent),
 );
 app.post(
@@ -833,6 +911,7 @@ sessionStore.ready
     });
     startAbandonedCartScheduler();
     startDailyOutOfStockSummaryScheduler();
+    startCompetitionWinnerDrawScheduler();
   })
   .catch((error) => {
     logger.error("session_store_boot_failed", {

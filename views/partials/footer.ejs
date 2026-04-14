@@ -63,6 +63,87 @@
       });
   })();
 </script>
+<script>
+  (() => {
+    if (!window.location.pathname.startsWith("/admin")) {
+      return;
+    }
+
+    const isVisible = (element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(element);
+      return style.display !== "none" && style.visibility !== "hidden";
+    };
+
+    const forms = Array.from(document.querySelectorAll("main form")).filter(
+      (form) =>
+        isVisible(form) &&
+        !form.closest(".modal") &&
+        !form.closest("table") &&
+        !form.closest(".inventory-table-card"),
+    );
+
+    const scoreForm = (form) => {
+      const controls = Array.from(
+        form.querySelectorAll("input, select, textarea"),
+      ).filter((field) => {
+        if (!(field instanceof HTMLElement)) return false;
+        if (!isVisible(field)) return false;
+        if (field.tagName.toLowerCase() === "input") {
+          const type = String(field.getAttribute("type") || "text").toLowerCase();
+          if (["hidden", "submit", "button", "reset"].includes(type)) return false;
+        }
+        return true;
+      });
+
+      if (controls.length < 2) return -1;
+
+      const multipart =
+        String(form.getAttribute("enctype") || "").toLowerCase() ===
+        "multipart/form-data";
+      const hasPrimarySubmit = Boolean(
+        form.querySelector('button[type="submit"].btn-primary, input[type="submit"].btn-primary'),
+      );
+
+      return controls.length + (multipart ? 4 : 0) + (hasPrimarySubmit ? 2 : 0);
+    };
+
+    const targetForm = forms
+      .map((form) => ({ form, score: scoreForm(form) }))
+      .sort((a, b) => b.score - a.score)[0];
+
+    if (!targetForm || targetForm.score < 2) {
+      return;
+    }
+
+    const form = targetForm.form;
+    const defaultSubmitter =
+      form.querySelector('button[type="submit"], input[type="submit"]');
+
+    const label =
+      defaultSubmitter?.textContent?.trim() ||
+      defaultSubmitter?.getAttribute("value") ||
+      "Save Changes";
+
+    const shell = document.createElement("div");
+    shell.className = "admin-floating-submit-actions";
+    shell.innerHTML = `<button type="button" class="btn btn-primary">${label}</button>`;
+
+    const button = shell.querySelector("button");
+    if (!button) return;
+
+    button.addEventListener("click", () => {
+      if (defaultSubmitter instanceof HTMLElement) {
+        form.requestSubmit(defaultSubmitter);
+      } else {
+        form.requestSubmit();
+      }
+    });
+
+    document.body.classList.add("has-admin-floating-submit");
+    document.body.appendChild(shell);
+  })();
+</script>
 <footer class="footer">
   <div class="container footer-shell">
     <div class="footer-brand">

@@ -2,6 +2,21 @@
   const rawAboutIntroImageUrl = (aboutText?.introImageUrl || "").toString().trim();
   const hasAboutIntroImage = Boolean(rawAboutIntroImageUrl);
   const aboutIntroImageUrl = hasAboutIntroImage ? rawAboutIntroImageUrl : "";
+  const showTeamSection = (aboutText?.teamSectionEnabled || "on").toString().toLowerCase() === "on";
+  const teamSectionTitle = (aboutText?.teamSectionTitle || "Meet the Team").toString().trim();
+  const teamMembers = [1, 2, 3, 4].map((n) => {
+    const name = (aboutText?.[`teamMember${n}Name`] || "").toString().trim();
+    const title = (aboutText?.[`teamMember${n}Title`] || "").toString().trim();
+    const imageUrl = (aboutText?.[`teamMember${n}ImageUrl`] || "").toString().trim();
+    const fallbackInitial = (name || title || String(n)).charAt(0).toUpperCase();
+    return {
+      name,
+      title,
+      imageUrl,
+      fallbackInitial,
+      label: name || title || `Team member ${n}`,
+    };
+  });
 %>
 <%- include("partials/header",{title: "About", preloadImageUrl: hasAboutIntroImage ? aboutIntroImageUrl : undefined }) %>
 <%- include("partials/navbar") %>
@@ -178,5 +193,31 @@
       </div>
     </div>
   </section>
+
+  <% if (showTeamSection) { %>
+  <section class="cz-band cz-section border-top about-team-section">
+    <div class="container">
+      <div class="text-center mb-4">
+        <h2 class="h3 fw-bold mb-2"><%= teamSectionTitle || "Meet the Team" %></h2>
+      </div>
+      <div class="row g-4 justify-content-center">
+        <% teamMembers.forEach((member) => { %>
+        <div class="col-6 col-md-3">
+          <div class="about-team-card">
+            <div class="about-team-face" role="img" aria-label="<%= member.label %>">
+              <% if (member.imageUrl) { %>
+              <img src="<%= member.imageUrl %>" alt="<%= member.label %>" loading="lazy" decoding="async" />
+              <% } else { %>
+              <span><%= member.fallbackInitial %></span>
+              <% } %>
+            </div>
+            <p class="about-team-title mb-0"><%= member.title || "Team Member" %></p>
+          </div>
+        </div>
+        <% }) %>
+      </div>
+    </div>
+  </section>
+  <% } %>
 </main>
 <%- include("partials/footer") %>

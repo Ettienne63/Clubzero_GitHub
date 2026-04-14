@@ -94,14 +94,20 @@
           <div class="col-md-6">
             <label class="form-label">Competition Name</label>
             <input class="form-control" name="currentTitle" value="<%= content.currentTitle %>" />
+            <div class="form-text">
+              This text appears in the home-page competition banner.
+            </div>
           </div>
           <div class="col-md-6">
             <label class="form-label">Prize</label>
             <input class="form-control" name="prize" value="<%= content.prize %>" />
           </div>
           <div class="col-md-6">
-            <label class="form-label">Winner Announced Label</label>
-            <input class="form-control" name="winnerDateLabel" value="<%= content.winnerDateLabel %>" />
+            <label class="form-label">Public Reveal</label>
+            <input class="form-control" name="winnerDateLabel" value="<%= content.winnerDateLabel %>" readonly />
+            <div class="form-text">
+              The winner is drawn privately when the competition ends and revealed publicly 3 days later.
+            </div>
           </div>
           <div class="col-md-6">
             <label class="form-label">Eligibility</label>

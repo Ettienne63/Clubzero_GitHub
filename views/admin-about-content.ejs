@@ -201,10 +201,101 @@
       </div>
     </details>
 
-    <div class="d-flex justify-content-end">
-      <button type="submit" class="btn btn-primary">Save About Content</button>
-    </div>
+    <details class="admin-compact-details">
+      <summary>About Us Section</summary>
+      <div class="card card-body border-0 pt-2">
+        <div class="row g-3">
+          <div class="col-12">
+            <div class="form-check form-switch">
+              <input type="hidden" name="teamSectionEnabled" value="off" />
+              <input
+                class="form-check-input"
+                type="checkbox"
+                role="switch"
+                id="teamSectionEnabled"
+                name="teamSectionEnabled"
+                value="on"
+                <%= content.teamSectionEnabled === "on" ? "checked" : "" %>
+              />
+              <label class="form-check-label" for="teamSectionEnabled">
+                Show "Meet the Team" section on the About page
+              </label>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">Section Title</label>
+            <input
+              class="form-control"
+              name="teamSectionTitle"
+              value="<%= content.teamSectionTitle %>"
+            />
+          </div>
+
+          <% [1,2,3,4].forEach((n) => { %>
+          <div class="col-12">
+            <hr class="my-1" />
+            <h3 class="h6 mb-0">Team Member <%= n %></h3>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Name / Initial</label>
+            <input
+              class="form-control"
+              name="teamMember<%= n %>Name"
+              value="<%= content[`teamMember${n}Name`] %>"
+            />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Title</label>
+            <input
+              class="form-control"
+              name="teamMember<%= n %>Title"
+              value="<%= content[`teamMember${n}Title`] %>"
+            />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Upload Photo</label>
+            <input
+              class="form-control"
+              name="teamMember<%= n %>Image"
+              type="file"
+              accept="image/*"
+            />
+          </div>
+          <div class="col-12">
+            <% if (content[`teamMember${n}ImageUrl`]) { %>
+            <div class="d-flex flex-wrap align-items-center gap-3">
+              <img
+                src="<%= content[`teamMember${n}ImageUrl`] %>"
+                alt="Team member <%= n %> preview"
+                class="rounded-circle border"
+                style="width: 72px; height: 72px; object-fit: cover;"
+                loading="lazy"
+                decoding="async"
+              />
+              <div class="form-check">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  name="teamMember<%= n %>ImageRemove"
+                  id="teamMember<%= n %>ImageRemove"
+                />
+                <label class="form-check-label" for="teamMember<%= n %>ImageRemove">
+                  Remove current photo
+                </label>
+              </div>
+            </div>
+            <% } else { %>
+            <p class="text-secondary small mb-0">No photo uploaded yet.</p>
+            <% } %>
+          </div>
+          <% }) %>
+        </div>
+      </div>
+    </details>
+
   </form>
+
 </main>
 
 <script>

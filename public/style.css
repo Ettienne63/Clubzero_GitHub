@@ -10,6 +10,12 @@
   --surface-radius: 18px;
   --surface-shadow: 0 12px 24px rgba(18, 38, 63, 0.08);
   --surface-border: #dbe6f7;
+  --competition-banner-bg: linear-gradient(90deg, rgba(13, 110, 253, 0.16), rgba(79, 172, 254, 0.12), rgba(67, 233, 123, 0.1));
+  --competition-banner-border: rgba(13, 110, 253, 0.18);
+  --competition-banner-text: #10203a;
+  --competition-banner-muted: #4f6282;
+  --competition-banner-badge-bg: rgba(255, 255, 255, 0.34);
+  --competition-banner-badge-text: #0d6efd;
 }
 html,
 body {
@@ -70,9 +76,213 @@ main {
 }
 
 .cz-navbar {
+  position: sticky;
+  top: 0;
   border-bottom: 1px solid #e6eef7;
   background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(10px);
+  z-index: 1020;
+}
+
+.cz-competition-banner {
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--competition-banner-border);
+  background: var(--competition-banner-bg);
+  color: var(--competition-banner-text);
+  z-index: 1;
+  isolation: isolate;
+}
+
+.cz-competition-banner--global {
+  background: linear-gradient(90deg, #0d6efd 0%, #4facfe 45%, #43e97b 100%);
+  color: #ffffff;
+  box-shadow: 0 12px 30px rgba(13, 110, 253, 0.22);
+}
+
+.cz-competition-banner--global .cz-competition-banner__badge {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+
+.cz-competition-banner--global .cz-competition-banner__title,
+.cz-competition-banner--global .cz-competition-banner__meta {
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+
+.cz-competition-banner--global .cz-competition-banner__link {
+  color: #0d6efd;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.cz-competition-banner--global .cz-competition-banner__link:hover,
+.cz-competition-banner--global .cz-competition-banner__link:focus {
+  color: #0b5ed7;
+}
+
+.cz-competition-banner::before,
+.cz-competition-banner::after {
+  content: "";
+  position: absolute;
+  inset: -40% auto auto -10%;
+  width: 18rem;
+  height: 18rem;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0));
+  pointer-events: none;
+  filter: blur(6px);
+}
+
+.cz-competition-banner::after {
+  inset: auto -8% -55% auto;
+  width: 16rem;
+  height: 16rem;
+  background: radial-gradient(circle, rgba(79, 172, 254, 0.22), rgba(79, 172, 254, 0));
+}
+
+.cz-competition-banner__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 0;
+  position: relative;
+  z-index: 1;
+}
+
+.cz-competition-banner__marquee {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.cz-competition-banner__track {
+  display: flex;
+  width: max-content;
+  align-items: center;
+  gap: 0;
+  will-change: transform;
+  animation: competition-marquee 24s linear infinite;
+}
+
+.cz-competition-banner__content {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.9rem;
+  padding-right: 0;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.cz-competition-banner__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.34rem 0.82rem;
+  border-radius: 999px;
+  background: var(--competition-banner-badge-bg);
+  color: var(--competition-banner-badge-text);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: inset 0 0 0 1px rgba(13, 110, 253, 0.14);
+  backdrop-filter: blur(10px);
+}
+
+.cz-competition-banner__title {
+  font-weight: 700;
+  color: var(--competition-banner-text);
+  font-size: 0.98rem;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  max-width: none;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.cz-competition-banner__meta {
+  color: var(--competition-banner-muted);
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 0.94rem;
+}
+
+.cz-competition-banner__link {
+  flex: 0 0 auto;
+  color: #ffffff;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+  background: linear-gradient(135deg, #0d6efd, #4facfe);
+  padding: 0.56rem 0.95rem;
+  border-radius: 999px;
+  box-shadow:
+    0 10px 24px rgba(13, 110, 253, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.cz-competition-banner__link:hover,
+.cz-competition-banner__link:focus {
+  color: #ffffff;
+  text-decoration: none;
+  transform: translateY(-1px);
+  box-shadow:
+    0 12px 28px rgba(13, 110, 253, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.cz-competition-banner__link,
+.cz-competition-banner__badge {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.cz-competition-banner:hover .cz-competition-banner__badge {
+  transform: translateY(-1px);
+}
+
+@keyframes competition-banner-shine {
+  0% {
+    transform: translateX(-12%);
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.35;
+  }
+  100% {
+    transform: translateX(12%);
+    opacity: 0.2;
+  }
+}
+
+.cz-competition-banner::before {
+  animation: competition-banner-shine 10s ease-in-out infinite alternate;
+}
+
+.cz-competition-banner::after {
+  animation: competition-banner-shine 12s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes competition-marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-33.3333%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cz-competition-banner__track,
+  .cz-competition-banner::before,
+  .cz-competition-banner::after {
+    animation: none !important;
+  }
 }
 
 .cz-brand-text {
@@ -2937,6 +3147,39 @@ body[data-site-theme] .custom-pack-toggle {
   color: #0d6efd;
 }
 
+.about-team-card {
+  text-align: center;
+}
+
+.about-team-face {
+  width: min(160px, 100%);
+  aspect-ratio: 1 / 1;
+  margin: 0 auto 0.75rem;
+  border-radius: 999px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  font-size: clamp(1.2rem, 2.2vw, 1.6rem);
+  font-weight: 700;
+  color: #1f3a5f;
+  background: linear-gradient(145deg, #ecf5ff 0%, #f2fff6 100%);
+  border: 1px solid #d5e8ff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.about-team-face img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.about-team-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #354b65;
+}
+
 .affiliate-page {
   max-width: 1100px;
 }
@@ -3457,6 +3700,29 @@ body[data-site-theme] {
 body[data-site-theme] .cz-navbar {
   border-bottom-color: var(--theme-navbar-border) !important;
   background: var(--theme-navbar-bg) !important;
+}
+
+body[data-site-theme] .cz-competition-banner {
+  border-bottom-color: color-mix(in srgb, var(--theme-primary) 18%, #ffffff) !important;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--theme-primary) 14%, #ffffff),
+    color-mix(in srgb, var(--theme-accent) 10%, #ffffff)
+  ) !important;
+}
+
+body[data-site-theme] .cz-competition-banner__title,
+body[data-site-theme] .cz-competition-banner__meta {
+  color: #1f2a44;
+}
+
+body[data-site-theme] .cz-competition-banner__badge,
+body[data-site-theme] .cz-competition-banner__link {
+  color: var(--theme-primary) !important;
+}
+
+body[data-site-theme] .cz-competition-banner__badge {
+  background: color-mix(in srgb, var(--theme-primary) 12%, #ffffff) !important;
 }
 
 body[data-site-theme] .cz-nav-link {
@@ -4233,6 +4499,16 @@ body[data-site-theme] .about-page .about-value-tag {
   color: var(--theme-pill-text) !important;
   border: 1px solid var(--theme-pill-border) !important;
   background-image: none !important;
+}
+
+body[data-site-theme] .about-page .about-team-face {
+  color: var(--theme-nav-link) !important;
+  background: color-mix(in srgb, var(--theme-primary) 10%, #ffffff) !important;
+  border-color: color-mix(in srgb, var(--theme-primary) 28%, #ffffff) !important;
+}
+
+body[data-site-theme] .about-page .about-team-title {
+  color: color-mix(in srgb, var(--theme-nav-link) 88%, #6b7280) !important;
 }
 
 /* Consolidated theme chips: soft accent surfaces */
@@ -5320,12 +5596,45 @@ body[data-site-theme] .competition-accordion-item {
   opacity: 1;
 }
 
+.admin-floating-submit-actions {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 1040;
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.admin-floating-submit-actions .btn {
+  pointer-events: auto;
+  min-width: 200px;
+  box-shadow:
+    0 14px 28px rgba(13, 110, 253, 0.3),
+    0 4px 12px rgba(15, 23, 42, 0.2);
+}
+
+body.has-admin-floating-submit {
+  padding-bottom: 6.25rem;
+}
+
 @media (max-width: 575.98px) {
   .admin-floating-alert {
     right: 10px;
     bottom: 10px;
     width: calc(100vw - 20px);
     padding: 10px 12px;
+  }
+
+  .admin-floating-submit-actions {
+    right: 12px;
+    left: 12px;
+    bottom: 12px;
+  }
+
+  .admin-floating-submit-actions .btn {
+    width: 100%;
+    min-width: 0;
   }
 }
 
