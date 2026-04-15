@@ -162,6 +162,38 @@ const upload = multer({
   },
 });
 
+const RETAIL_PROFIT_ALLOWED_MIME_TYPES = new Set([
+  "application/pdf",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "text/csv",
+  "application/csv",
+  "text/plain",
+]);
+
+const uploadRetailProfitDocument = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const extension = path
+      .extname(String(file.originalname || ""))
+      .toLowerCase();
+    const allowedExtension = [".pdf", ".xlsx", ".xls", ".csv"].includes(
+      extension,
+    );
+    const allowedMime = RETAIL_PROFIT_ALLOWED_MIME_TYPES.has(
+      String(file.mimetype || "").toLowerCase(),
+    );
+
+    if (allowedExtension || allowedMime) {
+      return cb(null, true);
+    }
+    return cb(
+      new Error("Only PDF, XLSX, XLS, and CSV files are allowed for retail profit uploads."),
+    );
+  },
+});
+
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
@@ -562,6 +594,12 @@ app.post(
   "/admin/payments/:id/mark-paid",
   requireAdmin,
   asyncHandler(orderController.markAdminOrderPaid),
+);
+app.post(
+  "/admin/payments/retail-profit/upload",
+  requireAdmin,
+  uploadRetailProfitDocument.single("retailProfitFile"),
+  asyncHandler(orderController.uploadAdminRetailProfitFile),
 );
 app.get(
   "/admin/team",

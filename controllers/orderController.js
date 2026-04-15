@@ -21,6 +21,12 @@ const {
   getProductAvailableCases,
   getMixLabPricingFromSettings,
 } = require("../lib/customPack");
+const {
+  getRetailProfitTracker,
+  addRetailProfitEntry,
+  parseRetailProfitFile,
+  buildRetailProfitSummary,
+} = require("../lib/retailProfitTracker");
 const DEFAULT_AFFILIATE_RATE = 0.05;
 const AFFILIATE_RATE_SETTING_KEY = "affiliate_rate";
 const AFFILIATE_STATUS = {
@@ -2342,13 +2348,65 @@ exports.getAdminPaymentsPage = async (req, res) => {
     },
   );
 
+  const retailProfitTracker = await getRetailProfitTracker();
+  const retailProfitSummary = buildRetailProfitSummary(retailProfitTracker);
+
   return res.render("admin-payments", {
     orders: filteredOrders,
     summary,
+    retailProfitEntries: retailProfitTracker.entries.slice(0, 20),
+    retailProfitSummary,
     activeStatusFilter,
     success: req.query.success || null,
     error: req.query.error || null,
   });
+};
+
+exports.uploadAdminRetailProfitFile = async (req, res) => {
+  const returnTo = "/admin/payments";
+  const file = req.file;
+
+  if (!file) {
+    return res.redirect(
+      `${returnTo}?error=${encodeURIComponent(
+        "Please upload a PDF, XLSX, XLS, or CSV file.",
+      )}`,
+    );
+  }
+
+  try {
+    const parsed = await parseRetailProfitFile(file);
+    const hasRevenue = Number.isFinite(parsed?.revenue);
+    const hasProfit = Number.isFinite(parsed?.profit);
+
+    if (!hasRevenue && !hasProfit) {
+      return res.redirect(
+        `${returnTo}?error=${encodeURIComponent(
+          "We could not find revenue or profit values in that file. Please check the document format.",
+        )}`,
+      );
+    }
+
+    await addRetailProfitEntry({
+      file,
+      revenue: hasRevenue ? Number(parsed.revenue) : null,
+      profit: hasProfit ? Number(parsed.profit) : null,
+    });
+
+    return res.redirect(
+      `${returnTo}?success=${encodeURIComponent(
+        "Retail profit file uploaded and values tracked.",
+      )}`,
+    );
+  } catch (error) {
+    logger.error("admin_retail_profit_upload_failed", {
+      filename: file?.originalname || "",
+      error: error.message,
+    });
+    return res.redirect(
+      `${returnTo}?error=${encodeURIComponent(error.message || "Could not process that file.")}`,
+    );
+  }
 };
 
 exports.markAdminOrderPaid = async (req, res) => {

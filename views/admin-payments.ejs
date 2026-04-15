@@ -56,6 +56,118 @@
   </section>
 
   <section class="card shadow-sm mb-4">
+    <div class="card-body">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+        <div>
+          <h2 class="h5 mb-1">Retail Profit</h2>
+          <p class="text-muted mb-0">
+            Upload Excel or PDF files to track retail totals from reported values.
+          </p>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-12 col-md-4">
+          <article class="card h-100">
+            <div class="card-body">
+              <p class="small text-uppercase fw-semibold text-muted mb-2">Total Revenue</p>
+              <p class="h5 mb-0">R<%= Number(retailProfitSummary.totalRevenue || 0).toFixed(2) %></p>
+            </div>
+          </article>
+        </div>
+        <div class="col-12 col-md-4">
+          <article class="card h-100">
+            <div class="card-body">
+              <p class="small text-uppercase fw-semibold text-muted mb-2">Total Profit</p>
+              <p class="h5 mb-0">R<%= Number(retailProfitSummary.totalProfit || 0).toFixed(2) %></p>
+            </div>
+          </article>
+        </div>
+        <div class="col-12 col-md-4">
+          <article class="card h-100">
+            <div class="card-body">
+              <p class="small text-uppercase fw-semibold text-muted mb-2">Uploaded Files</p>
+              <p class="h5 mb-0"><%= retailProfitSummary.uploadCount || 0 %></p>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <form
+        action="/admin/payments/retail-profit/upload"
+        method="POST"
+        enctype="multipart/form-data"
+        class="row g-2 align-items-end mb-3"
+      >
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <div class="col-12 col-md-8 col-xl-9">
+          <label class="form-label">Upload Retail Profit File</label>
+          <input
+            type="file"
+            name="retailProfitFile"
+            class="form-control"
+            accept=".pdf,.xlsx,.xls,.csv,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+            required
+          />
+          <p class="small text-muted mb-0 mt-1">
+            Supported file types: PDF, XLSX, XLS, CSV.
+          </p>
+        </div>
+        <div class="col-12 col-md-4 col-xl-3 d-grid">
+          <button type="submit" class="btn btn-primary">Upload & Track</button>
+        </div>
+      </form>
+
+      <% if (!retailProfitEntries || retailProfitEntries.length === 0) { %>
+      <div class="alert alert-info mb-0">No retail profit files uploaded yet.</div>
+      <% } else { %>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead>
+            <tr>
+              <th scope="col">Uploaded</th>
+              <th scope="col">File</th>
+              <th scope="col">Revenue</th>
+              <th scope="col">Profit</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% retailProfitEntries.forEach((entry) => { %>
+            <tr>
+              <td><%= entry.uploadedAt ? new Date(entry.uploadedAt).toLocaleString() : "-" %></td>
+              <td>
+                <% if (entry.fileUrl) { %>
+                <a href="<%= entry.fileUrl %>" target="_blank" rel="noreferrer">
+                  <%= entry.originalName || "Uploaded file" %>
+                </a>
+                <% } else { %>
+                <span><%= entry.originalName || "-" %></span>
+                <% } %>
+              </td>
+              <td>
+                <% if (typeof entry.revenue === "number") { %>
+                R<%= Number(entry.revenue).toFixed(2) %>
+                <% } else { %>
+                <span class="text-muted">Not found</span>
+                <% } %>
+              </td>
+              <td>
+                <% if (typeof entry.profit === "number") { %>
+                R<%= Number(entry.profit).toFixed(2) %>
+                <% } else { %>
+                <span class="text-muted">Not found</span>
+                <% } %>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% } %>
+    </div>
+  </section>
+
+  <section class="card shadow-sm mb-4">
     <div class="card-body d-flex flex-wrap align-items-center gap-2">
       <span class="fw-semibold me-2">Filter:</span>
       <% ["PAID", "PENDING_PAYMENT"].forEach((status) => { %>
