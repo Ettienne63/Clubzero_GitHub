@@ -285,6 +285,12 @@ main {
   }
 }
 
+@media (max-width: 767.98px) {
+  .cz-competition-banner__link {
+    display: none !important;
+  }
+}
+
 .cz-brand-text {
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -2844,6 +2850,17 @@ body[data-site-theme] .custom-pack-toggle {
   background: #f8f9fa;
 }
 
+.admin-avatar-preview {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+}
+
+.admin-hero-preview {
+  max-height: 160px;
+  object-fit: cover;
+}
+
 .about-intro-section {
   background: linear-gradient(180deg, #fff8fd 0%, #f3f9ff 55%, #f3fff8 100%);
   position: relative;
@@ -5329,6 +5346,11 @@ body[data-site-theme] .thank-you-review-btn.active {
 
   .competition-page .cz-section {
     padding: 0.8rem 0;
+  }
+
+  .competition-hero .cz-section {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
   }
 
   .competition-hero-media-wrap {

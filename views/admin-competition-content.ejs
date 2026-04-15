@@ -20,6 +20,7 @@
     enctype="multipart/form-data"
     class="vstack gap-3"
     data-enter-submit="true"
+    data-floating-submit="true"
   >
     <details class="admin-compact-details" open>
       <summary>Hero</summary>
@@ -68,8 +69,7 @@
             <img
               src="<%= content.heroImageUrl %>"
               alt="Competition hero preview"
-              class="rounded border admin-image-frame w-100"
-              style="max-height: 160px; object-fit: cover;"
+              class="rounded border admin-image-frame w-100 admin-hero-preview"
               loading="lazy"
               decoding="async"
             />

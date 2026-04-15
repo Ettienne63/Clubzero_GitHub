@@ -18,6 +18,7 @@
     enctype="multipart/form-data"
     class="vstack gap-3"
     data-enter-submit="true"
+    data-floating-submit="true"
   >
     <details class="admin-compact-details">
       <summary>Intro</summary>
@@ -268,8 +269,7 @@
               <img
                 src="<%= content[`teamMember${n}ImageUrl`] %>"
                 alt="Team member <%= n %> preview"
-                class="rounded-circle border"
-                style="width: 72px; height: 72px; object-fit: cover;"
+                class="rounded-circle border admin-avatar-preview"
                 loading="lazy"
                 decoding="async"
               />

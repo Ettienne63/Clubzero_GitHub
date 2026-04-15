@@ -173,6 +173,90 @@ const isTruthy = (value) => {
 };
 
 const roundMoney = (value) => Number(Number(value || 0).toFixed(2));
+const UNPAID_ORDER_STATUSES = ["PENDING_PAYMENT", "PAYMENT_FAILED"];
+
+const normalizeCustomPackConfigForSignature = (config) => {
+  const entries = Array.isArray(config) ? config : [];
+  return entries
+    .map((entry) => ({
+      productId: Number.parseInt(entry?.productId, 10) || 0,
+      productName: String(entry?.productName || "").trim().toLowerCase(),
+      bottlesPerPack: Number(entry?.bottlesPerPack || 0),
+    }))
+    .sort((a, b) => {
+      if (a.productId !== b.productId) {
+        return a.productId - b.productId;
+      }
+      if (a.bottlesPerPack !== b.bottlesPerPack) {
+        return a.bottlesPerPack - b.bottlesPerPack;
+      }
+      return a.productName.localeCompare(b.productName);
+    });
+};
+
+const buildCartItemsSignature = (cartItems = []) =>
+  JSON.stringify(
+    (cartItems || [])
+      .map((item) => ({
+        isCustomPack: Boolean(item?.isCustomPack),
+        productId: item?.isCustomPack ? null : Number.parseInt(item?.productId, 10) || 0,
+        quantity: Number(item?.quantity || 0),
+        unitPrice: roundMoney(item?.unitPrice || 0),
+        subtotal: roundMoney(item?.subtotal || 0),
+        customPackConfig: item?.isCustomPack
+          ? normalizeCustomPackConfigForSignature(item?.customPackEntries || [])
+          : [],
+      }))
+      .sort((a, b) => {
+        if (a.isCustomPack !== b.isCustomPack) {
+          return a.isCustomPack ? 1 : -1;
+        }
+        if (a.productId !== b.productId) {
+          return (a.productId || 0) - (b.productId || 0);
+        }
+        if (a.quantity !== b.quantity) {
+          return a.quantity - b.quantity;
+        }
+        if (a.subtotal !== b.subtotal) {
+          return a.subtotal - b.subtotal;
+        }
+        return JSON.stringify(a.customPackConfig).localeCompare(
+          JSON.stringify(b.customPackConfig),
+        );
+      }),
+  );
+
+const buildOrderItemsSignature = (orderItems = []) =>
+  JSON.stringify(
+    (orderItems || [])
+      .map((item) => ({
+        isCustomPack: Boolean(item?.isCustomPack),
+        productId: item?.isCustomPack ? null : Number.parseInt(item?.productId, 10) || 0,
+        quantity: Number(item?.quantity || 0),
+        unitPrice: roundMoney(item?.productPrice || 0),
+        subtotal: roundMoney(item?.subtotal || 0),
+        customPackConfig: item?.isCustomPack
+          ? normalizeCustomPackConfigForSignature(item?.customPackConfig || [])
+          : [],
+      }))
+      .sort((a, b) => {
+        if (a.isCustomPack !== b.isCustomPack) {
+          return a.isCustomPack ? 1 : -1;
+        }
+        if (a.productId !== b.productId) {
+          return (a.productId || 0) - (b.productId || 0);
+        }
+        if (a.quantity !== b.quantity) {
+          return a.quantity - b.quantity;
+        }
+        if (a.subtotal !== b.subtotal) {
+          return a.subtotal - b.subtotal;
+        }
+        return JSON.stringify(a.customPackConfig).localeCompare(
+          JSON.stringify(b.customPackConfig),
+        );
+      }),
+  );
 
 const buildCheckoutTotals = ({
   productsSubtotal,
@@ -1379,6 +1463,7 @@ exports.postCheckout = async (req, res) => {
   const orderSubtotal = checkoutTotals.orderSubtotal;
   const creditApplied = checkoutTotals.creditApplied;
   const payableTotal = checkoutTotals.payableTotal;
+  const cartItemsSignature = buildCartItemsSignature(cartItems);
 
   let affiliateReferrerUserId = Number.parseInt(
     req.session?.refAffiliateUserId,
@@ -1452,69 +1537,182 @@ exports.postCheckout = async (req, res) => {
   }
 
   const affiliateRate = await getAffiliateRate();
+  let reusableOrderId = Number.parseInt(req.session?.pendingOrderId, 10);
+  if (!Number.isInteger(reusableOrderId)) {
+    reusableOrderId = null;
+  }
+
+  if (!Number.isInteger(reusableOrderId)) {
+    const recentUnpaidOrders = await prisma.order.findMany({
+      where: {
+        userId,
+        status: { in: UNPAID_ORDER_STATUSES },
+      },
+      include: {
+        orderItems: {
+          orderBy: { id: "asc" },
+        },
+      },
+      orderBy: { id: "desc" },
+      take: 5,
+    });
+
+    const matchingOrder = recentUnpaidOrders.find(
+      (order) =>
+        roundMoney(order.productsSubtotal) === productsSubtotal &&
+        roundMoney(order.deliveryFee) === deliveryFee &&
+        roundMoney(order.total) === payableTotal &&
+        buildOrderItemsSignature(order.orderItems) === cartItemsSignature,
+    );
+
+    if (matchingOrder) {
+      reusableOrderId = matchingOrder.id;
+    }
+  }
+
   const createdOrder = await prisma.$transaction(async (tx) => {
-    if (creditApplied > 0) {
-      await tx.user.update({
-        where: { id: userId },
-        data: {
-          affiliateBalance: {
-            decrement: creditApplied,
+    const orderItemRows = cartItems.map((item) => ({
+      productId: item.isCustomPack ? null : item.productId,
+      isCustomPack: Boolean(item.isCustomPack),
+      customPackConfig: item.isCustomPack
+        ? (item.customPackEntries || []).map((entry) => ({
+            productId: entry.productId,
+            productName: entry.productName,
+            bottlesPerPack: entry.bottlesPerPack,
+          }))
+        : null,
+      productName: item.isCustomPack
+        ? item.displayName || "Custom 12-Pack"
+        : item.product.name,
+      productPrice: item.isCustomPack
+        ? Number(item.unitPrice || 0)
+        : getDiscountedPrice(
+            item.product.price,
+            getEffectiveDiscountPercent(item.product, discountsEnabled),
+          ),
+      quantity: item.quantity,
+      subtotal: Number(item.subtotal || 0),
+    }));
+
+    const reusableOrder =
+      Number.isInteger(reusableOrderId)
+        ? await tx.order.findUnique({
+            where: { id: reusableOrderId },
+            select: {
+              id: true,
+              userId: true,
+              status: true,
+              affiliateCreditApplied: true,
+            },
+          })
+        : null;
+
+    const canReuseOrder = Boolean(
+      reusableOrder &&
+        reusableOrder.userId === userId &&
+        UNPAID_ORDER_STATUSES.includes(reusableOrder.status),
+    );
+
+    let order = null;
+    if (canReuseOrder) {
+      const previousCreditApplied = roundMoney(reusableOrder.affiliateCreditApplied || 0);
+      const nextCreditApplied = roundMoney(creditApplied);
+      const creditDelta = roundMoney(nextCreditApplied - previousCreditApplied);
+
+      if (creditDelta > 0) {
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            affiliateBalance: {
+              decrement: creditDelta,
+            },
           },
+        });
+      } else if (creditDelta < 0) {
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            affiliateBalance: {
+              increment: Math.abs(creditDelta),
+            },
+          },
+        });
+      }
+
+      order = await tx.order.update({
+        where: { id: reusableOrder.id },
+        data: {
+          affiliateReferrerUserId: affiliateReferrerUserId || null,
+          affiliateReferrerCode,
+          affiliateRate,
+          productsSubtotal,
+          deliveryFee,
+          deliveryDistanceKm: null,
+          total: payableTotal,
+          status: "PENDING_PAYMENT",
+          affiliateCreditApplied: creditApplied,
+          deliveryName: formData.deliveryName,
+          deliveryPhone: formData.deliveryPhone,
+          deliveryAddressLine1: formData.deliveryAddressLine1,
+          deliveryAddressLine2: formData.deliveryAddressLine2 || null,
+          deliveryCity: formData.deliveryCity,
+          deliveryState: formData.deliveryState,
+          deliveryPostalCode: formData.deliveryPostalCode,
+          deliveryCountry: formData.deliveryCountry,
+          deliveryLatitude: null,
+          deliveryLongitude: null,
+          orderItems: {
+            deleteMany: {},
+            create: orderItemRows,
+          },
+        },
+        include: {
+          orderItems: true,
+        },
+      });
+    } else {
+      if (creditApplied > 0) {
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            affiliateBalance: {
+              decrement: creditApplied,
+            },
+          },
+        });
+      }
+
+      order = await tx.order.create({
+        data: {
+          userId,
+          affiliateReferrerUserId: affiliateReferrerUserId || null,
+          affiliateReferrerCode,
+          affiliateRate,
+          productsSubtotal,
+          deliveryFee,
+          deliveryDistanceKm: null,
+          total: payableTotal,
+          status: "PENDING_PAYMENT",
+          affiliateCreditApplied: creditApplied,
+          deliveryName: formData.deliveryName,
+          deliveryPhone: formData.deliveryPhone,
+          deliveryAddressLine1: formData.deliveryAddressLine1,
+          deliveryAddressLine2: formData.deliveryAddressLine2 || null,
+          deliveryCity: formData.deliveryCity,
+          deliveryState: formData.deliveryState,
+          deliveryPostalCode: formData.deliveryPostalCode,
+          deliveryCountry: formData.deliveryCountry,
+          deliveryLatitude: null,
+          deliveryLongitude: null,
+          orderItems: {
+            create: orderItemRows,
+          },
+        },
+        include: {
+          orderItems: true,
         },
       });
     }
-
-    const order = await tx.order.create({
-      data: {
-        userId,
-        affiliateReferrerUserId: affiliateReferrerUserId || null,
-        affiliateReferrerCode,
-        affiliateRate,
-        productsSubtotal,
-        deliveryFee,
-        deliveryDistanceKm: null,
-        total: payableTotal,
-        status: "PENDING_PAYMENT",
-        affiliateCreditApplied: creditApplied,
-        deliveryName: formData.deliveryName,
-        deliveryPhone: formData.deliveryPhone,
-        deliveryAddressLine1: formData.deliveryAddressLine1,
-        deliveryAddressLine2: formData.deliveryAddressLine2 || null,
-        deliveryCity: formData.deliveryCity,
-        deliveryState: formData.deliveryState,
-        deliveryPostalCode: formData.deliveryPostalCode,
-        deliveryCountry: formData.deliveryCountry,
-        deliveryLatitude: null,
-        deliveryLongitude: null,
-        orderItems: {
-          create: cartItems.map((item) => ({
-            productId: item.isCustomPack ? null : item.productId,
-            isCustomPack: Boolean(item.isCustomPack),
-            customPackConfig: item.isCustomPack
-              ? (item.customPackEntries || []).map((entry) => ({
-                  productId: entry.productId,
-                  productName: entry.productName,
-                  bottlesPerPack: entry.bottlesPerPack,
-                }))
-              : null,
-            productName: item.isCustomPack
-              ? item.displayName || "Custom 12-Pack"
-              : item.product.name,
-            productPrice: item.isCustomPack
-              ? Number(item.unitPrice || 0)
-              : getDiscountedPrice(
-                  item.product.price,
-                  getEffectiveDiscountPercent(item.product, discountsEnabled),
-                ),
-            quantity: item.quantity,
-            subtotal: Number(item.subtotal || 0),
-          })),
-        },
-      },
-      include: {
-        orderItems: true,
-      },
-    });
 
     if (formData.saveAddress && hasAddressBookModel()) {
       const addressLine2WithPin = appendPinToAddressLine2(

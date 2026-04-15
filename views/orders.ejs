@@ -27,7 +27,9 @@
           </div>
           <div class="text-end">
             <span class="badge text-bg-primary"><%= order.status %></span>
-            <% if (order.invoice) { %>
+            <% const orderStatusLabel = String(order.status || "").toUpperCase(); %>
+            <% const invoiceStatusLabel = String(order.invoiceStatus || "").toUpperCase(); %>
+            <% if (order.invoice && invoiceStatusLabel && invoiceStatusLabel !== orderStatusLabel) { %>
             <div class="mt-2">
               <span class="badge text-bg-secondary"><%= order.invoiceStatus %></span>
             </div>

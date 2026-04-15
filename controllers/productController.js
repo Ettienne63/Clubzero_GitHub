@@ -1,5 +1,8 @@
 const { prisma } = require("../prisma/lib/prisma");
-const { parseCustomPackConfig } = require("../lib/customPack");
+const {
+  buildPurchasedProductIdSet,
+  getPurchasedProductIdsForUser,
+} = require("../lib/reviewEligibility");
 const {
   getPromoSettings,
   savePromoSettings,
@@ -351,25 +354,6 @@ const getProducts = (search = "", options = {}) => {
   });
 };
 
-const buildPurchasedProductIdSet = (orderItems = []) => {
-  const purchased = new Set();
-  (orderItems || []).forEach((item) => {
-    if (Number.isInteger(item?.productId) && item.productId > 0) {
-      purchased.add(item.productId);
-    }
-
-    if (item?.isCustomPack) {
-      parseCustomPackConfig(item.customPackConfig).forEach((entry) => {
-        if (Number.isInteger(entry.productId) && entry.productId > 0) {
-          purchased.add(entry.productId);
-        }
-      });
-    }
-  });
-
-  return purchased;
-};
-
 exports.listProducts = async (req, res) => {
   const searchQuery = (req.query.search || "").toString();
   const userId = Number.parseInt(req.session?.user?.id, 10);
@@ -396,22 +380,15 @@ exports.listProducts = async (req, res) => {
     .filter(Boolean);
 
   if (Number.isInteger(userId)) {
-    const [purchasedItems, myReviews] = await Promise.all([
-      prisma.orderItem.findMany({
-        where: { order: { userId, status: "PAID" } },
-        select: {
-          productId: true,
-          isCustomPack: true,
-          customPackConfig: true,
-        },
-      }),
+    const [purchasedProductIdSet, myReviews] = await Promise.all([
+      getPurchasedProductIdsForUser(prisma, userId),
       prisma.review.findMany({
         where: { userId },
         select: { productId: true, rating: true, comment: true },
       }),
     ]);
 
-    purchasedProductIds = Array.from(buildPurchasedProductIdSet(purchasedItems));
+    purchasedProductIds = Array.from(purchasedProductIdSet);
     myReviewsByProduct = myReviews.reduce((acc, review) => {
       acc[review.productId] = {
         rating: review.rating,
@@ -498,18 +475,7 @@ exports.createReview = async (req, res) => {
     );
   }
 
-  const purchasedItems = await prisma.orderItem.findMany({
-    where: {
-      order: { userId, status: "PAID" },
-      OR: [{ productId }, { isCustomPack: true }],
-    },
-    select: {
-      productId: true,
-      isCustomPack: true,
-      customPackConfig: true,
-    },
-  });
-  const purchasedProductIds = buildPurchasedProductIdSet(purchasedItems);
+  const purchasedProductIds = await getPurchasedProductIdsForUser(prisma, userId);
   const purchased = purchasedProductIds.has(productId);
 
   if (!purchased) {

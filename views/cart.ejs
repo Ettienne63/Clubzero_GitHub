@@ -30,7 +30,7 @@
       <% } else { %>
       <% if (hasUnavailableItems) { %>
       <div class="alert alert-warning">
-        Some items in your cart are hidden and cannot be checked out.
+        Some items in your cart are out of stock and cannot be checked out.
       </div>
       <% } %>
       <div class="d-flex justify-content-end mb-3">
@@ -56,7 +56,6 @@
         <% const hasDiscount = !isCustomPack && Boolean(discountsEnabled) && item.product?.discountEnabled !== false && discountPercent > 0; %>
         <% const discountedPrice = !isCustomPack ? (hasDiscount ? Number(item.product?.price || 0) * (1 - discountPercent / 100) : Number(item.product?.price || 0)) : Number(item.unitPrice || 0); %>
         <% const availableStock = !isCustomPack ? Number(item.availableCases || 0) : 999; %>
-        <% const canIncreaseQuantity = !isCustomPack ? (availableStock > Number(item.quantity || 0)) : true; %>
         <tr data-cart-item-row="<%= item.id %>">
           <td data-label="Product">
             <div class="d-flex align-items-center gap-3">
@@ -82,7 +81,7 @@
                 </div>
                 <% } %>
                 <% if (item.isUnavailable) { %>
-                <div class="small text-danger">Unavailable</div>
+                <div class="small text-danger">Out of stock</div>
                 <% } %>
               </div>
             </div>
@@ -127,14 +126,6 @@
             <form action="/auth/cart/<%= item.id %>/delete" method="POST">
               <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
             </form>
-            <% if (!isCustomPack) { %>
-            <div
-              class="small cart-stock-note mt-1 <%= canIncreaseQuantity ? 'invisible' : '' %>"
-              data-max-stock-note
-            >
-              Stock limit reached
-            </div>
-            <% } %>
           </td>
         </tr>
         <% }) %>
@@ -186,15 +177,6 @@
       const quantityInput = form.querySelector('input[name="quantity"]');
       if (!quantityInput) return;
       const row = form.closest("[data-cart-item-row]");
-      const maxStockNote = row?.querySelector("[data-max-stock-note]");
-
-      const refreshMaxStockNote = () => {
-        if (!maxStockNote) return;
-        const maxValue = Number.parseInt(quantityInput.getAttribute("max"), 10);
-        const quantityValue = Number.parseInt(quantityInput.value, 10) || 0;
-        const hasReachedMax = Number.isInteger(maxValue) && quantityValue >= maxValue;
-        maxStockNote.classList.toggle("invisible", !hasReachedMax);
-      };
 
       let timerId = null;
 
@@ -207,7 +189,6 @@
           ? Math.min(Math.max(normalizedValue, minValue), maxValue)
           : Math.max(normalizedValue, minValue);
         quantityInput.value = String(clampedValue);
-        refreshMaxStockNote();
 
         const formData = new URLSearchParams();
         formData.set("quantity", quantityInput.value);
@@ -254,7 +235,6 @@
           }
 
           quantityInput.value = payload.quantity;
-          refreshMaxStockNote();
           if (totalCell) {
             totalCell.textContent = formatCurrency(payload.total);
           }
@@ -293,7 +273,6 @@
       });
 
       quantityInput.addEventListener("input", () => {
-        refreshMaxStockNote();
         if (timerId) {
           clearTimeout(timerId);
         }
@@ -301,8 +280,6 @@
           form.requestSubmit();
         }, 250);
       });
-
-      refreshMaxStockNote();
     });
   })();
 </script>
