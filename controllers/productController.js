@@ -31,14 +31,6 @@ const toOptionalText = (value) => {
   return trimmed ? trimmed : null;
 };
 
-const productWithReviewRatingsInclude = {
-  reviews: {
-    select: {
-      rating: true,
-    },
-  },
-};
-
 const productWithReviewDetailsInclude = {
   reviews: {
     include: {
@@ -50,7 +42,23 @@ const productWithReviewDetailsInclude = {
   },
 };
 
-const mapProductWithReviewStats = (product) => {
+const mapProductWithReviewStats = (product, reviewStats = null) => {
+  if (reviewStats) {
+    return {
+      ...product,
+      averageRating: reviewStats.averageRating,
+      reviewCount: reviewStats.reviewCount,
+    };
+  }
+
+  if (!Array.isArray(product.reviews)) {
+    return {
+      ...product,
+      averageRating: null,
+      reviewCount: 0,
+    };
+  }
+
   const ratings = product.reviews.map((review) => review.rating);
   const averageRating = ratings.length
     ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length
@@ -61,6 +69,33 @@ const mapProductWithReviewStats = (product) => {
     averageRating,
     reviewCount: product.reviews.length,
   };
+};
+
+const getReviewStatsByProductId = async (productIds = []) => {
+  const uniqueProductIds = Array.from(
+    new Set(
+      productIds.filter((id) => Number.isInteger(id) && id > 0),
+    ),
+  );
+
+  if (uniqueProductIds.length === 0) {
+    return {};
+  }
+
+  const groupedReviews = await prisma.review.groupBy({
+    by: ["productId"],
+    where: { productId: { in: uniqueProductIds } },
+    _avg: { rating: true },
+    _count: { _all: true },
+  });
+
+  return groupedReviews.reduce((acc, row) => {
+    acc[row.productId] = {
+      averageRating: row._avg.rating === null ? null : Number(row._avg.rating),
+      reviewCount: Number(row._count._all || 0),
+    };
+    return acc;
+  }, {});
 };
 
 const getRecentlyViewedProductIds = (req) => {
@@ -333,7 +368,7 @@ const parsePromoInput = (body, file, current = {}) => {
 };
 
 const getProducts = (search = "", options = {}) => {
-  const { includeInactive = false, includeReviewRatings = false } = options;
+  const { includeInactive = false } = options;
   const trimmedSearch = search.trim();
   const where = {
     ...(includeInactive ? {} : { isActive: true }),
@@ -349,7 +384,6 @@ const getProducts = (search = "", options = {}) => {
 
   return prisma.product.findMany({
     where,
-    ...(includeReviewRatings ? { include: productWithReviewRatingsInclude } : {}),
     orderBy: { id: "desc" },
   });
 };
@@ -357,25 +391,32 @@ const getProducts = (search = "", options = {}) => {
 exports.listProducts = async (req, res) => {
   const searchQuery = (req.query.search || "").toString();
   const userId = Number.parseInt(req.session?.user?.id, 10);
+  const recentlyViewedProductIds = getRecentlyViewedProductIds(req);
   const [products, recentlyViewedProductsRaw, promoSettings] = await Promise.all([
-    getProducts(searchQuery, { includeReviewRatings: true }),
+    getProducts(searchQuery),
     prisma.product.findMany({
-      where: { id: { in: getRecentlyViewedProductIds(req) }, isActive: true },
-      include: productWithReviewRatingsInclude,
+      where: { id: { in: recentlyViewedProductIds }, isActive: true },
     }),
     getPromoSettings(),
+  ]);
+  const reviewStatsByProductId = await getReviewStatsByProductId([
+    ...products.map((product) => product.id),
+    ...recentlyViewedProductsRaw.map((product) => product.id),
   ]);
   let purchasedProductIds = [];
   let myReviewsByProduct = {};
 
   const recentlyViewedProductsById = recentlyViewedProductsRaw.reduce(
     (acc, product) => {
-      acc[product.id] = mapProductWithReviewStats(product);
+      acc[product.id] = mapProductWithReviewStats(
+        product,
+        reviewStatsByProductId[product.id] || null,
+      );
       return acc;
     },
     {},
   );
-  const recentlyViewedProducts = getRecentlyViewedProductIds(req)
+  const recentlyViewedProducts = recentlyViewedProductIds
     .map((id) => recentlyViewedProductsById[id])
     .filter(Boolean);
 
@@ -398,7 +439,9 @@ exports.listProducts = async (req, res) => {
     }, {});
   }
 
-  const productsWithStats = products.map(mapProductWithReviewStats);
+  const productsWithStats = products.map((product) =>
+    mapProductWithReviewStats(product, reviewStatsByProductId[product.id] || null),
+  );
   const mixLabSettings = getMixLabViewState(promoSettings);
 
   res.render("products", {

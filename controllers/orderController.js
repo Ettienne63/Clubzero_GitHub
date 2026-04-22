@@ -1,6 +1,9 @@
 const { prisma } = require("../prisma/lib/prisma");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
+const archiver = require("archiver");
 const {
   initializeTransaction,
   verifyTransaction,
@@ -2545,6 +2548,10 @@ exports.getAdminPaymentsPage = async (req, res) => {
       paidCount: 0,
     },
   );
+  summary.avgPaidOrderValue =
+    summary.paidCount > 0 ? summary.paidValue / summary.paidCount : 0;
+  summary.avgPendingOrderValue =
+    summary.pendingCount > 0 ? summary.pendingValue / summary.pendingCount : 0;
 
   const retailProfitTracker = await getRetailProfitTracker();
   const retailProfitSummary = buildRetailProfitSummary(retailProfitTracker);
@@ -2552,7 +2559,7 @@ exports.getAdminPaymentsPage = async (req, res) => {
   return res.render("admin-payments", {
     orders: filteredOrders,
     summary,
-    retailProfitEntries: retailProfitTracker.entries.slice(0, 20),
+    retailProfitEntries: retailProfitTracker.entries,
     retailProfitSummary,
     activeStatusFilter,
     success: req.query.success || null,
@@ -2589,6 +2596,7 @@ exports.uploadAdminRetailProfitFile = async (req, res) => {
       file,
       revenue: hasRevenue ? Number(parsed.revenue) : null,
       profit: hasProfit ? Number(parsed.profit) : null,
+      parseInsights: parsed?.insights || null,
     });
 
     return res.redirect(
@@ -2605,6 +2613,145 @@ exports.uploadAdminRetailProfitFile = async (req, res) => {
       `${returnTo}?error=${encodeURIComponent(error.message || "Could not process that file.")}`,
     );
   }
+};
+
+const escapeCsvCell = (value) => {
+  const source =
+    value === null || value === undefined ? "" : String(value);
+  if (/[",\n]/.test(source)) {
+    return `"${source.replace(/"/g, '""')}"`;
+  }
+  return source;
+};
+
+const buildRetailProfitHistoryCsv = (entries = []) => {
+  const headers = [
+    "uploadedAt",
+    "originalName",
+    "fileUrl",
+    "revenue",
+    "profit",
+    "source",
+    "rowsParsed",
+    "linesScanned",
+    "sheetsScanned",
+    "revenueDetected",
+    "profitDetected",
+    "warnings",
+  ];
+
+  const lines = [headers.join(",")];
+  entries.forEach((entry) => {
+    const row = [
+      entry.uploadedAt || "",
+      entry.originalName || "",
+      entry.fileUrl || "",
+      Number.isFinite(entry.revenue) ? Number(entry.revenue).toFixed(2) : "",
+      Number.isFinite(entry.profit) ? Number(entry.profit).toFixed(2) : "",
+      entry.parseInsights?.source || "",
+      Number.isFinite(entry.parseInsights?.rowsParsed)
+        ? Number(entry.parseInsights.rowsParsed)
+        : "",
+      Number.isFinite(entry.parseInsights?.linesScanned)
+        ? Number(entry.parseInsights.linesScanned)
+        : "",
+      Number.isFinite(entry.parseInsights?.sheetsScanned)
+        ? Number(entry.parseInsights.sheetsScanned)
+        : "",
+      entry.parseInsights
+        ? entry.parseInsights?.fieldsDetected?.revenue
+          ? "yes"
+          : "no"
+        : "",
+      entry.parseInsights
+        ? entry.parseInsights?.fieldsDetected?.profit
+          ? "yes"
+          : "no"
+        : "",
+      Array.isArray(entry.parseInsights?.warnings)
+        ? entry.parseInsights.warnings.join(" | ")
+        : "",
+    ];
+    lines.push(row.map(escapeCsvCell).join(","));
+  });
+  return lines.join("\n");
+};
+
+exports.downloadAdminRetailProfitHistory = async (_req, res) => {
+  const tracker = await getRetailProfitTracker();
+  const entries = Array.isArray(tracker?.entries) ? tracker.entries : [];
+  const csvContent = buildRetailProfitHistoryCsv(entries);
+
+  const timestamp = new Date().toISOString().slice(0, 10);
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename=\"retail-profit-history-${timestamp}.csv\"`,
+  );
+  return res.send(csvContent);
+};
+
+exports.downloadAdminRetailProfitBundle = async (_req, res) => {
+  const tracker = await getRetailProfitTracker();
+  const entries = Array.isArray(tracker?.entries) ? tracker.entries : [];
+  const csvContent = buildRetailProfitHistoryCsv(entries);
+  const timestamp = new Date().toISOString().slice(0, 10);
+  const uploadsDir = path.join(__dirname, "..", "public", "uploads");
+
+  res.setHeader("Content-Type", "application/zip");
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename=\"retail-profit-bundle-${timestamp}.zip\"`,
+  );
+
+  const archive = archiver("zip", { zlib: { level: 9 } });
+
+  archive.on("error", (error) => {
+    logger.error("admin_retail_profit_bundle_failed", { error: error.message });
+    if (!res.headersSent) {
+      res.status(500).send("Could not build retail profit bundle.");
+      return;
+    }
+    res.end();
+  });
+
+  archive.pipe(res);
+  archive.append(csvContent, {
+    name: `retail-profit-history-${timestamp}.csv`,
+  });
+
+  const usedNames = new Set();
+  entries.forEach((entry, index) => {
+    const fileUrl = String(entry.fileUrl || "").trim();
+    if (!fileUrl.startsWith("/uploads/")) {
+      return;
+    }
+
+    const diskName = path.basename(fileUrl);
+    const absolutePath = path.join(uploadsDir, diskName);
+    if (!fs.existsSync(absolutePath)) {
+      return;
+    }
+
+    const originalName = String(entry.originalName || "").trim();
+    const extension = path.extname(originalName || diskName).toLowerCase();
+    const safeBase = (originalName || `upload-${index + 1}`)
+      .replace(path.extname(originalName || ""), "")
+      .replace(/[^a-zA-Z0-9._-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "") || `upload-${index + 1}`;
+
+    let archiveName = `files/${safeBase}${extension || ""}`;
+    let counter = 2;
+    while (usedNames.has(archiveName)) {
+      archiveName = `files/${safeBase}-${counter}${extension || ""}`;
+      counter += 1;
+    }
+    usedNames.add(archiveName);
+    archive.file(absolutePath, { name: archiveName });
+  });
+
+  return archive.finalize();
 };
 
 exports.markAdminOrderPaid = async (req, res) => {

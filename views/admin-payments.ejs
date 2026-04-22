@@ -2,8 +2,8 @@
 <%- include("partials/navbar") %>
 <%- include("partials/admin-nav") %>
 
-<main class="container py-5 admin-shell">
-  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+<main class="container py-5 admin-shell admin-payments-page">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 admin-payments-header">
     <div>
       <h1 class="h3 mb-1">Admin Payments & Invoices</h1>
       <p class="text-muted mb-0">Track paid vs pending orders and their invoices in one place.</p>
@@ -12,63 +12,98 @@
 
   <%- include("partials/admin-floating-alert", { success, error }) %>
 
-  <section class="row g-3 mb-4">
-    <div class="col-12 col-md-6 col-xl-3">
-      <article class="card h-100">
-        <div class="card-body">
-          <p class="small text-uppercase fw-semibold text-muted mb-2">Total Orders</p>
-          <p class="h4 mb-0"><%= summary.totalOrders %></p>
-        </div>
-      </article>
+  <section class="payments-block payments-block--website mb-4">
+    <div class="payments-block__heading">
+      <p class="payments-block__eyebrow mb-1">Website Stats</p>
+      <h2 class="h5 mb-0">Storefront Payment Snapshot</h2>
     </div>
-    <div class="col-12 col-md-6 col-xl-3">
-      <article class="card h-100">
-        <div class="card-body">
-          <p class="small text-uppercase fw-semibold text-muted mb-2">Paid Value</p>
-          <p class="h4 mb-0">R<%= Number(summary.paidValue).toFixed(2) %></p>
-        </div>
-      </article>
-    </div>
-    <div class="col-12 col-md-6 col-xl-3">
-      <article class="card h-100">
-        <div class="card-body">
-          <p class="small text-uppercase fw-semibold text-muted mb-2">Pending Value</p>
-          <p class="h4 mb-0">R<%= Number(summary.pendingValue).toFixed(2) %></p>
-        </div>
-      </article>
-    </div>
-    <div class="col-12 col-md-6 col-xl-2">
-      <article class="card h-100">
-        <div class="card-body">
-          <p class="small text-uppercase fw-semibold text-muted mb-2">Pending Orders</p>
-          <p class="h4 mb-0"><%= summary.pendingCount %></p>
-        </div>
-      </article>
-    </div>
-    <div class="col-12 col-md-6 col-xl-2">
-      <article class="card h-100">
-        <div class="card-body">
-          <p class="small text-uppercase fw-semibold text-muted mb-2">Paid Orders</p>
-          <p class="h4 mb-0"><%= summary.paidCount %></p>
-        </div>
-      </article>
+    <div class="row g-3">
+      <div class="col-12 col-md-6 col-xl-3">
+        <article class="card h-100 payments-metric-card">
+          <div class="card-body">
+            <p class="small text-uppercase fw-semibold text-muted mb-2">Total Orders</p>
+            <p class="h4 mb-0"><%= summary.totalOrders %></p>
+          </div>
+        </article>
+      </div>
+      <div class="col-12 col-md-6 col-xl-3">
+        <article class="card h-100 payments-metric-card">
+          <div class="card-body">
+            <p class="small text-uppercase fw-semibold text-muted mb-2">Paid Value</p>
+            <p class="h4 mb-0">R<%= Number(summary.paidValue).toFixed(2) %></p>
+          </div>
+        </article>
+      </div>
+      <div class="col-12 col-md-6 col-xl-3">
+        <article class="card h-100 payments-metric-card">
+          <div class="card-body">
+            <p class="small text-uppercase fw-semibold text-muted mb-2">Pending Value</p>
+            <p class="h4 mb-0">R<%= Number(summary.pendingValue).toFixed(2) %></p>
+          </div>
+        </article>
+      </div>
+      <div class="col-12 col-md-6 col-xl-3">
+        <article class="card h-100 payments-metric-card">
+          <div class="card-body">
+            <p class="small text-uppercase fw-semibold text-muted mb-2">Pending Orders</p>
+            <p class="h4 mb-0"><%= summary.pendingCount %></p>
+          </div>
+        </article>
+      </div>
+      <div class="col-12 col-md-6 col-xl-3">
+        <article class="card h-100 payments-metric-card">
+          <div class="card-body">
+            <p class="small text-uppercase fw-semibold text-muted mb-2">Avg Paid Order</p>
+            <p class="h4 mb-0">R<%= Number(summary.avgPaidOrderValue || 0).toFixed(2) %></p>
+          </div>
+        </article>
+      </div>
+      <div class="col-12 col-md-6 col-xl-3">
+        <article class="card h-100 payments-metric-card">
+          <div class="card-body">
+            <p class="small text-uppercase fw-semibold text-muted mb-2">Avg Pending Order</p>
+            <p class="h4 mb-0">R<%= Number(summary.avgPendingOrderValue || 0).toFixed(2) %></p>
+          </div>
+        </article>
+      </div>
+      <div class="col-12 col-md-6 col-xl-3">
+        <article class="card h-100 payments-metric-card">
+          <div class="card-body">
+            <p class="small text-uppercase fw-semibold text-muted mb-2">Paid Orders</p>
+            <p class="h4 mb-0"><%= summary.paidCount %></p>
+          </div>
+        </article>
+      </div>
     </div>
   </section>
 
-  <section class="card shadow-sm mb-4">
-    <div class="card-body">
+  <div class="payments-section-divider" role="presentation" aria-hidden="true">
+    <span>Retail Stats</span>
+  </div>
+
+  <section class="card shadow-sm mb-4 payments-block payments-block--retail">
+    <div class="card-body payments-block__body">
       <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
         <div>
-          <h2 class="h5 mb-1">Retail Profit</h2>
+          <p class="payments-block__eyebrow mb-1">Retail Stats</p>
+          <h2 class="h5 mb-1">Retail Profit Tracking</h2>
           <p class="text-muted mb-0">
-            Upload Excel or PDF files to track retail totals from reported values.
+            Upload Excel or PDF files to track retail totals and keep a full upload history.
           </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <a href="/admin/payments/retail-profit/export" class="btn btn-sm btn-outline-primary">
+            Download Full History (CSV)
+          </a>
+          <a href="/admin/payments/retail-profit/export-bundle" class="btn btn-sm btn-primary">
+            Download CSV + Files (ZIP)
+          </a>
         </div>
       </div>
 
       <div class="row g-3 mb-3">
         <div class="col-12 col-md-4">
-          <article class="card h-100">
+          <article class="card h-100 payments-metric-card payments-metric-card--retail">
             <div class="card-body">
               <p class="small text-uppercase fw-semibold text-muted mb-2">Total Revenue</p>
               <p class="h5 mb-0">R<%= Number(retailProfitSummary.totalRevenue || 0).toFixed(2) %></p>
@@ -76,7 +111,7 @@
           </article>
         </div>
         <div class="col-12 col-md-4">
-          <article class="card h-100">
+          <article class="card h-100 payments-metric-card payments-metric-card--retail">
             <div class="card-body">
               <p class="small text-uppercase fw-semibold text-muted mb-2">Total Profit</p>
               <p class="h5 mb-0">R<%= Number(retailProfitSummary.totalProfit || 0).toFixed(2) %></p>
@@ -84,7 +119,7 @@
           </article>
         </div>
         <div class="col-12 col-md-4">
-          <article class="card h-100">
+          <article class="card h-100 payments-metric-card payments-metric-card--retail">
             <div class="card-body">
               <p class="small text-uppercase fw-semibold text-muted mb-2">Uploaded Files</p>
               <p class="h5 mb-0"><%= retailProfitSummary.uploadCount || 0 %></p>
@@ -97,7 +132,7 @@
         action="/admin/payments/retail-profit/upload"
         method="POST"
         enctype="multipart/form-data"
-        class="row g-2 align-items-end mb-3"
+        class="row g-2 align-items-end mb-3 payments-upload-form"
       >
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
         <div class="col-12 col-md-8 col-xl-9">
@@ -120,10 +155,15 @@
         </div>
       </form>
 
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h3 class="h6 mb-0">Upload History Tracker</h3>
+        <span class="small text-muted"><%= retailProfitEntries.length %> file<%= retailProfitEntries.length === 1 ? "" : "s" %> tracked</span>
+      </div>
+
       <% if (!retailProfitEntries || retailProfitEntries.length === 0) { %>
       <div class="alert alert-info mb-0">No retail profit files uploaded yet.</div>
       <% } else { %>
-      <div class="table-responsive">
+      <div class="table-responsive payments-table-wrap">
         <table class="table align-middle mb-0">
           <thead>
             <tr>
@@ -131,6 +171,7 @@
               <th scope="col">File</th>
               <th scope="col">Revenue</th>
               <th scope="col">Profit</th>
+              <th scope="col">Insights</th>
             </tr>
           </thead>
           <tbody>
@@ -160,6 +201,42 @@
                 <span class="text-muted">Not found</span>
                 <% } %>
               </td>
+              <td>
+                <% if (entry.parseInsights) { %>
+                <div class="payments-insight-stack">
+                  <div class="payments-insight-badges">
+                    <span class="badge text-bg-light">
+                      <%= String(entry.parseInsights.source || "file").toUpperCase() %>
+                    </span>
+                    <span class="badge text-bg-light">
+                      Revenue: <%= entry.parseInsights.fieldsDetected?.revenue ? "yes" : "no" %>
+                    </span>
+                    <span class="badge text-bg-light">
+                      Profit: <%= entry.parseInsights.fieldsDetected?.profit ? "yes" : "no" %>
+                    </span>
+                  </div>
+                  <div class="small text-muted">
+                    <% if (entry.parseInsights.rowsParsed) { %>
+                    Rows parsed: <%= entry.parseInsights.rowsParsed %>
+                    <% } else if (entry.parseInsights.linesScanned) { %>
+                    Lines scanned: <%= entry.parseInsights.linesScanned %>
+                    <% } else { %>
+                    Parser metrics unavailable
+                    <% } %>
+                    <% if (entry.parseInsights.sheetsScanned) { %>
+                    • Sheets: <%= entry.parseInsights.sheetsScanned %>
+                    <% } %>
+                  </div>
+                  <% if (entry.parseInsights.warnings && entry.parseInsights.warnings.length) { %>
+                  <div class="small text-warning">
+                    <%= entry.parseInsights.warnings.join(" • ") %>
+                  </div>
+                  <% } %>
+                </div>
+                <% } else { %>
+                <span class="small text-muted">Legacy upload (no parser insights)</span>
+                <% } %>
+              </td>
             </tr>
             <% }) %>
           </tbody>
@@ -169,7 +246,7 @@
     </div>
   </section>
 
-  <section class="card shadow-sm mb-4">
+  <section class="card shadow-sm mb-4 payments-filter-card">
     <div class="card-body d-flex flex-wrap align-items-center gap-2">
       <span class="fw-semibold me-2">Filter:</span>
       <% ["PAID", "PENDING_PAYMENT"].forEach((status) => { %>
@@ -183,14 +260,14 @@
     </div>
   </section>
 
-  <section class="card shadow-sm">
+  <section class="card shadow-sm payments-table-card">
     <div class="card-body">
       <h2 class="h5 mb-3">Payment Status</h2>
 
       <% if (!orders || orders.length === 0) { %>
       <div class="alert alert-info mb-0">No orders found for this filter.</div>
       <% } else { %>
-      <div class="table-responsive">
+      <div class="table-responsive payments-table-wrap">
         <table class="table align-middle mb-0">
           <thead>
             <tr>

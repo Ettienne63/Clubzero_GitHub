@@ -602,6 +602,16 @@ app.post(
   asyncHandler(orderController.uploadAdminRetailProfitFile),
 );
 app.get(
+  "/admin/payments/retail-profit/export",
+  requireAdmin,
+  asyncHandler(orderController.downloadAdminRetailProfitHistory),
+);
+app.get(
+  "/admin/payments/retail-profit/export-bundle",
+  requireAdmin,
+  asyncHandler(orderController.downloadAdminRetailProfitBundle),
+);
+app.get(
   "/admin/team",
   requireOwner,
   asyncHandler(adminController.getAdminTeamPage),

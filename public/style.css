@@ -634,6 +634,141 @@ main {
   padding-bottom: 0.7rem;
 }
 
+.admin-payments-page {
+  --payments-divider-color: #d4e1f3;
+  --payments-soft-bg: #f6f9ff;
+  --payments-soft-bg-retail: #fffaf1;
+}
+
+.admin-payments-page .admin-payments-header {
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid #e3ebf7;
+}
+
+.admin-payments-page .payments-block {
+  border: 1px solid #dce8f7;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #f9fbff 0%, #f4f8ff 100%);
+  padding: 1rem;
+}
+
+.admin-payments-page .payments-block--retail {
+  background: linear-gradient(180deg, #fffdf7 0%, #fff8eb 100%);
+  border-color: #f0debe;
+}
+
+.admin-payments-page .payments-block__heading {
+  margin-bottom: 0.95rem;
+}
+
+.admin-payments-page .payments-block__eyebrow {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+  color: #4f6484;
+}
+
+.admin-payments-page .payments-block__body {
+  padding: 1.1rem;
+}
+
+.admin-payments-page .payments-metric-card {
+  border-color: #cfe0f6;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.admin-payments-page .payments-metric-card .card-body {
+  background: var(--payments-soft-bg);
+}
+
+.admin-payments-page .payments-metric-card--retail {
+  border-color: #f3dcb5;
+}
+
+.admin-payments-page .payments-metric-card--retail .card-body {
+  background: var(--payments-soft-bg-retail);
+}
+
+.admin-payments-page .payments-section-divider {
+  position: relative;
+  text-align: center;
+  margin: 1.1rem 0 1.25rem;
+}
+
+.admin-payments-page .payments-section-divider::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1px dashed var(--payments-divider-color);
+  transform: translateY(-50%);
+}
+
+.admin-payments-page .payments-section-divider span {
+  position: relative;
+  display: inline-block;
+  padding: 0.18rem 0.65rem;
+  background: #ffffff;
+  border: 1px solid #d8e4f5;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+  color: #446189;
+}
+
+.admin-payments-page .payments-upload-form {
+  border: 1px solid #ebd9b7;
+  border-radius: 14px;
+  padding: 0.75rem;
+  background: #fffdf8;
+}
+
+.admin-payments-page .payments-filter-card .card-body {
+  background: #f9fbff;
+}
+
+.admin-payments-page .payments-table-wrap {
+  border: 1px solid #dce8f7;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.admin-payments-page .payments-table-card .card-body > .h5 {
+  margin-bottom: 0.95rem;
+}
+
+.admin-payments-page .payments-insight-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 220px;
+}
+
+.admin-payments-page .payments-insight-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+@media (max-width: 767.98px) {
+  .admin-payments-page .payments-block {
+    padding: 0.85rem;
+  }
+
+  .admin-payments-page .payments-block__body {
+    padding: 0.85rem;
+  }
+
+  .admin-payments-page .payments-section-divider {
+    margin: 0.9rem 0 1.1rem;
+  }
+}
+
 .admin-shell .competition-action-card {
   position: relative;
   overflow: hidden;
