@@ -27,8 +27,10 @@ const {
 const {
   getRetailProfitTracker,
   addRetailProfitEntry,
+  deleteRetailProfitEntry,
   parseRetailProfitFile,
   buildRetailProfitSummary,
+  buildRetailCustomerSummary,
 } = require("../lib/retailProfitTracker");
 const DEFAULT_AFFILIATE_RATE = 0.05;
 const AFFILIATE_RATE_SETTING_KEY = "affiliate_rate";
@@ -2555,12 +2557,14 @@ exports.getAdminPaymentsPage = async (req, res) => {
 
   const retailProfitTracker = await getRetailProfitTracker();
   const retailProfitSummary = buildRetailProfitSummary(retailProfitTracker);
+  const retailCustomerSummary = buildRetailCustomerSummary(retailProfitTracker);
 
   return res.render("admin-payments", {
     orders: filteredOrders,
     summary,
     retailProfitEntries: retailProfitTracker.entries,
     retailProfitSummary,
+    retailCustomerSummary,
     activeStatusFilter,
     success: req.query.success || null,
     error: req.query.error || null,
@@ -2583,11 +2587,14 @@ exports.uploadAdminRetailProfitFile = async (req, res) => {
     const parsed = await parseRetailProfitFile(file);
     const hasRevenue = Number.isFinite(parsed?.revenue);
     const hasProfit = Number.isFinite(parsed?.profit);
+    const hasCustomerRows =
+      Array.isArray(parsed?.insights?.customerRows) &&
+      parsed.insights.customerRows.length > 0;
 
-    if (!hasRevenue && !hasProfit) {
+    if (!hasRevenue && !hasProfit && !hasCustomerRows) {
       return res.redirect(
         `${returnTo}?error=${encodeURIComponent(
-          "We could not find revenue or profit values in that file. Please check the document format.",
+          "We could not find revenue, profit, or customer totals in that file. Please check the document format.",
         )}`,
       );
     }
@@ -2615,6 +2622,47 @@ exports.uploadAdminRetailProfitFile = async (req, res) => {
   }
 };
 
+exports.deleteAdminRetailProfitFile = async (req, res) => {
+  const returnTo = "/admin/payments";
+  const entryId = String(req.params.id || "").trim();
+  if (!entryId) {
+    return res.redirect(
+      `${returnTo}?error=${encodeURIComponent("Invalid retail file id.")}`,
+    );
+  }
+
+  try {
+    const { removed } = await deleteRetailProfitEntry(entryId);
+    if (!removed) {
+      return res.redirect(
+        `${returnTo}?error=${encodeURIComponent("Retail file entry not found.")}`,
+      );
+    }
+
+    const fileUrl = String(removed.fileUrl || "").trim();
+    if (fileUrl.startsWith("/uploads/")) {
+      const uploadsDir = path.join(__dirname, "..", "public", "uploads");
+      const diskName = path.basename(fileUrl);
+      const absolutePath = path.join(uploadsDir, diskName);
+      if (fs.existsSync(absolutePath)) {
+        await fs.promises.unlink(absolutePath);
+      }
+    }
+
+    return res.redirect(
+      `${returnTo}?success=${encodeURIComponent("Retail file removed.")}`,
+    );
+  } catch (error) {
+    logger.error("admin_retail_profit_delete_failed", {
+      entryId,
+      error: error.message,
+    });
+    return res.redirect(
+      `${returnTo}?error=${encodeURIComponent("Could not remove retail file.")}`,
+    );
+  }
+};
+
 const escapeCsvCell = (value) => {
   const source =
     value === null || value === undefined ? "" : String(value);
@@ -2637,6 +2685,7 @@ const buildRetailProfitHistoryCsv = (entries = []) => {
     "sheetsScanned",
     "revenueDetected",
     "profitDetected",
+    "customerRowsParsed",
     "warnings",
   ];
 
@@ -2667,6 +2716,9 @@ const buildRetailProfitHistoryCsv = (entries = []) => {
         ? entry.parseInsights?.fieldsDetected?.profit
           ? "yes"
           : "no"
+        : "",
+      Array.isArray(entry.parseInsights?.customerRows)
+        ? entry.parseInsights.customerRows.length
         : "",
       Array.isArray(entry.parseInsights?.warnings)
         ? entry.parseInsights.warnings.join(" | ")

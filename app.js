@@ -601,6 +601,11 @@ app.post(
   uploadRetailProfitDocument.single("retailProfitFile"),
   asyncHandler(orderController.uploadAdminRetailProfitFile),
 );
+app.post(
+  "/admin/payments/retail-profit/:id/delete",
+  requireAdmin,
+  asyncHandler(orderController.deleteAdminRetailProfitFile),
+);
 app.get(
   "/admin/payments/retail-profit/export",
   requireAdmin,
