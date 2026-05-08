@@ -2485,6 +2485,15 @@ exports.getAdminAnalyticsPage = async (req, res) => {
 
 exports.getAdminPaymentsPage = async (req, res) => {
   const statusFilter = (req.query.status || "paid").toString().toUpperCase();
+  const paymentsLimitParam = String(req.query.paymentsLimit || "5")
+    .toLowerCase()
+    .trim();
+  const customersLimitParam = String(req.query.customersLimit || "5")
+    .toLowerCase()
+    .trim();
+  const historyLimitParam = String(req.query.historyLimit || "3")
+    .toLowerCase()
+    .trim();
   const allowedStatuses = new Set([
     "PAID",
     "PENDING_PAYMENT",
@@ -2526,6 +2535,12 @@ exports.getAdminPaymentsPage = async (req, res) => {
     activeStatusFilter === "PAID"
       ? normalizedOrders.filter((order) => order.status === "PAID")
       : normalizedOrders.filter((order) => order.status === "PENDING_PAYMENT");
+  const showAllPayments = paymentsLimitParam === "all";
+  const paymentsLimit = 5;
+  const visibleOrders = showAllPayments
+    ? filteredOrders
+    : filteredOrders.slice(0, paymentsLimit);
+  const hasMorePayments = filteredOrders.length > visibleOrders.length;
 
   const summary = normalizedOrders.reduce(
     (acc, order) => {
@@ -2557,15 +2572,35 @@ exports.getAdminPaymentsPage = async (req, res) => {
 
   const retailProfitTracker = await getRetailProfitTracker();
   const retailProfitSummary = buildRetailProfitSummary(retailProfitTracker);
-  const retailCustomerSummary = buildRetailCustomerSummary(retailProfitTracker);
+  const retailCustomerSummaryAll = buildRetailCustomerSummary(retailProfitTracker);
+  const retailProfitEntriesAll = Array.isArray(retailProfitTracker.entries)
+    ? retailProfitTracker.entries
+    : [];
+  const showAllCustomers = customersLimitParam === "all";
+  const showAllHistory = historyLimitParam === "all";
+  const retailCustomerSummary = showAllCustomers
+    ? retailCustomerSummaryAll
+    : retailCustomerSummaryAll.slice(0, 5);
+  const retailProfitEntries = showAllHistory
+    ? retailProfitEntriesAll
+    : retailProfitEntriesAll.slice(0, 3);
+  const hasMoreCustomers =
+    retailCustomerSummaryAll.length > retailCustomerSummary.length;
+  const hasMoreHistory = retailProfitEntriesAll.length > retailProfitEntries.length;
 
   return res.render("admin-payments", {
-    orders: filteredOrders,
+    orders: visibleOrders,
     summary,
-    retailProfitEntries: retailProfitTracker.entries,
+    retailProfitEntries,
     retailProfitSummary,
     retailCustomerSummary,
     activeStatusFilter,
+    showAllPayments,
+    hasMorePayments,
+    showAllCustomers,
+    hasMoreCustomers,
+    showAllHistory,
+    hasMoreHistory,
     success: req.query.success || null,
     error: req.query.error || null,
   });
@@ -2624,10 +2659,11 @@ exports.uploadAdminRetailProfitFile = async (req, res) => {
 
 exports.deleteAdminRetailProfitFile = async (req, res) => {
   const returnTo = "/admin/payments";
+  const returnAnchor = "#upload-history";
   const entryId = String(req.params.id || "").trim();
   if (!entryId) {
     return res.redirect(
-      `${returnTo}?error=${encodeURIComponent("Invalid retail file id.")}`,
+      `${returnTo}?error=${encodeURIComponent("Invalid retail file id.")}${returnAnchor}`,
     );
   }
 
@@ -2635,7 +2671,7 @@ exports.deleteAdminRetailProfitFile = async (req, res) => {
     const { removed } = await deleteRetailProfitEntry(entryId);
     if (!removed) {
       return res.redirect(
-        `${returnTo}?error=${encodeURIComponent("Retail file entry not found.")}`,
+        `${returnTo}?error=${encodeURIComponent("Retail file entry not found.")}${returnAnchor}`,
       );
     }
 
@@ -2650,7 +2686,7 @@ exports.deleteAdminRetailProfitFile = async (req, res) => {
     }
 
     return res.redirect(
-      `${returnTo}?success=${encodeURIComponent("Retail file removed.")}`,
+      `${returnTo}?success=${encodeURIComponent("Retail file removed.")}${returnAnchor}`,
     );
   } catch (error) {
     logger.error("admin_retail_profit_delete_failed", {
@@ -2658,7 +2694,7 @@ exports.deleteAdminRetailProfitFile = async (req, res) => {
       error: error.message,
     });
     return res.redirect(
-      `${returnTo}?error=${encodeURIComponent("Could not remove retail file.")}`,
+      `${returnTo}?error=${encodeURIComponent("Could not remove retail file.")}${returnAnchor}`,
     );
   }
 };

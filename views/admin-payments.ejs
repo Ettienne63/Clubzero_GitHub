@@ -147,9 +147,9 @@
         </div>
       </form>
 
-      <div class="d-flex justify-content-between align-items-center mb-2">
+      <div id="customer-totals" class="d-flex justify-content-between align-items-center mb-2">
         <h3 class="h6 mb-0">Customer Totals (All Uploaded Files)</h3>
-        <span class="small text-muted"><%= retailCustomerSummary.length %> customer<%= retailCustomerSummary.length === 1 ? "" : "s" %></span>
+        <span class="small text-muted">Showing <%= retailCustomerSummary.length %> customer<%= retailCustomerSummary.length === 1 ? "" : "s" %></span>
       </div>
       <% if (!retailCustomerSummary || retailCustomerSummary.length === 0) { %>
       <div class="alert alert-info mb-3">
@@ -182,11 +182,30 @@
           </tbody>
         </table>
       </div>
+      <% if (hasMoreCustomers) { %>
+      <div class="mt-2 mb-3 text-center">
+        <a
+          href="/admin/payments?status=<%= activeStatusFilter.toLowerCase() %>&paymentsLimit=<%= showAllPayments ? 'all' : '5' %>&customersLimit=all&historyLimit=<%= showAllHistory ? 'all' : '3' %>#customer-totals"
+          class="btn btn-outline-primary btn-sm"
+        >
+          Show more
+        </a>
+      </div>
+      <% } else if (showAllCustomers && retailCustomerSummary.length > 5) { %>
+      <div class="mt-2 mb-3 text-center">
+        <a
+          href="/admin/payments?status=<%= activeStatusFilter.toLowerCase() %>&paymentsLimit=<%= showAllPayments ? 'all' : '5' %>&customersLimit=5&historyLimit=<%= showAllHistory ? 'all' : '3' %>#customer-totals"
+          class="btn btn-outline-secondary btn-sm"
+        >
+          Show less
+        </a>
+      </div>
+      <% } %>
       <% } %>
 
-      <div class="d-flex justify-content-between align-items-center mb-2">
+      <div id="upload-history" class="d-flex justify-content-between align-items-center mb-2">
         <h3 class="h6 mb-0">Upload History Tracker</h3>
-        <span class="small text-muted"><%= retailProfitEntries.length %> file<%= retailProfitEntries.length === 1 ? "" : "s" %> tracked</span>
+        <span class="small text-muted">Showing <%= retailProfitEntries.length %> file<%= retailProfitEntries.length === 1 ? "" : "s" %></span>
       </div>
 
       <% if (!retailProfitEntries || retailProfitEntries.length === 0) { %>
@@ -276,6 +295,25 @@
           </tbody>
         </table>
       </div>
+      <% if (hasMoreHistory) { %>
+      <div class="mt-3 text-center">
+        <a
+          href="/admin/payments?status=<%= activeStatusFilter.toLowerCase() %>&paymentsLimit=<%= showAllPayments ? 'all' : '5' %>&customersLimit=<%= showAllCustomers ? 'all' : '5' %>&historyLimit=all#upload-history"
+          class="btn btn-outline-primary btn-sm"
+        >
+          Show more
+        </a>
+      </div>
+      <% } else if (showAllHistory && retailProfitEntries.length > 3) { %>
+      <div class="mt-3 text-center">
+        <a
+          href="/admin/payments?status=<%= activeStatusFilter.toLowerCase() %>&paymentsLimit=<%= showAllPayments ? 'all' : '5' %>&customersLimit=<%= showAllCustomers ? 'all' : '5' %>&historyLimit=3#upload-history"
+          class="btn btn-outline-secondary btn-sm"
+        >
+          Show less
+        </a>
+      </div>
+      <% } %>
       <% } %>
     </div>
   </section>
@@ -294,7 +332,7 @@
     </div>
   </section>
 
-  <section class="card shadow-sm payments-table-card">
+  <section id="payment-status" class="card shadow-sm payments-table-card">
     <div class="card-body">
       <h2 class="h5 mb-3">Payment Status</h2>
 
@@ -335,7 +373,9 @@
               </td>
               <td>
                 <% if (order.invoiceStatus) { %>
-                <span class="badge text-bg-secondary"><%= order.invoiceStatus %></span>
+                <span class="badge text-bg-secondary">
+                  <%= order.invoiceStatus === "PAID" ? "Issued" : order.invoiceStatus %>
+                </span>
                 <% } else { %>
                 <span class="badge text-bg-light text-muted">None</span>
                 <% } %>
@@ -374,6 +414,25 @@
           </tbody>
         </table>
       </div>
+      <% if (hasMorePayments) { %>
+      <div class="mt-3 text-center">
+        <a
+          href="/admin/payments?status=<%= activeStatusFilter.toLowerCase() %>&paymentsLimit=all#payment-status"
+          class="btn btn-outline-primary btn-sm"
+        >
+          Show more
+        </a>
+      </div>
+      <% } else if (showAllPayments && orders.length > 5) { %>
+      <div class="mt-3 text-center">
+        <a
+          href="/admin/payments?status=<%= activeStatusFilter.toLowerCase() %>&paymentsLimit=5#payment-status"
+          class="btn btn-outline-secondary btn-sm"
+        >
+          Show less
+        </a>
+      </div>
+      <% } %>
       <% } %>
     </div>
   </section>
