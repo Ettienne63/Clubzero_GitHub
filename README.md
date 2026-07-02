@@ -1,127 +1,227 @@
-# Club Zero Website
+# Club Zero
 
-Express + EJS ecommerce app for Club Zero with products, cart, checkout, orders, affiliate tracking, and contact forms.
+Club Zero is a full-stack e-commerce web application developed for an early-stage beverage business concept.
 
-## Local Setup
+The platform includes product browsing, user authentication, shopping-cart functionality, checkout and order processing, Paystack payments, invoice generation, affiliate tracking, inventory management, contact forms, stockist applications, and administrative tools.
 
-1. Install dependencies:
+## Live Website
 
-```bash
-npm install
-```
+https://clubzero.co.za
 
-2. Create your environment file:
+## Key Features
 
-```bash
-copy .env.example .env
-```
+- Customer registration and authentication
 
-3. Fill in the required values in `.env`:
+- Password reset functionality
 
-- `DATABASE_URL`
-- `SESSION_SECRET`
+- Product catalogue and product-detail pages
 
-4. Start the app:
+- Shopping cart and custom product packs
 
-```bash
-npm run dev
-```
+- Checkout and order processing
 
-## Environment Variables
+- Paystack payment integration
 
-### Required
+- Invoice generation and email delivery
 
-- `DATABASE_URL`: PostgreSQL connection string used by Prisma and the session store.
-- `SESSION_SECRET`: Strong secret used to sign sessions. This must be at least 24 characters and cannot be `dev-secret`.
+- Affiliate applications and referral tracking
 
-### Common Optional
+- Inventory and supplier management
 
-- `NODE_ENV`: Use `production` in production.
-- `PORT`: HTTP port. Defaults to `3000`.
-- `DB_SCHEMA`: PostgreSQL schema for Prisma and session storage. Defaults to `clubzero_setup`.
-- `TRUST_PROXY`: Set this when running behind a reverse proxy or platform load balancer so secure cookies and client IPs behave correctly.
-- `SESSION_COOKIE_NAME`: Session cookie name. Defaults to `clubzero.sid`.
-- `UPLOAD_DIR`: Override local upload storage path.
-- `PUBLIC_BASE_URL`: Base URL used for building absolute links in emails (like password resets).
+- Low-stock monitoring and alerts
 
-### Contact Email
+- Contact forms and stockist applications
 
-- `SMTP_HOST`
-- `SMTP_PORT`
-- `SMTP_SECURE`
-- `SMTP_USER`
-- `SMTP_PASS`
-- `CONTACT_TO_EMAIL`
-- `CONTACT_FROM_EMAIL`
-- `ORDER_NOTIFICATION_EMAIL`: Optional internal recipient for new order emails (defaults to `CONTACT_TO_EMAIL`).
+- Abandoned-cart reminders
 
-If SMTP is not configured, contact messages are still saved to the database but notification emails are skipped.
+- Administrative user management
 
-### Abandoned Cart Reminders (Optional)
+- Responsive desktop and mobile design
 
-- `ABANDONED_CART_ENABLED`: Set `true` to enable the scheduler.
-- `ABANDONED_CART_DELAY_HOURS`: How long after cart activity to send the first reminder. Default `24`.
-- `ABANDONED_CART_RESEND_HOURS`: Minimum hours between reminders. Default `72`.
-- `ABANDONED_CART_MAX_SENDS`: Maximum reminders per cart. Default `2`.
-- `ABANDONED_CART_INTERVAL_MINUTES`: Scheduler interval. Default `30`.
-- `ABANDONED_CART_BATCH`: Max users processed per run. Default `50`.
+- PostgreSQL-backed sessions
 
-### Alerts
+- CSRF protection and rate limiting
 
-- `ALERT_WEBHOOK_URL`: Optional webhook endpoint for critical error alerts.
+## Tech Stack
 
-## Paystack Setup Checklist
+### Frontend
 
-1. Create a Paystack account and get your API keys.
-2. Add these to `.env`:
-   - `PAYSTACK_SECRET_KEY=sk_test_...` (use `sk_live_...` in production)
-   - `PAYSTACK_PUBLIC_KEY=pk_test_...` (optional, for future inline checkout)
-   - `PAYSTACK_CALLBACK_URL=https://your-domain.com/auth/checkout/paystack` (optional)
-3. Configure the Paystack dashboard:
-   - **Webhook URL**: `https://your-domain.com/webhooks/paystack`
-   - **Callback URL** (optional): `https://your-domain.com/auth/checkout/paystack`
-4. For local testing, use a public tunnel (ngrok or Cloudflare Tunnel) so Paystack can reach your webhook.
+- EJS
 
-Notes:
-- Orders start in `PENDING_PAYMENT` and become `PAID` after Paystack confirms.
-- Invoices are created and emailed after payment succeeds.
+- HTML5
+
+- CSS3
+
+- Bootstrap
+
+- JavaScript
+
+### Backend
+
+- Node.js
+
+- Express.js
+
+### Database
+
+- PostgreSQL
+
+- Prisma ORM
+
+### Infrastructure and Deployment
+
+- Docker
+
+- Fly.io
+
+- Fly Managed Postgres
+
+- Git
+
+- GitHub
+
+### Integrations
+
+- Paystack
+
+- SMTP email services
+
+### Security
+
+- Helmet
+
+- CSRF protection
+
+- Rate limiting
+
+- Secure session cookies
+
+- PostgreSQL session storage
+
+- Structured error logging
+
+## My Role
+
+I designed, developed, tested, and deployed the Club Zero application as part of a remote contract project.
+
+My responsibilities included:
+
+- Building responsive frontend pages using EJS, Bootstrap, HTML, CSS, and JavaScript
+
+- Developing backend routes and application logic with Node.js and Express
+
+- Designing and managing PostgreSQL data using Prisma
+
+- Implementing authentication, cart, checkout, order, and payment functionality
+
+- Building affiliate, inventory, supplier, and administrative features
+
+- Integrating Paystack payments and email notifications
+
+- Containerising the application with Docker
+
+- Deploying and maintaining the application on Fly.io
+
+- Testing, debugging, and improving application security
+
+- Using AI-assisted development tools as part of the development workflow
 
 ## Production Notes
 
 ### Security
 
-- The app will refuse to boot if `DATABASE_URL` or `SESSION_SECRET` is missing.
-- The app will refuse to boot if `SESSION_SECRET` is weak or still set to `dev-secret`.
-- Sessions are stored in PostgreSQL, not in process memory.
-- Session cookies use `httpOnly` and `sameSite=lax`, and `secure` is enabled automatically when `NODE_ENV=production`.
-- CSRF protection is enforced for all non-GET requests.
-- Rate limits are applied to login, signup, checkout, and contact form submission.
-- `helmet` is enabled for baseline security headers.
+The application includes several production security controls:
 
-### Reverse Proxy
+- The app refuses to start if `DATABASE_URL` is missing
 
-If you deploy behind Nginx, Fly, Render, Railway, or another proxy, set:
+- The app refuses to start if `SESSION_SECRET` is missing or weak
 
-```env
-NODE_ENV=production
-TRUST_PROXY=true
+- Sessions are stored in PostgreSQL
+
+- Session cookies use `httpOnly`
+
+- Session cookies use `sameSite=lax`
+
+- Secure cookies are enabled automatically in production
+
+- CSRF protection is enforced for non-GET requests
+
+- Rate limits are applied to authentication, checkout, and contact endpoints
+
+- Helmet provides baseline HTTP security headers
+
+- Passwords are stored as bcrypt hashes
+
+- Sensitive values are stored in environment variables
+- 
+## Repository Security
+
+The repository must never contain:
+
+- `.env`
+
+- Database backups
+
+- API keys
+
+- Passwords
+
+- Session secrets
+
+- SMTP credentials
+
+- Paystack secret keys
+
+- Fly.io access tokens
+
+- Real customer records
+
+- Production database dumps
+
+  
+The `.gitignore` file excludes sensitive and generated files such as:
+
+```gitignore
+
+node_modules/
+
+.env
+
+.env.*
+
+!.env.example
+
+*.sql
+
+*.dump
+
+*.backup
+
+.tmp*
+
+*.exe
+
+.DS_Store
+
 ```
+## Project Status
 
-Without `TRUST_PROXY`, secure cookies may not behave correctly behind HTTPS termination.
+The application is deployed and available online.
 
-### Logging And Alerts
+The project is no longer under active feature development, but the repository remains available as a portfolio project and technical reference.
 
-- Requests are logged in structured JSON.
-- Request failures, unhandled promise rejections, and uncaught exceptions are logged as structured errors.
-- If `ALERT_WEBHOOK_URL` is configured, critical failures are posted to that webhook.
+## Licence
 
-## Verification
+Copyright © 2026. All rights reserved.
 
-Basic syntax checks used after the security changes:
+This source code is provided for portfolio and demonstration purposes only. It may not be copied, modified, distributed, or used commercially without permission.
 
-```bash
-node --check app.js
-node --check middleware/security.js
-node --check lib/pgSessionStore.js
-node --check controllers/contactController.js
-```
+## Author
+
+**Ettienne Janse van Vuuren**
+
+- GitHub: https://github.com/Ettienne63
+
+- LinkedIn: https://www.linkedin.com/in/ettienne-janse-van-vuuren-86284040b
+
+- Live project: https://clubzero.co.za
