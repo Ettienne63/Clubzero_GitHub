@@ -8,3 +8,8 @@ node_modules
 *.sql
 *.dump
 *.backup
+
+# Temporary and generated files
+.tmp*
+*.exe
+.DS_Store
