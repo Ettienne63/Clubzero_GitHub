@@ -41,7 +41,7 @@ return `${day}-${month}-${year}`; }; %>
           <h2 class="h6 text-uppercase text-muted">Bill To</h2>
           <p class="mb-0 fw-semibold"><%= invoice.recipientName %></p>
           <p class="mb-0"><%= invoice.recipientEmail %></p>
-          <p class="mb-0"><%= order.deliveryPhone %></p>
+          <p class="mb-0">Phone: <%= order.deliveryPhone || "-" %></p>
         </div>
       </div>
 
@@ -115,6 +115,7 @@ return `${day}-${month}-${year}`; }; %>
           <h2 class="h6 text-uppercase text-muted">Delivery Address</h2>
           <p class="mb-0">
             <%= order.deliveryName %><br />
+            Phone: <%= order.deliveryPhone || "-" %><br />
             <%= order.deliveryAddressLine1 %><br />
             <% if (order.deliveryAddressLine2) { %>
             <%= order.deliveryAddressLine2 %><br />

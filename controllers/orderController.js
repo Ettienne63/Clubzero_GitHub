@@ -729,6 +729,7 @@ const buildInternalOrderText = (order) => {
     "Customer:",
     `${order.user?.name || ""} ${order.user?.email ? `<${order.user.email}>` : ""}`
       .trim(),
+    order.deliveryPhone ? `Phone: ${order.deliveryPhone}` : "",
     "",
     "Order summary:",
   ];
@@ -786,6 +787,7 @@ const buildInternalOrderHtml = (order) => {
       <p style="margin:0 0 12px;">Order #${order.id}</p>
       <p style="margin:0 0 12px;">
         <strong>Customer:</strong> ${customerName} ${customerEmail ? `&lt;${customerEmail}&gt;` : ""}
+        ${order.deliveryPhone ? `<br /><strong>Phone:</strong> ${order.deliveryPhone}` : ""}
       </p>
       <h3 style="margin:16px 0 8px;">Order summary</h3>
       <table style="width:100%; border-collapse:collapse;">
